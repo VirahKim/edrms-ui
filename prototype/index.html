@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>EDRMS File Journeys</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="bundle.css">
+<link rel="stylesheet" href="app.css">
+
+<div class="qb app">
+  <div class="login" id="login" hidden></div>
+
+  <div class="shell" id="shell">
+    <div class="scrim-mobile" id="nav-scrim" hidden></div>
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="main">
+      <main id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div class="qb-hub" data-qb-hub id="hub">
+    <div class="qb-hub__items" aria-hidden="true">
+      <button class="qb-hub__item qb-hub__item--guide" tabindex="-1" data-hub="guide"><span class="qb-hub__label">User Manual</span><span class="qb-hub__dot"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+      <button class="qb-hub__item qb-hub__item--report" tabindex="-1" data-hub="capture"><span class="qb-hub__label">Capture Screen</span><span class="qb-hub__dot"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V6a2 2 0 0 1 2-2h2M4 17v1a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v1M16 20h2a2 2 0 0 0 2-2v-1M5 12h14"/></svg></span></button>
+      <button class="qb-hub__item qb-hub__item--chat" tabindex="-1" data-hub="chat"><span class="qb-hub__label">Chat</span><span class="qb-hub__dot"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg></span></button>
+    </div>
+    <button class="qb-fab" aria-expanded="false" aria-label="Open Q-BITS AI"><span class="qb-fab__icon" aria-hidden="true"><svg class="qb-mark-svg qb-fab__mark" viewBox="100 140 1770 1240" fill="none" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M800 1355H135V168H1071V772" stroke="#b7e4df"/><circle cx="1313" cy="772" r="242" stroke="#b7e4df"/><path d="M1157 168H1850V1355H913V772" stroke="#187f7b"/><circle cx="669" cy="772" r="242" stroke="#187f7b"/></svg></span><span class="qb-fab__text qb-fab__text--closed">Q-BITS AI</span><span class="qb-fab__text qb-fab__text--opened">Ask Q-BITS</span></button>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div id="modal-root"></div>
+</div>
+
+<script src="bundle.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="views.js"></script>
+</body></html>
