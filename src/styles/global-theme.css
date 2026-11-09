@@ -1,0 +1,53 @@
+/* App-wide teal icon palette + consistent list/table value typography.
+   Reuses the teal palette already established in the EDMS dashboard charts. */
+
+:root {
+  --app-teal-1: #003d80;
+  --app-teal-2: #007bff;
+  --app-teal-3: #0069d9;
+  --app-teal-4: #3395ff;
+  --app-teal-5: #66b0ff;
+  --app-teal-6: #99caff;
+}
+
+/* Non-semantic icons (navigation, info, neutral actions) → teal shades.
+   Semantic icons (text-danger, text-warning, text-success) are untouched
+   so meaning like delete/warning/approved still reads at a glance. */
+i.text-primary,
+.spinner-border.text-primary {
+  color: var(--app-teal-2) !important;
+}
+i.text-info {
+  color: var(--app-teal-3) !important;
+}
+i.text-secondary {
+  color: var(--app-teal-4) !important;
+}
+i.text-muted {
+  color: var(--app-teal-5) !important;
+}
+
+/* Consistent baseline font size for list/table value text. */
+table.table {
+  font-size: 0.875rem;
+}
+
+/* main.jsx/Navbar.jsx now set data-bs-theme alongside data-pc-theme so
+   Bootstrap's own dark-mode variables (bg-*-subtle, *-text-emphasis, table/
+   form/link colors — previously dead code, since nothing ever set
+   data-bs-theme) activate too. style.css loads [data-bs-theme=dark] AFTER
+   style-preset.css's [data-pc-theme=dark], and both define the six
+   properties below, so — being later in the cascade at equal specificity —
+   Bootstrap's plain grey would otherwise win over the app's navy dark
+   palette. This file loads last of all (bundled via this JS import), so
+   re-asserting the app's original values here keeps them on top while every
+   other Bootstrap dark variable (the *-subtle/*-emphasis/tertiary/link ones
+   neither file previously touched) still comes through untouched. */
+[data-pc-theme="dark"] {
+  --bs-body-bg: #131920;
+  --bs-body-bg-rgb: 19, 25, 32;
+  --bs-body-color: #bfbfbf;
+  --bs-body-color-rgb: 191, 191, 191;
+  --bs-border-color: rgb(47.5, 62.5, 80);
+  --bs-heading-color: #fafafa;
+}

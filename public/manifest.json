@@ -1,0 +1,24 @@
+{
+  "name": "QBITS ERP",
+  "short_name": "QBITS-ERP",
+  "description": "AI-powered ERP system to streamline your business operations.",
+  "start_url": "/index.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#335390",
+  "icons": [
+    {
+      "src": "/QBITS_ICON_WHITE.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/QBITS_ICON_WHITE.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

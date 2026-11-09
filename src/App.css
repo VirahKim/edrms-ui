@@ -1,0 +1,120 @@
+/* #root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+} */
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+/* 
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+} */
+
+/* Zoom pulse animation for preloader image */
+@keyframes zoom-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .zoom-pulse {
+    animation: zoom-pulse 2.5s ease-in-out infinite;
+    transform-origin: center;
+    display: inline-block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoom-pulse {
+    animation: none;
+  }
+}
+
+/* WhatsApp Fullscreen Mode */
+body.whatsapp-fullscreen .pc-sidebar,
+body.whatsapp-fullscreen .pc-header,
+body.whatsapp-fullscreen .pc-footer {
+  display: none !important;
+}
+
+body.whatsapp-fullscreen .pc-container {
+  margin-left: 0 !important;
+  padding: 0 !important;
+}
+
+body.whatsapp-fullscreen .pc-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Reduce gap between fixed navbar and page content */
+.pc-container .pc-content {
+  padding-top: 10px;
+}
+
+.page-header {
+  min-height: 40px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.pc-container .page-header + .row {
+  padding-top: 10px;
+}
+
+.pc-container .page-header + .pc-content {
+  padding-top: 24px;
+}
+
+/* Q-Bits brand teal utilities */
+.bg-brand-subtle { background-color: rgba(2, 115, 92, 0.12) !important; }
+.text-brand { color: #007bff !important; }
+.btn-link-brand {
+  color: #007bff !important;
+  background: transparent;
+  border: none;
+  text-decoration: none;
+  padding: 0;
+}
+.btn-link-brand:hover { color: #003d80 !important; text-decoration: underline; }
+
+/* Small screens: keep reduced but prevent overlap */
+@media (max-width: 1024px) {
+  .pc-container .pc-content {
+    padding-top: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
