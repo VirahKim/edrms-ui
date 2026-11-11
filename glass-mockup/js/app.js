@@ -274,7 +274,7 @@ function encodeRoute(h) {
   return '#' + seg.join('-');
 }
 /* Names used by Back links: "Back to Registries & Files" */
-const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'File Census', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
@@ -308,7 +308,7 @@ function render() {
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
   if (parts[0] !== 'file') ui.curFile = null; // entering a file again starts on the folio table
   let view, nav = 'dashboard', after = null;
-  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
+  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
     case 'files': view = viewFiles(q); nav = 'files'; break;
     case 'file': {
@@ -323,14 +323,14 @@ function render() {
     case 'queue': view = viewQueue(q); nav = 'queue'; break;
     case 'upload': view = viewUpload(q); nav = 'upload'; break;
     case 'ai': view = viewAI(); nav = 'ai'; after = () => $('#aip-q')?.focus(); break;
-    case 'inward': view = viewInward(); nav = 'more'; break;
-    case 'outward': view = viewOutward(); nav = 'more'; break;
+    case 'inward': view = viewInward(); nav = 'inward'; break;
+    case 'outward': view = viewOutward(); nav = 'outward'; break;
     case 'movements': view = viewMovements(); nav = 'more'; break;
     case 'bringup': view = viewBringup(); nav = 'bringup'; break;
-    case 'access': view = viewAccess(); nav = 'more'; break;
-    case 'physical': view = viewPhysical(q); nav = 'more'; break;
+    case 'access': view = viewAccess(); nav = 'access'; break;
+    case 'physical': view = viewPhysical(q); nav = 'physical'; break;
     case 'records': view = viewRecords(q); nav = 'more'; break;
-    case 'census': view = viewCensus(q); nav = 'more'; break;
+    case 'census': view = viewCensus(q); nav = 'physical'; break;
     case 'senders': view = viewSenders(); nav = 'more'; break;
     case 'grid': view = viewGrid({ id: parts[1] }); nav = 'files'; break;
     case 'tutorial': view = viewTutorial(parts[1]); nav = 'more'; break;
@@ -398,6 +398,8 @@ function sidebar(active) {
     <div class="side-scroll">
       <div class="side-h">Navigation</div>
       <nav class="nav">${items.map(([k, h, l, c, i]) => k === 'request' ? `<button type="button" data-act="requestAny">${ic(i)} ${l}</button>` : `<a href="${h}" class="${active === k ? 'on' : ''}" ${active === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>
+      ${r === 'registry' ? `<div class="side-h">Registry</div>
+      <nav class="nav" aria-label="Registry pages">${REG_PAGES().map(([k, h, l, c, i]) => `<a href="${h}" class="${active === k ? 'on' : ''}" ${active === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>` : ''}
       <div class="side-h">Recent Notifications</div>
       ${recent.length ? recent.map(notifCard).join('') : '<p class="muted" style="margin:0 8px;font-size:14px">You are all caught up.</p>'}
     </div>
@@ -423,6 +425,9 @@ function navItems() {
     reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
     ['settings', '#/settings', 'Settings', 0, 'settings']];
 }
+/* Registry pages in the side navigation (moved out of Settings) */
+const REG_PAGES = () => [['inward', '#/inward', 'Inward Register', landingDocs().length, 'inboxIn'], ['outward', '#/outward', 'Outward Register', 0, 'send'],
+  ['access', '#/access', 'Access Requests', S.access.filter(a => a.status === 'open').length, 'lock'], ['physical', '#/physical', 'Physical Files', 0, 'archive']];
 function topNav() {
   const items = navItems();
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
@@ -516,7 +521,7 @@ function tiles() {
     tile('send', 'Outward Register', 'Dispatch completed letters', '#/outward', S.files.flatMap(f => f.docs).filter(d => d.kind === 'response' && !S.dispatch[d.id]).length),
     tile('inboxIn', 'Inward Register', 'Receive and register mail', '#/inward', landingDocs().length),
     tile('enter', 'Files Requested', 'Letter & File Access', '#/access', S.access.filter(a => a.status === 'open').length),
-    tile('archive', 'Physical Files', 'Paper custody', '#/physical', S.handovers.filter(h => h.status === 'SENT' || h.status === 'RETURNED').length),
+    tile('archive', 'Physical Files', 'File location', '#/physical', S.handovers.filter(h => h.status === 'SENT' || h.status === 'RETURNED').length),
     tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
   const mk = r === 'marking';
@@ -1118,6 +1123,11 @@ function viewGrid(q) {
    ========================================================================== */
 const HO_STATUS = { SENT: ['Waiting for receipt', 't-amber'], RECEIVED: ['With holders', 't-blue'], RETURNED: ['Returned, to acknowledge', 't-violet'], CLOSED: ['Closed', 't-neutral'] };
 const hoWith = h => h.toKind === 'room' ? esc(h.room) : `${avatar(h.to)} ${esc(person(h.to).name)}`;
+/* Physical Files: one page with File location and File Census tabs */
+function physHead(which, sub, right = '') {
+  return pageHead({ crumbs: [['Physical Files', which === 'census' ? '#/physical' : ''], ...(which === 'census' ? [['File Census']] : [])], title: 'Physical Files', sub, right }) +
+    `<div class="queue-switch seg solid" role="tablist" aria-label="Physical Files">${[['location', '#/physical', 'File location', 'archive'], ['census', '#/census', 'File Census', 'checkCircle']].map(([k, h, l, i]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}</button>`).join('')}</div>`;
+}
 function viewPhysical(q) {
   const tab = q.tab || 'open';
   const tabs = [['open', 'Open', x => x.status !== 'CLOSED'], ['SENT', 'Waiting for receipt', x => x.status === 'SENT'], ['RECEIVED', 'With holders', x => x.status === 'RECEIVED'], ['RETURNED', 'Returned, to acknowledge', x => x.status === 'RETURNED'], ['CLOSED', 'Closed', x => x.status === 'CLOSED']];
@@ -1126,7 +1136,7 @@ function viewPhysical(q) {
   const act = h => h.status === 'SENT' ? `<button class="btn btn-primary btn-xs" data-act="hoReceive" data-id="${h.id}">${ic('check')} Acknowledge receipt</button>`
     : h.status === 'RECEIVED' ? `<button class="btn btn-light btn-xs" data-act="hoReturn" data-id="${h.id}">${ic('undo')} Return to records</button>`
     : h.status === 'RETURNED' ? `<button class="btn btn-primary btn-xs" data-act="hoAckReturn" data-id="${h.id}">${ic('checkCircle')} Acknowledge return</button>` : '';
-  return pageHead({ crumbs: [['Physical Files']], title: 'File Movement Register', sub: 'Physical files, and single documents taken out of them, and where they are. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.', right: `<button class="btn btn-white" data-act="handOver">${ic('send')} Hand over</button>` }) + `
+  return physHead('location', 'Where every physical file, and any single document taken out of it, is now. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.', `<button class="btn btn-white" data-act="handOver">${ic('send')} Hand over</button>`) + `
     <section class="panel glass dense"><div class="tabs">${tabs.map(([k, l, fn]) => `<button class="${pick[0] === k ? 'on' : ''}" data-href="#/physical?tab=${k}">${l} <span class="n">${S.handovers.filter(fn).length}</span></button>`).join('')}</div>
     ${simpleTable(['Physical file', 'Moving', 'Document', 'Status', 'With', 'Sent', 'Returned'], list.map(h => { const f = getFile(h.fileId); const d = h.docId && getDoc(f, h.docId);
       return `<tr><td>${fileLink(f)}<small class="sub">${esc(f.location)}</small></td><td>${h.what === 'file' ? 'Whole file' : 'Single document'}</td><td>${d ? `Folio ${esc(d.folio)} · ${esc(d.title)}` : '<span class="muted">All documents in the file</span>'}</td>
@@ -1227,7 +1237,7 @@ function viewCensus(q) {
         return `<tr><td class="mono">${esc(f.ref)}</td><td><a href="#/file/${f.id}"><b>${esc(f.name)}</b></a></td><td>${esc(it.recorded)}</td><td><span class="chip ${CEN_STATUS[it.status][1]}">${CEN_STATUS[it.status][0]}</span>${it.remarks ? `<small class="sub">${esc(it.remarks)}</small>` : ''}</td><td>${esc(it.foundAt || '—')}</td><td>${esc(it.officer || '—')}</td>
           <td>${cur.closed ? '' : `<div class="row-btns"><button class="btn btn-light btn-xs" data-act="censusMark" data-c="${cur.id}" data-i="${i}" data-k="FOUND">${ic('check')} Found</button><button class="btn btn-light btn-xs" data-act="censusMark" data-c="${cur.id}" data-i="${i}" data-k="MISSING">${ic('x')} Missing</button></div>`}</td></tr>`; }), 'No files in this census.')}</section>`;
   })() : `<section class="panel glass"><div class="empty">${ic('checkCircle')}<div>Choose a census to check files.</div></div></section>`;
-  return pageHead({ crumbs: [['Files & Records', '#/records'], ['File census']], title: 'File census', sub: 'Check every physical file against its recorded location. Missing files are reported.' }) + `
+  return physHead('census', 'Check every physical file against its recorded location. Missing files are reported.') + `
     <div class="census">
       <aside class="panel glass">
         <div class="field"><label for="cn-title">Title</label><input class="input" id="cn-title" placeholder="e.g. Room 3 census, October" value="${esc(C.title)}" data-cn="title"></div>
@@ -1465,7 +1475,7 @@ function viewSettings() {
     ['bell', 'Notifications', 'Everything sent to you', 'openNotifs', unread()],
     ['book', 'User Guide', 'How the system works', '#/guide'],
     ['swap', 'Movement Sheets', 'Where every file has been', '#/movements'],
-    ...(reg ? [['inboxIn', 'Inward Register', 'Mail received and filed', '#/inward', landingDocs().length], ['send', 'Outward Register', 'Dispatch completed letters', '#/outward'], ['lock', 'Access Requests', 'Read-only, with expiry', '#/access', S.access.filter(a => a.status === 'open').length], ['archive', 'Physical Files', 'Paper custody', '#/physical'], ['layers', 'Files & Records', 'Open, close, dispose', '#/records'], ['checkCircle', 'File Census', 'Check files in racks', '#/census'], ['users', 'Mail Senders', 'Names used in the mail registers', '#/senders']] : []),
+    ...(reg ? [['layers', 'Files & Records', 'Open, close, dispose', '#/records'], ['users', 'Mail Senders', 'Names used in the mail registers', '#/senders']] : []),
   ];
   return pageHead({ crumbs: [['Settings']], title: 'Settings', sub: 'Your tools, profile and appearance.' }) + `
   <section class="panel glass" style="max-width:820px">

@@ -1527,3 +1527,15 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 .folio-tbl td:nth-child(5) { white-space: normal; min-width: 120px; }
 .folio-panel .seg.icons { margin-left: 4px; }
 .folio-panel.is-pages { padding-bottom: 16px; }
+/* Overview header: greeting sits to the right of the logo */
+.dash-hero { grid-template-rows: auto; align-items: center; }
+.dash-hero .disc-big { grid-column: 1; grid-row: 1; margin: 0; align-self: center; }
+.dash-hero .dash-hello { grid-column: 2; grid-row: 1; margin: 0; padding: 0; align-self: center; }
+.dash-hero .cover-stack { grid-row: 1; }
+@media (max-width: 760px) {
+  .dash-hero { grid-template-columns: auto minmax(0, 1fr); column-gap: 16px; padding: 6px 0 10px; }
+  .dash-hero .disc-big { width: 92px; height: 92px; font-size: 6px; }
+  .dash-hero .disc-big img { width: 38px; }
+  .dash-hello h1 { font-size: 24px; }
+  .dash-hello p { font-size: 13.5px; }
+}

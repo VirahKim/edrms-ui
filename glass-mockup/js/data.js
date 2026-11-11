@@ -279,7 +279,7 @@ const GUIDE = [
   { id: 'start', title: 'Getting started', icon: 'info', body: `
     <p>EDRMS keeps the Ministry's files and letters the way the paper registry does, so every file has a cover, a movement sheet and numbered folios.</p>
     <h4>Signing in</h4><p>Sign in with your Q-BITS ERP account or Microsoft. Your role (Registry, Marking or Action Officer), department and what you can see come from the ERP.</p>
-    <h4>Finding your way</h4><ul><li><b>Overview</b> – your tiles, Recent Notifications and AI Suggestions. It is the only page with the top navigation.</li><li><b>Side navigation</b> – Q-BITS AI, then the same items as the top navigation: Overview, Registries &amp; Files, My Queue, Bring Up Diary (Registry) or Request file (Marking and Action Officers) and Settings. Everything else is under <b>Settings › Pages and tools</b>.</li><li><b>Registries &amp; Files</b> – every registry and file, in grid or list view, with drafts.</li><li><b>My Queue</b> – two tabs: <b>My Queue</b> (everything assigned to you) and <b>File Movement</b> (files by stage).</li><li><b>Tutorial mode</b> – in this guide, a step-by-step walkthrough of the main journeys with screenshots.</li></ul>
+    <h4>Finding your way</h4><ul><li><b>Overview</b> – your tiles, Recent Notifications and AI Suggestions. It is the only page with the top navigation.</li><li><b>Side navigation</b> – Q-BITS AI, then the same items as the top navigation: Overview, Registries &amp; Files, My Queue, Bring Up Diary (Registry) or Request file (Marking and Action Officers) and Settings. The Registry also gets a <b>Registry</b> section: Inward Register, Outward Register, Access Requests and Physical Files (with File Census as a tab). Everything else is under <b>Settings › Pages and tools</b>.</li><li><b>Registries &amp; Files</b> – every registry and file, in grid or list view, with drafts.</li><li><b>My Queue</b> – two tabs: <b>My Queue</b> (everything assigned to you) and <b>File Movement</b> (files by stage).</li><li><b>Tutorial mode</b> – in this guide, a step-by-step walkthrough of the main journeys with screenshots.</li></ul>
     <h4>Help</h4><p>The <b>Q-BITS AI</b> button (bottom right) opens AI chat, screen capture for reporting problems, and this guide.</p>` },
   { id: 'journey', title: 'How a file moves', icon: 'route', body: `
     <p>Files always pass back through the Registry between officers:</p>
@@ -387,7 +387,7 @@ const TUTORIAL = [
     { id: 'p-bring', title: 'Bring Up Diary', text: 'Set a date for a file to come back to someone. Due and overdue bring-ups show on the Overview.', path: '/bringup', button: 'Add bring-up' },
     { id: 'p-access', title: 'Files Requested', text: 'Officers ask for files they cannot open. Grant read-only access with an expiry date, or decline.', path: '/access', target: '.panel .tbl' },
     { id: 'p-records', title: 'Open, close or dispose of a file', text: 'Each request is sent for approval before it takes effect.', path: '/records', target: '.rec-form' },
-    { id: 'p-census', title: 'File census', text: 'Check every paper file against where it should be. Mark each one found or missing.', path: '/census', target: '.census > aside' },
+    { id: 'p-census', title: 'File census', text: 'In Physical Files, open the File Census tab. Check every paper file against where it should be and mark each one found or missing.', path: '/census', target: '.census > aside' },
   ] },
 ];
 
