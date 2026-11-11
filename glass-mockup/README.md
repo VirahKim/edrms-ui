@@ -22,7 +22,7 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 - **Dark mode contrast:** every screen for all three officers is checked by pixel (text against what is actually behind it); all text meets 4.5:1, large text 3:1.
 - **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, File Movements, and for the Registry the Inward and Outward Registers and Access Requests.
 - **Marking and Action Officers can add files too**: New File and Upload are on Registries & Files, Upload Document is one of their tiles, and an open file has Add document.
-- The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 3840px wide, darkened in dark mode).
+- The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 5262 × 2949, darkened in dark mode).
 
 ### All Files
 - **Registries** (formerly Folders) are shown at the top. Click one to see only its files.
