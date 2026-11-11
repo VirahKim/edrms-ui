@@ -152,7 +152,7 @@ try { theme = localStorage.getItem('edrms-theme') || 'light'; } catch (e) { /* s
 document.documentElement.dataset.theme = theme;
 try { if (localStorage.getItem('edrms-side-mini') === '1') document.body.classList.add('side-mini'); } catch (e) { /* storage blocked */ }
 const freshUpload = () => ({ tab: 'single', step: 1, fileId: '', files: [], metas: [], idx: 0, err: '', phase: 0 });
-const ui = {
+const ui = { navStack: [location.hash || "#/"],
   loginRole: 'registry',
   files: { q: '', sort: 'recent', show: 'all', reg: 'all', view: 'grid' },
   dash: { tab: 'all', q: '', stage: '', filter: false, dir: 'desc' },
@@ -272,9 +272,17 @@ function encodeRoute(h) {
   const key = ROUTE_PARAM[parts[0]]; if (key && q.get(key)) seg.push(q.get(key).replace(/_/g, ''));
   return '#' + seg.join('-');
 }
+/* Names used by Back links: "Back to Registries & Files" */
+const SCREEN_NAME = { files: 'Registries & Files', routing: 'File Routing', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'File Movements', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'File Census', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+function screenName(h) {
+  const { parts } = parseHash(h);
+  if (!parts.length) return 'Overview';
+  if (parts[0] === 'file' || parts[0] === 'grid') { const f = getFile(parts[1]); if (f) return parts[0] === 'grid' ? `File grid – ${f.name}` : f.name; }
+  return SCREEN_NAME[parts[0]] || 'previous page';
+}
 function unslug(v) { return Object.keys(STAGES).find(k => k.replace(/_/g, '') === v) || v; }
-function parseHash() {
-  const raw = location.hash.replace(/^#/, '');
+function parseHash(h) {
+  const raw = (h == null ? location.hash : h).replace(/^#/, '');
   if (raw.startsWith('/')) { const [path, qs] = raw.split('?'); return { parts: path.split('/').filter(Boolean), q: Object.fromEntries(new URLSearchParams(qs || '')) }; }
   const seg = raw.split('-').filter(Boolean);
   let name = seg[0] || 'overview';
@@ -289,6 +297,7 @@ let lastPath = null, curNav = 'dashboard';
 const go = h => { const e = encodeRoute(h); if (location.hash === e) render(); else location.hash = e; };
 
 function render() {
+  closeAcct();
   document.body.classList.remove('nav-open');
   const { parts, q } = parseHash();
   const root = $('#app');
@@ -333,7 +342,7 @@ function render() {
   watchPages();
   if (after) requestAnimationFrame(after);
 }
-window.addEventListener('hashchange', () => { ui.sel = null; ui.editing = null; render(); });
+window.addEventListener('hashchange', () => { ui.sel = null; ui.editing = null; const st = ui.navStack || (ui.navStack = []), h = location.hash; if (st.length > 1 && st[st.length - 2] === h) st.pop(); else if (st[st.length - 1] !== h) st.push(h); render(); });
 
 /* ==========================================================================
    Login
@@ -409,7 +418,8 @@ function notifCard(n) {
 }
 function topNav() {
   const items = [['dashboard', '#/', 'Overview'], ['files', '#/files', 'Registries & Files'], ['routing', '#/routing', 'File Routing'], ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length], ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length], ['settings', '#/settings', 'Settings']];
-  return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
+  const req = role() !== 'registry' ? `<button type="button" data-act="requestAny">${ic('filePlus')} Request file</button>` : '';
+  return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}${req}</nav>`;
 }
 function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = null, meta = '', hero = '' }) {
   return `<section class="phead glass ${hero ? 'is-hero' : ''}">
@@ -419,12 +429,13 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
         <button class="ph-ic" data-act="palette" aria-label="Search">${ic('search')}</button>
         ${themeToggle()}
         <button class="ph-ic" data-act="openNotifs" aria-label="Notifications">${ic('bell')}${unread() ? `<span class="badge">${unread()}</span>` : ''}</button>
-        <button class="ph-ic me" data-act="switchRole" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)} · ${ROLE_LABEL[role()]}">${avatar(meId())}</button>
+        <button class="ph-ic me" data-act="acctMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)}">${avatar(meId())}</button>
       </div>
     </div>
     ${hero || ''}
     ${hero ? '' : `<div class="phead-main">${lead}
-      <div class="phead-titles">${back ? `<a class="back" href="${back[1]}">${ic('chevL')} ${esc(back[0])}</a>` : ''}<h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
+      <div class="phead-titles">${back ? `<a class="back" href="${back[1]}">${ic('chevL')} ${esc(back[0])}</a>` : (() => { const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
+        return `<button type="button" class="back" data-act="goBack" data-fallback="${esc(fb)}">${ic('chevL')} Back to ${esc(screenName(prev || encodeRoute(fb)))}</button>`; })()}<h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
       ${right ? `<div class="phead-right">${right}</div>` : ''}
     </div>`}
   </section>`;
@@ -481,7 +492,7 @@ function quickActions() {
 const roleQueue = () => role() === 'marking' ? filesToMark() : filesToAct();
 const roleDone = () => S.files.filter(f => !f.draft && (role() === 'marking' ? ['returned_marking', 'action', 'returned_action', 'filed'] : ['returned_action', 'filed']).includes(f.stage) && f.movements.some(m => m.to === meId()));
 /* Home-page tile artwork (supplied SVGs); other tiles fall back to the drawn icon */
-const TILE_ART = { upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup' };
+const TILE_ART = { upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup', pen: 'to-act', checkCircle: 'to-act', check: 'acted' };
 const tile = (icon, title, sub, target, badge) => {
   const art = TILE_ART[icon];
   const inner = `${art ? `<span class="tile-ic art"><img src="assets/tiles/${art}.svg" alt=""></span>` : `<span class="tile-ic"><i></i><span>${ic(icon)}</span></span>`}${badge ? `<span class="badge tile-badge">${badge}</span>` : ''}<b>${title}</b><span class="sub">${sub}</span>`;
@@ -556,11 +567,13 @@ function roleFilesPanel() {
 }
 function viewDashboard() {
   const r = role(), p = me();
-  const where = r === 'marking' ? esc(p.title) : esc(regName(p.registry));
+  const h = new Date().getHours(), hi = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const dept = (p.dept || regName(p.registry)).replace(/^Ministry of Health\s*[-–]\s*/i, '');
+  const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(esc).join(' <span class="sep" aria-hidden="true"></span> ');
   const recent = [...dashFiles()].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3);
   const hero = `<div class="dash-hero">
       <div class="disc-big">${MOH_LOCKUP}</div>
-      <div class="dash-hello"><h1>Hello, ${esc(p.name)}</h1><p>${where} <span class="sep" aria-hidden="true"></span> ${ROLE_LABEL[r]}</p></div>
+      <div class="dash-hello"><h1>${hi}, ${esc(p.name)}</h1><p>${line}</p></div>
       <div class="cover-stack" aria-hidden="true">${recent.map((f, k) => `<a href="#/file/${f.id}" tabindex="-1" class="cs cs${k}">${coverHTML(f, 6)}</a>`).reverse().join('')}</div>
     </div>`;
   const notes = myNotifs().slice(0, 3);
@@ -670,7 +683,7 @@ function viewFiles(q) {
   const letters = term ? S.files.flatMap(f => f.docs.filter(d => [d.title, d.from, d.folio, d.edms, d.subject || ''].join(' ').toLowerCase().includes(term)).map(d => ({ f, d }))) : [];
   const total = S.files.reduce((a, f) => a + liveDocs(f).length, 0);
   const nFiles = S.files.filter(f => !f.draft).length;
-  const regs = REGISTRIES.map(r => ({ ...r, files: S.files.filter(f => f.registry === r.id && !f.draft) })).filter(r => !term || r.name.toLowerCase().includes(term) || r.files.some(f => files.includes(f)));
+  const regs = REGISTRIES.map(r => ({ ...r, files: S.files.filter(f => f.registry === r.id && !f.draft) })).filter(r => F.reg === 'all' || r.id === F.reg).filter(r => !term || r.name.toLowerCase().includes(term) || r.files.some(f => files.includes(f)));
   const showRegs = ['all', 'registries'].includes(F.show), showFiles = F.show !== 'registries';
   const isReg = role() === 'registry';
   const regsGrid = `<div class="folders">${regs.map(r => `<button class="folder tint-${r.tint} ${F.reg === r.id ? 'on' : ''}" data-act="pickReg" data-id="${r.id}">
@@ -691,11 +704,11 @@ function viewFiles(q) {
       <label class="lbl-select">${ic('building')}<select data-change="filesReg" aria-label="Registry"><option value="all">All registries</option>${REGISTRIES.map(r => `<option value="${r.id}" ${F.reg === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}</select></label>
       <div class="seg icons" role="group" aria-label="View">${[['grid', 'gridView', 'Grid view'], ['list', 'list', 'List view']].map(([k, i, l]) => `<button class="${F.view === k ? 'on' : ''}" data-act="filesView" data-k="${k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
     </div>
-    ${showRegs ? `<div class="section-h"><h2>Registries</h2><span class="n">${regs.length}</span></div>${F.view === 'grid' ? regsGrid : regsList}` : ''}
+    ${showRegs ? `<div class="section-h"><h2>Registries</h2><span class="n">${regs.length}</span>${F.reg !== 'all' ? `<div class="right"><button class="btn btn-glass btn-sm" style="color:#fff" data-act="pickReg" data-id="all">${ic('folders')} View all registries</button></div>` : ''}</div>${F.view === 'grid' ? regsGrid : regsList}` : ''}
     ${letters.length && showFiles ? `<div class="section-h"><h2>Letters</h2><span class="n">${letters.length}</span></div>
       <div class="results" style="margin-bottom:28px">${letters.slice(0, 10).map(({ f, d }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} · ${esc(d.from)} · in <b style="display:inline">${esc(f.name)}</b></small></div><small class="mono" style="margin-left:auto">${esc(d.edms)}</small></a>`).join('')}</div>` : ''}
     ${showFiles ? `<div class="section-h"><h2>${F.show === 'drafts' ? 'Draft files' : F.reg === 'all' ? 'Files' : esc(regName(F.reg))}</h2><span class="n">${files.length}</span>
-      ${F.reg !== 'all' ? `<div class="right"><button class="btn btn-glass btn-sm" style="color:#fff" data-act="pickReg" data-id="all">${ic('x')} All registries</button></div>` : ''}</div>
+      ${F.reg !== 'all' && !showRegs ? `<div class="right"><button class="btn btn-glass btn-sm" style="color:#fff" data-act="pickReg" data-id="all">${ic('x')} All registries</button></div>` : ''}</div>
       ${files.length ? (F.view === 'grid' ? `<div class="fgrid">${files.map(fileCard).join('')}</div>` : filesTable(files)) : `<div class="card empty">${F.show === 'drafts' ? 'No draft files. Use <b>Save as draft</b> in New File to keep one for later.' : 'No files match.'}</div>`}` : ''}`;
 }
 
@@ -747,7 +760,7 @@ function viewFile(f, q) {
   const meta = `${stageChip(f.stage)}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
   const who = f.withUser === 'registry' ? '<span class="muted">In the Registry</span>' : `${avatar(f.withUser)}<span>With <b>${esc(person(f.withUser).name)}</b></span>`;
   const acts = actionButtons(f);
-  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name]], back: ['Registries & Files', '#/files'], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
+  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name]], back: ['Back to Registries & Files', '#/files'], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
     <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who"><button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>${who}</div></div>
     ${f.draft ? `<div class="instruction">${ic('fileEdit')}<div><b>This file is a draft.</b> Finish the cover and details, then press <b>Open file</b> to start using it. Draft files are only listed under <b>Show → Draft files</b>.</div></div>` : ''}
     ${f.instruction && ['returned_marking', 'action'].includes(f.stage) ? `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}</div></div>` : ''}
@@ -990,7 +1003,7 @@ function viewQueue(q) {
   let body = '';
   if (tab === 'act') body = `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.');
   if (tab === 'notes') body = notes.length ? `<div class="results">${notes.map(({ f, d, s }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}" style="border-left:8px solid ${stickyCol(s.color)}"><span class="pg">${ic('sticky')}</span><div><b>${esc(s.text)}</b><small>From ${esc(person(s.by).name)} · Folio ${esc(d.folio)} in ${esc(f.name)} · ${ago(s.at)}</small></div></a>`).join('')}</div>` : '<div class="card empty">No sticky notes addressed to you.</div>';
-  if (tab === 'approvals') body = reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>For ${esc(f.name)} · ${esc(x.reason)} · ${ago(x.at)}</small></div>
+  if (tab === 'approvals') body = reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>${f ? `For ${esc(f.name)} · ` : ''}${esc(x.reason)} · ${ago(x.at)}</small></div>
       <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : `<div class="card empty">No requests.${r === 'action' ? ' Use <b>Request files</b> inside a file that is with you.' : ''}</div>`;
   if (tab === 'landing') body = `<p class="muted" style="margin:0 0 14px">Documents recently uploaded, still awaiting OCR/classification or validation.</p>` + (landingDocs().length ? `<div class="results">${landingDocs().map(({ f, d }) => `<div class="result card"><span class="pg">${ic('file')}</span><div data-href="#/file/${f.id}/doc/${d.id}" style="cursor:pointer"><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} · ${esc(d.from)} · into ${esc(f.name)} · ${ago(d.date)}</small></div><span style="margin-left:auto">${r === 'registry' ? `<button class="btn btn-primary btn-sm" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate &amp; add to file</button>` : '<span class="chip t-violet">Processing</span>'}</span></div>`).join('')}</div>` : '<div class="card empty">The landing queue is empty.</div>');
   if (tab === 'subs') body = subs.length ? `<div class="results">${subs.map(({ f, d }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} in ${esc(f.name)} · ${fmtDT(d.date)}</small></div><span style="margin-left:auto" class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></a>`).join('')}</div>` : '<div class="card empty">You have not submitted anything yet.</div>';
@@ -1065,7 +1078,7 @@ function gridRows(f) {
 function viewGrid(q) {
   const f = getFile(q.file || q.id) || S.files.find(x => !x.draft && x.movements.length);
   const rows = gridRows(f);
-  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name, `#/file/${f.id}`], ['File grid']], title: 'File grid', sub: `${esc(f.name)} · ${esc(f.ref)}`, back: ['Back to the file', `#/file/${f.id}`], right: `<button class="btn btn-white" data-act="gridExcel" data-id="${f.id}">${ic('download')} Download Excel</button>` }) + `
+  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name, `#/file/${f.id}`], ['File grid']], title: 'File grid', sub: `${esc(f.name)} · ${esc(f.ref)}`, back: [`Back to ${f.name}`, `#/file/${f.id}`], right: `<button class="btn btn-white" data-act="gridExcel" data-id="${f.id}">${ic('download')} Download Excel</button>` }) + `
     <section class="panel glass dense">${simpleTable(['Date', 'Folio', 'Document', 'Step', 'Officer to see', 'Initials', 'Acknowledged'], rows.map(r => `<tr><td>${fmtDT(r.date)}</td><td class="mono">${esc(r.folio)}</td><td>${esc(r.doc)}</td><td>${r.step}</td><td>${esc(r.to)}</td><td class="mono">${esc(r.initials)}</td><td>${r.ack === 'Yes' ? `<span class="chip t-green">${ic('check')} Yes</span>` : '—'}</td></tr>`), 'Nothing has been marked on this file yet.')}</section>`;
 }
 
@@ -1383,7 +1396,7 @@ function viewGuide() {
 const tutShot = st => `assets/tutorial/${st.id}.webp`;
 function viewTutorial(id) {
   const J = TUTORIAL.find(j => j.id === id) || TUTORIAL[0], n = TUTORIAL.indexOf(J), next = TUTORIAL[n + 1];
-  return pageHead({ crumbs: [['User Manual', '#/guide'], ['User Tutorial']], title: 'User Tutorial', sub: 'The main journeys in EDRMS, with a screenshot of every step.', back: ['Back to the User Manual', '#/guide'] }) + `
+  return pageHead({ crumbs: [['User Manual', '#/guide'], ['User Tutorial']], title: 'User Tutorial', sub: 'The main journeys in EDRMS, with a screenshot of every step.', back: ['Back to User Manual', '#/guide'] }) + `
     <div class="tut-page">
       <nav class="tut-nav glass" aria-label="Journeys">${TUTORIAL.map(j => `<a href="#/tutorial/${j.id}" class="${j === J ? 'on' : ''}" ${j === J ? 'aria-current="page"' : ''}><span class="mi">${ic(j.icon)}</span><span><b>${esc(j.title)}</b><small>${esc(j.who)} · ${plural(j.steps.length, 'step')}</small></span></a>`).join('')}</nav>
       <div class="tut-main">
@@ -1671,6 +1684,41 @@ function _oldDownloadDoc(name, inner) {
   a.download = (name.replace(/[^\w\- ]+/g, '').trim().slice(0, 60) || 'response') + '.doc';
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
 }
+/* Account menu on the top-right avatar */
+const workEmail = p => `${p.name.toLowerCase().replace(/\s+/g, '.')}@health.go.ke`;
+const deptLine = p => { const d = (p.dept || regName(p.registry)); return /ministry of health/i.test(d) ? d : `Ministry of Health - ${d}`; };
+function openAcct(btn) {
+  const p = me(), m = document.createElement('div');
+  m.id = 'acct-menu'; m.className = 'acct-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', 'Account');
+  m.innerHTML = `<div class="acct-h">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span><small>${ic('building')} ${esc(deptLine(p))}</small></div></div>
+    <button role="menuitem" data-act="myProfile"><span class="i">${ic('user')}</span><span>My Profile</span></button>
+    <button role="menuitem" data-act="changePw"><span class="i">${ic('settings')}</span><span>Change Password</span></button>
+    <button role="menuitem" data-act="logout"><span class="i">${ic('lock')}</span><span>Logout</span></button>`;
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 10) + 'px'; m.style.right = Math.max(12, innerWidth - r.right) + 'px';
+  btn.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
+}
+function closeAcct(focusBtn) { const m = $('#acct-menu'); if (!m) return; m.remove(); const b = $('.ph-ic.me'); if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBtn) b.focus(); } }
+function profileModal() {
+  const p = me();
+  modal(`${mHead('user', 'My Profile', 'Your details as other officers see them.')}
+    <div class="modal-b"><div class="profile-card">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span></div></div>
+      <dl class="kv">${[['Department', deptLine(p)], ['Role', ROLE_LABEL[role()]], ['Registry', regName(p.registry)], ['Work email', workEmail(p)]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>
+    <div class="modal-f"><button class="btn btn-primary" data-act="close">Done</button></div>`);
+}
+function passwordModal() {
+  const f = (id, l, ac) => `<div class="field"><label for="${id}">${l}</label><input class="input" type="password" id="${id}" autocomplete="${ac}"><p class="field-err" id="${id}-err" role="alert" hidden></p></div>`;
+  modal(`${mHead('lock', 'Change Password', 'Use at least 8 characters, with letters and a number.')}
+    <div class="modal-b">${f('pw-cur', 'Current password', 'current-password')}${f('pw-new', 'New password', 'new-password')}${f('pw-conf', 'Confirm new password', 'new-password')}</div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="savePw">${ic('lock')} Change password</button></div>`, '', '#pw-cur');
+}
+function requestAnyModal() {
+  const opts = S.files.filter(x => !x.draft && canSee(x) && !myQueue().includes(x)).map(x => `<option value="${x.id}">${esc(x.name)} — ${esc(x.ref)}</option>`).join('');
+  modal(`${mHead('filePlus', 'Request file', 'Ask the Registry to send you a file. They will see your reason.')}
+    <div class="modal-b"><div class="field"><label for="ra-file">File you need</label><select class="select" id="ra-file">${opts}</select></div>
+      <div class="field"><label for="ra-why">Why you need it <span class="req">*</span></label><textarea class="textarea" id="ra-why" placeholder="e.g. Need the earlier correspondence to respond to the Treasury"></textarea></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmRequestAny">${ic('send')} Send request</button></div>`, '', '#ra-file');
+}
 function requestModal(f) {
   modal(`${mHead('filePlus', 'Request files', 'Ask the Registry for more files you need in order to take action.')}
     <div class="modal-b"><div class="field"><label for="rq-file">File you need</label><select class="select" id="rq-file">${S.files.filter(x => x.id !== f.id).map(x => `<option value="${esc(x.ref)}">${esc(x.name)} — ${esc(x.ref)}</option>`).join('')}</select></div>
@@ -1876,8 +1924,18 @@ const ACT = {
   close: () => closeModal(),
   pickRole: el => { ui.loginRole = el.dataset.role; render(); },
   login: () => { S.session = ui.loginRole; save(); go('#/'); toast(`Signed in as ${me().name}`); },
-  logout: () => { S.session = null; save(); closeModal(); ui.fabOpen = false; history.replaceState(null, '', '#login'); render(); },
+  logout: () => { closeAcct(); S.session = null; save(); closeModal(); ui.fabOpen = false; history.replaceState(null, '', '#login'); render(); },
   switchRole: () => switchRoleModal(),
+  acctMenu: el => { if ($('#acct-menu')) closeAcct(); else openAcct(el); },
+  myProfile: () => { closeAcct(); profileModal(); },
+  changePw: () => { closeAcct(); passwordModal(); },
+  savePw: () => {
+    const cur = $('#pw-cur').value, nw = $('#pw-new').value, cf = $('#pw-conf').value; const err = (id, m) => { const e = $('#' + id + '-err'); e.textContent = m; e.hidden = !m; return !!m; };
+    let bad = err('pw-cur', cur ? '' : 'Enter your current password.');
+    bad = err('pw-new', nw.length >= 8 && /\d/.test(nw) && /[A-Za-z]/.test(nw) ? '' : 'Use at least 8 characters, with letters and a number.') || bad;
+    bad = err('pw-conf', cf && cf === nw ? '' : 'The two new passwords do not match.') || bad;
+    if (bad) return; closeModal(); toast('Password changed. Use the new one next time you sign in.');
+  },
   setRole: el => {
     S.session = el.dataset.role; save(); closeModal(); ui.upload = freshUpload(); ui.resp = null; ui.sel = null; ui.editing = null; ui.chat = [];
     $('#ai-panel')?.remove();
@@ -2128,6 +2186,13 @@ const ACT = {
     S.requests.unshift({ id: nid('r'), by: meId(), fileId: f.id, want: val('rq-file'), reason: why, at: now(), status: 'open' });
     notify('registry', 'Requested a file.', meId(), f.id); save(); closeModal(); render(); toast('Request sent to the Registry');
   },
+  requestAny: () => requestAnyModal(),
+  confirmRequestAny: () => {
+    const f = getFile(val('ra-file')), why = need('ra-why', 'Reason'); if (!f || !why) return;
+    S.requests.unshift({ id: nid('r'), by: meId(), fileId: null, wantId: f.id, want: f.ref, reason: why, at: now(), status: 'open' });
+    notify('registry', `Requested file ${f.ref}.`, meId(), f.id); save(); closeModal(); render(); toast('Request sent to the Registry. You will be notified when the file is sent.');
+  },
+  goBack: el => { if ((ui.navStack || []).length > 1) history.back(); else go(el.dataset.fallback || '#/'); },
   approveReq: el => { const x = S.requests.find(r => r.id === el.dataset.id); x.status = 'sent'; notify(x.by, `Requested file ${x.want} sent to you.`, meId(), x.fileId); save(); render(); toast(`Sent ${x.want} to ${person(x.by).name}`); },
   delegate: el => delegateModal(getFile(el.dataset.id)),
   confirmDelegate: el => {
@@ -2226,6 +2291,7 @@ document.addEventListener('click', e => {
     if (a.tagName === 'A' && a.getAttribute('href') && a.dataset.act === 'close') { e.preventDefault(); closeModal(); go(a.getAttribute('href')); return; }
     e.preventDefault(); ACT[a.dataset.act](a, e); return;
   }
+  if ($('#acct-menu') && !e.target.closest('#acct-menu')) closeAcct();
   if (ui.fabOpen && !e.target.closest('#fab')) setFab(false);
   const link = e.target.closest('a[href^="#/"]');
   if (link) { e.preventDefault(); if (link.closest('#overlay, #drawer')) closeModal(); go(link.getAttribute('href')); return; }
@@ -2234,6 +2300,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && S.session) { e.preventDefault(); paletteModal(); }
+  if (e.key === 'Escape' && $('#acct-menu')) { closeAcct(true); return; }
   if (e.key === 'Escape') { if (ui.editing) ACT.mnCancel(); else if (ui.fabOpen) setFab(false); else if ($('#ai-panel') && !$('#overlay')) $('#ai-panel').remove(); else closeModal(); }
   if (e.key === 'Enter' && e.target.classList?.contains('fcard')) go(e.target.dataset.href);
   if (e.key === 'Enter' && e.target.id === 'pal-q') { const a = $('#pal-list a'); if (a) { closeModal(); go(a.getAttribute('href')); } }

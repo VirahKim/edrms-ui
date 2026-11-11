@@ -9,11 +9,17 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 ## What's in it
 
 ### Overview (first page, every role)
-- A glass header with the **top navigation** (Overview · Registries & Files · File Routing · My Queue · Bring Up Diary · Settings), the Republic of Kenya / Ministry of Health logo, a greeting with registry and role, and the covers of the three most recent files.
-- **Recent Notifications** and an **AI Suggestions** card on the left. Suggestions are worked out from the files: files waiting to be routed, bring-ups due today, documents to validate, access requests, drafts. Each has a button that takes you there, and the dots switch between them.
+- A glass header with the **top navigation** (Overview · Registries & Files · File Routing · My Queue · Bring Up Diary · Settings, plus **Request file** for the Marking and Action Officers), the Republic of Kenya / Ministry of Health logo, a time-of-day greeting with the officer's name, then their title · department · Ministry of Health, and the covers of the three most recent files.
+- **Recent Notifications** and an **AI Suggestions** card on the left. Suggestions are worked out from the files: files waiting to be routed, bring-ups due today, documents to validate, access requests, drafts. Each has a button that takes you there, and the dots switch between them. On wide screens this column stays in place while the tiles and files scroll.
 - **Six large tiles** on the right, with counts. Upload, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary use the supplied tile artwork (`assets/tiles/`); the other tiles' icons are drawn to match. The Registry gets Upload Document, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary. Marking and Action Officers get their own six.
 - The Action Officer only sees their own registry.
 - The **top navigation is only on the Overview**. Every other screen has the **side navigation** with just Overview · Registries & Files · File Routing, plus search, recent notifications, and Settings and Sign out next to your name. Its collapse button shrinks it to icons on desktop and closes it on phones.
+- **Files to act on / Files I have marked or acted on** tiles use the supplied clock and double-tick icons (`assets/tiles/to-act.svg`, `acted.svg`).
+- **Request file** (Marking and Action Officers) asks the Registry for any file, with a reason; the Registry sees it under My Queue › Pending Approvals.
+- **Back to <screen>** sits above the title on every screen (the Q-BITS BackLink): it names and returns to the screen you came from, or the parent page when you arrived directly.
+- **Account menu:** the avatar at the top right opens your name, title and department, with **My Profile**, **Change Password** (checked: current password, 8+ characters with letters and a number, matching confirmation) and **Logout**. Escape or a click outside closes it.
+- **Registries & Files:** picking a registry shows only that registry, with **View all registries** to bring the rest back.
+- **Dark mode contrast:** every screen for all three officers is checked by pixel (text against what is actually behind it); all text meets 4.5:1, large text 3:1.
 - **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, File Movements, and for the Registry the Inward and Outward Registers and Access Requests.
 - **Marking and Action Officers can add files too**: New File and Upload are on Registries & Files, Upload Document is one of their tiles, and an open file has Add document.
 - The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 3840px wide, darkened in dark mode).
