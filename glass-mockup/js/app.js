@@ -434,8 +434,9 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
     </div>
     ${hero || ''}
     ${hero ? '' : `<div class="phead-main">${lead}
-      <div class="phead-titles">${back ? `<a class="back" href="${back[1]}">${ic('chevL')} ${esc(back[0])}</a>` : (() => { const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
-        return `<button type="button" class="back" data-act="goBack" data-fallback="${esc(fb)}">${ic('chevL')} Back to ${esc(screenName(prev || encodeRoute(fb)))}</button>`; })()}<h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
+      <div class="phead-titles">${(() => { const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = back ? back[1] : (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
+        const label = prev ? `Back to ${screenName(prev)}` : back ? back[0] : `Back to ${screenName(encodeRoute(fb))}`;
+        return `<button type="button" class="back" data-act="goBack" data-fallback="${esc(fb)}">${ic('chevL')} ${esc(label)}</button>`; })()}<h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
       ${right ? `<div class="phead-right">${right}</div>` : ''}
     </div>`}
   </section>`;
