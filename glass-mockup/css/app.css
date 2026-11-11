@@ -1481,3 +1481,15 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 [data-theme="dark"] .nav button:hover { background: rgba(255,255,255,.08); }
 .side-mini .sidebar .nav button svg { width: 20px; height: 20px; }
 .side-mini .sidebar .nav button { justify-content: center; font-size: 0; gap: 0; padding: 11px; }
+
+/* ---- Overview: top navigation centred in the header ---- */
+@media (min-width: 1400px) {
+  .phead.is-hero .phead-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr); align-items: center; }
+  .phead.is-hero .phead-top .topnav { grid-column: 2; margin: 0; }
+  .phead.is-hero .phead-top .ph-icons { grid-column: 3; justify-self: end; }
+}
+@media (max-width: 1399px) {
+  .phead.is-hero .phead-top { flex-wrap: wrap; }
+  .phead.is-hero .phead-top .ph-icons { margin-left: auto; }
+  .phead.is-hero .phead-top .topnav { order: 3; flex: 1 0 100%; justify-content: safe center; margin: 8px 0 0; }
+}
