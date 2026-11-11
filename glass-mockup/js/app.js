@@ -568,13 +568,12 @@ function roleFilesPanel() {
 }
 function viewDashboard() {
   const r = role(), p = me();
-  const h = new Date().getHours(), hi = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const dept = (p.dept || regName(p.registry)).replace(/^Ministry of Health\s*[-–]\s*/i, '');
-  const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(esc).join(' <span class="sep" aria-hidden="true"></span> ');
+  const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(t => `<span class="hello-part">${esc(t)}</span>`).join('<span class="sep" aria-hidden="true"></span>');
   const recent = [...dashFiles()].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3);
   const hero = `<div class="dash-hero">
       <div class="disc-big">${MOH_LOCKUP}</div>
-      <div class="dash-hello"><h1>${hi}, ${esc(p.name)}</h1><p>${line}</p></div>
+      <div class="dash-hello"><h1>Hello, ${esc(p.name)}</h1><p class="hello-line">${line}</p></div>
       <div class="cover-stack" aria-hidden="true">${recent.map((f, k) => `<a href="#/file/${f.id}" tabindex="-1" class="cs cs${k}">${coverHTML(f, 6)}</a>`).reverse().join('')}</div>
     </div>`;
   const notes = myNotifs().slice(0, 3);

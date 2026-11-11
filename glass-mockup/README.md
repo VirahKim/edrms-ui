@@ -9,7 +9,7 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 ## What's in it
 
 ### Overview (first page, every role)
-- A glass header with the **top navigation** (Overview · Registries & Files · File Routing · My Queue · Bring Up Diary · Settings, plus **Request file** for the Marking and Action Officers), the Republic of Kenya / Ministry of Health logo, a time-of-day greeting with the officer's name, then their title · department · Ministry of Health, and the covers of the three most recent files.
+- A glass header with the **top navigation** (Overview · Registries & Files · File Routing · My Queue · Bring Up Diary · Settings, plus **Request file** for the Marking and Action Officers), the Republic of Kenya / Ministry of Health logo, "Hello, <name>", then their title · department · Ministry of Health (stacked one per line on narrow screens), and the covers of the three most recent files.
 - **Recent Notifications** and an **AI Suggestions** card on the left. Suggestions are worked out from the files: files waiting to be routed, bring-ups due today, documents to validate, access requests, drafts. Each has a button that takes you there, and the dots switch between them. On wide screens this column stays in place while the tiles and files scroll.
 - **Six large tiles** on the right, with counts. Upload, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary use the supplied tile artwork (`assets/tiles/`); the other tiles' icons are drawn to match. The Registry gets Upload Document, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary. Marking and Action Officers get their own six.
 - The Action Officer only sees their own registry.
