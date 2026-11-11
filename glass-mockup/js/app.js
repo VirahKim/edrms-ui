@@ -320,6 +320,7 @@ function render() {
     case 'routing': view = viewRouting(q); nav = 'routing'; break;
     case 'queue': view = viewQueue(q); nav = 'queue'; break;
     case 'upload': view = viewUpload(q); nav = 'upload'; break;
+    case 'ai': view = viewAI(); nav = 'ai'; after = () => $('#aip-q')?.focus(); break;
     case 'inward': view = viewInward(); nav = 'more'; break;
     case 'outward': view = viewOutward(); nav = 'more'; break;
     case 'movements': view = viewMovements(); nav = 'more'; break;
@@ -395,10 +396,10 @@ function sidebar(active) {
       <button class="btn btn-glass btn-icon btn-sm" data-act="closeNav" aria-label="Collapse menu" title="Collapse menu">${ic('sidebar')}</button></div>
       <button class="side-search" data-act="palette">${ic('search')} Search</button>
     </div>
-    <button class="qb-side-ai ${$('#ai-panel') ? 'is-active' : ''}" data-act="fabChat" title="Q-BITS AI"><span class="qb-side-ai__rim" aria-hidden="true"></span>${QB_MARK('qb-side-ai__mark')}<span class="qb-side-ai__label">Q-BITS AI</span></button>
+    <a class="qb-side-ai ${active === 'ai' ? 'is-active' : ''}" href="#/ai" ${active === 'ai' ? 'aria-current="page"' : ''} title="Q-BITS AI"><span class="qb-side-ai__rim" aria-hidden="true"></span>${QB_MARK('qb-side-ai__mark')}<span class="qb-side-ai__label">Q-BITS AI</span></a>
     <div class="side-scroll">
       <div class="side-h">Navigation</div>
-      <nav class="nav">${items.map(([k, h, i, l, c]) => `<a href="${h}" class="${active === k ? 'on' : ''}">${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>
+      <nav class="nav">${items.map(([k, h, i, l, c]) => `<a href="${h}" class="${active === k ? 'on' : ''}">${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}${r !== 'registry' ? `<button type="button" data-act="requestAny">${ic('filePlus')} Request file</button>` : ''}</nav>
       <div class="side-h">Recent Notifications</div>
       ${recent.length ? recent.map(notifCard).join('') : '<p class="muted" style="margin:0 8px;font-size:14px">You are all caught up.</p>'}
     </div>
@@ -417,9 +418,9 @@ function notifCard(n) {
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div></div>`;
 }
 function topNav() {
-  const items = [['dashboard', '#/', 'Overview'], ['files', '#/files', 'Registries & Files'], ['routing', '#/routing', 'File Routing'], ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length], ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length], ['settings', '#/settings', 'Settings']];
-  const req = role() !== 'registry' ? `<button type="button" data-act="requestAny">${ic('filePlus')} Request file</button>` : '';
-  return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}${req}</nav>`;
+  const reg = role() === 'registry';
+  const items = [['dashboard', '#/', 'Overview'], ['files', '#/files', 'Registries & Files'], ...(reg ? [['routing', '#/routing', 'File Routing']] : []), ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length], ...(reg ? [['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length]] : [['request']]), ['settings', '#/settings', 'Settings']];
+  return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
 }
 function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = null, meta = '', hero = '' }) {
   return `<section class="phead glass ${hero ? 'is-hero' : ''}">
@@ -493,7 +494,7 @@ function quickActions() {
 const roleQueue = () => role() === 'marking' ? filesToMark() : filesToAct();
 const roleDone = () => S.files.filter(f => !f.draft && (role() === 'marking' ? ['returned_marking', 'action', 'returned_action', 'filed'] : ['returned_action', 'filed']).includes(f.stage) && f.movements.some(m => m.to === meId()));
 /* Home-page tile artwork (supplied SVGs); other tiles fall back to the drawn icon */
-const TILE_ART = { upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup', pen: 'to-act', checkCircle: 'to-act', check: 'acted' };
+const TILE_ART = { upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup', filePlus: 'request', pen: 'to-act', checkCircle: 'to-act', check: 'acted' };
 const tile = (icon, title, sub, target, badge) => {
   const art = TILE_ART[icon];
   const inner = `${art ? `<span class="tile-ic art"><img src="assets/tiles/${art}.svg" alt=""></span>` : `<span class="tile-ic"><i></i><span>${ic(icon)}</span></span>`}${badge ? `<span class="badge tile-badge">${badge}</span>` : ''}<b>${title}</b><span class="sub">${sub}</span>`;
@@ -518,6 +519,7 @@ function tiles() {
     tile('send', 'Files sent to me', 'Whole files for marking or action', '#/routing'),
     tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),
     tile('folders', 'All files', 'Browse files and letters', '#/files'),
+    tile('filePlus', 'Request file', 'Ask the Registry for a file', 'requestAny'),
     tile(mk ? 'pen' : 'checkCircle', mk ? 'Files awaiting my marking' : 'Files to act on', `${plural(roleQueue().length, 'file')} waiting`, '#/routing', roleQueue().length),
     tile('check', mk ? 'Files I have marked' : 'Files I have acted on', `${plural(roleDone().length, 'file')}`, '#/routing'),
   ];
@@ -704,11 +706,11 @@ function viewFiles(q) {
       <label class="lbl-select">${ic('building')}<select data-change="filesReg" aria-label="Registry"><option value="all">All registries</option>${REGISTRIES.map(r => `<option value="${r.id}" ${F.reg === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}</select></label>
       <div class="seg icons" role="group" aria-label="View">${[['grid', 'gridView', 'Grid view'], ['list', 'list', 'List view']].map(([k, i, l]) => `<button class="${F.view === k ? 'on' : ''}" data-act="filesView" data-k="${k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
     </div>
-    ${showRegs ? `<div class="section-h"><h2>Registries</h2><span class="n">${regs.length}</span>${F.reg !== 'all' ? `<div class="right"><button class="btn btn-glass btn-sm" style="color:#fff" data-act="pickReg" data-id="all">${ic('folders')} View all registries</button></div>` : ''}</div>${F.view === 'grid' ? regsGrid : regsList}` : ''}
+    ${showRegs ? `<div class="section-h"><h2>Registries</h2><span class="n">${regs.length}</span>${F.reg !== 'all' ? `<div class="right"><button class="btn btn-glass btn-sm" data-act="pickReg" data-id="all">${ic('folders')} View all registries</button></div>` : ''}</div>${F.view === 'grid' ? regsGrid : regsList}` : ''}
     ${letters.length && showFiles ? `<div class="section-h"><h2>Letters</h2><span class="n">${letters.length}</span></div>
       <div class="results" style="margin-bottom:28px">${letters.slice(0, 10).map(({ f, d }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} · ${esc(d.from)} · in <b style="display:inline">${esc(f.name)}</b></small></div><small class="mono" style="margin-left:auto">${esc(d.edms)}</small></a>`).join('')}</div>` : ''}
     ${showFiles ? `<div class="section-h"><h2>${F.show === 'drafts' ? 'Draft files' : F.reg === 'all' ? 'Files' : esc(regName(F.reg))}</h2><span class="n">${files.length}</span>
-      ${F.reg !== 'all' && !showRegs ? `<div class="right"><button class="btn btn-glass btn-sm" style="color:#fff" data-act="pickReg" data-id="all">${ic('x')} All registries</button></div>` : ''}</div>
+      ${F.reg !== 'all' && !showRegs ? `<div class="right"><button class="btn btn-glass btn-sm" data-act="pickReg" data-id="all">${ic('x')} All registries</button></div>` : ''}</div>
       ${files.length ? (F.view === 'grid' ? `<div class="fgrid">${files.map(fileCard).join('')}</div>` : filesTable(files)) : `<div class="card empty">${F.show === 'drafts' ? 'No draft files. Use <b>Save as draft</b> in New File to keep one for later.' : 'No files match.'}</div>`}` : ''}`;
 }
 
@@ -1851,11 +1853,55 @@ function aiAnswer(q) {
   if (!best || score < 2) return `I couldn't find that in the guide. You can browse the User Guide, or capture the screen to report it to support.<div class="links"><a class="btn btn-light btn-xs" href="#/guide">${ic('book')} User guide</a><button class="btn btn-light btn-xs" data-act="fabCapture">${ic('scan')} Capture screen</button></div>`;
   return `${best.a}<div class="links">${best.link ? `<a class="btn btn-light btn-xs" href="${best.link[0]}">${best.link[1]}</a>` : ''}<a class="btn btn-light btn-xs" href="#/guide?s=${best.guide}">${ic('book')} Read in the guide</a></div>`;
 }
+function aipAsk(q) {
+  if (!q || !q.trim()) return;
+  if (!ui.chat.length) ui.chat.push({ bot: true, html: `Hi ${esc(me().name.split(' ')[0])}. Ask me anything about EDRMS.` });
+  ui.chat.push({ html: esc(q), q }); ui.chat.push({ bot: true, typing: true, html: 'Thinking…' }); drawAIPage();
+  setTimeout(() => { ui.chat.pop(); ui.chat.push({ bot: true, html: aiReply(q) }); if (parseHash().parts[0] === 'ai') { render(); $('#aip-q')?.focus(); } }, 450);
+}
 function aiAsk(q) {
   if (!q.trim()) return;
   ui.chat.push({ html: esc(q), q }); ui.chat.push({ bot: true, typing: true, html: 'Thinking…' }); drawChat();
-  setTimeout(() => { ui.chat.pop(); ui.chat.push({ bot: true, html: aiAnswer(q) }); drawChat(); }, 450);
+  setTimeout(() => { ui.chat.pop(); ui.chat.push({ bot: true, html: aiReply(q) }); drawChat(); }, 450);
 }
+/* Q-BITS AI page (#/ai) — the side-nav Q-BITS AI button opens this, as in the Q-Bits ERM */
+const AI_CAN = [['folder', 'Find files and letters', 'By name, reference, sender or folio'], ['route', 'Explain where a file is', 'Who has it, and what happens next'], ['book', 'Answer how-to questions', 'From the EDRMS user guide'], ['zap', 'Point out what needs you', 'Files waiting, notes and bring-ups']];
+function aiAttention() {
+  const list = insights();
+  return `Here is what needs your attention:<ul class="ai-list">${list.map(x => `<li>${esc(x.text)} ${x.target.startsWith('#') ? `<a href="${x.target}">${x.cta}</a>` : ''}</li>`).join('')}</ul>`;
+}
+function aiReply(q) {
+  return /attention|need(s)? me|waiting|today|to do|my files/i.test(q) ? aiAttention() : aiAnswer(q);
+}
+function aipMsgs() {
+  if (!ui.chat.some(c => !c.bot)) return `<div class="aip-empty">
+      <img src="assets/qbits-mark-on-mint.png" alt="" class="aip-mark">
+      <h2>Ask Q-BITS</h2><p>Ask about files, letters and how EDRMS works. Answers come from the user guide and the files you can see.</p>
+      <div class="aip-starters">${['What needs my attention today?', ...FAQS.slice(0, 3).map(f => f.q)].map(q => `<button class="aip-starter" data-act="aipAsk" data-q="${esc(q)}">${ic('chevR')}<span>${esc(q)}</span></button>`).join('')}</div>
+    </div>`;
+  return ui.chat.map(c => `<div class="bubble ${c.bot ? 'bot' : 'me'} ${c.typing ? 'typing' : ''}">${c.bot ? '<img src="assets/qbits-mark-on-mint.png" alt="" class="aip-av">' : ''}<div>${c.html}</div></div>`).join('');
+}
+function viewAI() {
+  const asked = ui.chat.filter(c => !c.bot).map(c => c.q);
+  return pageHead({ crumbs: [['Q-BITS AI']], title: 'Q-BITS AI', sub: 'Your assistant for EDRMS: find files, follow their movement and learn how things work.' }) + `
+  <div class="aipage">
+    <section class="aip-chat ai-panel-like" aria-label="Chat with Q-BITS AI">
+      <div class="aip-msgs" id="aip-msgs" aria-live="polite">${aipMsgs()}</div>
+      <form class="aip-input" onsubmit="ACT.aipSend();return false">
+        <label class="sr" for="aip-q">Ask Q-BITS</label>
+        <input class="input" id="aip-q" placeholder="Ask Q-BITS anything about your files…" autocomplete="off">
+        <button class="btn btn-primary" type="submit">${ic('send')} Ask</button>
+      </form>
+    </section>
+    <aside class="aip-side">
+      <section class="aip-card"><div class="aip-card-h"><h2>Conversation</h2>${ui.chat.some(c => !c.bot) ? `<button class="btn btn-light btn-sm" data-act="aipNew">${ic('plus')} New chat</button>` : ''}</div>
+        <p class="muted">${ui.chat.filter(c => !c.bot).length ? `${plural(ui.chat.filter(c => !c.bot).length, 'question')} so far. The chat pop-up from the Q-BITS AI button shares this conversation.` : 'Nothing asked yet. The chat pop-up from the Q-BITS AI button shares this conversation.'}</p></section>
+      <section class="aip-card"><h2>Try asking</h2><div class="aip-sugg">${FAQS.filter(f => !asked.includes(f.q)).slice(0, 5).map(f => `<button data-act="aipAsk" data-q="${esc(f.q)}">${esc(f.q)}</button>`).join('')}</div></section>
+      <section class="aip-card"><h2>What I can do</h2><ul class="aip-can">${AI_CAN.map(([i, t, d]) => `<li><span class="mh-ic">${ic(i)}</span><div><b>${t}</b><small>${d}</small></div></li>`).join('')}</ul></section>
+    </aside>
+  </div>`;
+}
+function drawAIPage() { const m = $('#aip-msgs'); if (!m) return; m.innerHTML = aipMsgs(); m.scrollTop = m.scrollHeight; }
 /* Screen capture with highlights, for reporting issues */
 async function captureScreen(keep) {
   setFab(false); $('#ai-panel')?.remove(); closeModal();
@@ -2265,7 +2311,10 @@ const ACT = {
   /* AI Support */
   fabToggle: () => setFab(!ui.fabOpen),
   fabGuide: () => { setFab(false); go('#/guide'); },
-  fabChat: () => { openChat(); $('.qb-side-ai')?.classList.toggle('is-active', !!$('#ai-panel')); },
+  fabChat: () => openChat(),
+  aipAsk: el => aipAsk(el.dataset.q),
+  aipSend: () => { const i = $('#aip-q'); const q = i.value; i.value = ''; aipAsk(q); },
+  aipNew: () => { ui.chat = []; render(); },
   fabCapture: () => captureScreen(),
   closeChat: () => { $('#ai-panel')?.remove(); $('.qb-side-ai')?.classList.remove('is-active'); },
   aiFaq: el => aiAsk(el.dataset.q),
