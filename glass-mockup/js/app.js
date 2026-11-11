@@ -387,7 +387,7 @@ const QB_MARK = cls => `<svg class="qb-mark-svg ${cls}" viewBox="100 140 1770 12
 const themeToggle = (cls = '') => `<button class="qb-theme-toggle ${cls} ${theme === 'dark' ? 'is-dark' : ''}" role="switch" aria-checked="${theme === 'dark'}" aria-label="Dark mode" data-act="toggleTheme"><span class="qb-tt-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="qb-tt-clouds" aria-hidden="true"><i></i><i></i></span><span class="qb-tt-knob" aria-hidden="true"><span class="qb-tt-crater"></span><span class="qb-tt-crater"></span><span class="qb-tt-crater"></span></span></button>`;
 function sidebar(active) {
   const r = role();
-  const items = navItems();
+  const items = navItems().filter(([k]) => k !== 'settings'); // Settings stays by your name at the bottom
   const recent = myNotifs().slice(0, 2);
   return `<aside class="sidebar glass" aria-label="Main navigation">
     <div class="side-top">

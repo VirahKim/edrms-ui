@@ -1570,3 +1570,5 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 .phead h1 .star svg { width: 24px; height: 24px; }
 .phead h1 .star.on { color: #ffd54a; } .phead h1 .star.on svg { fill: #ffd54a; }
 .phead h1 .star:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
+/* Side-nav Q-BITS AI button: both shapes of the mark in white */
+.qb-side-ai__mark path, .qb-side-ai__mark circle { stroke: #fff; }
