@@ -31,7 +31,7 @@ const REGISTRIES = [
   { id: 'hr',   name: 'HR Registry',   tint: 'sky',   officer: 'rachael' },
 ];
 
-/* ---- Routing stages (as the live File Routing tabs) -------------------- */
+/* ---- Routing stages (as the live File Movement tabs) -------------------- */
 const STAGES = {
   registry:         { label: 'In Registry',              short: 'In Registry',           tone: 'neutral' },
   marking:          { label: 'With the Marking Officer', short: 'With Marking Officer',  tone: 'amber' },
@@ -279,7 +279,7 @@ const GUIDE = [
   { id: 'start', title: 'Getting started', icon: 'info', body: `
     <p>EDRMS keeps the Ministry's files and letters the way the paper registry does, so every file has a cover, a movement sheet and numbered folios.</p>
     <h4>Signing in</h4><p>Sign in with your Q-BITS ERP account or Microsoft. Your role (Registry, Marking or Action Officer), department and what you can see come from the ERP.</p>
-    <h4>Finding your way</h4><ul><li><b>Overview</b> – your tiles, Recent Notifications and AI Suggestions. It is the only page with the top navigation.</li><li><b>Side navigation</b> – Q-BITS AI, Overview, Registries &amp; Files and File Routing. Everything else is under <b>Settings › Pages and tools</b>.</li><li><b>Registries &amp; Files</b> – every registry and file, in grid or list view, with drafts.</li><li><b>File Routing</b> – files by stage.</li><li><b>Tutorial mode</b> – in this guide, a step-by-step walkthrough of the main journeys with screenshots.</li></ul>
+    <h4>Finding your way</h4><ul><li><b>Overview</b> – your tiles, Recent Notifications and AI Suggestions. It is the only page with the top navigation.</li><li><b>Side navigation</b> – Q-BITS AI, then the same items as the top navigation: Overview, Registries &amp; Files, My Queue, Bring Up Diary (Registry) or Request file (Marking and Action Officers) and Settings. Everything else is under <b>Settings › Pages and tools</b>.</li><li><b>Registries &amp; Files</b> – every registry and file, in grid or list view, with drafts.</li><li><b>My Queue</b> – two tabs: <b>My Queue</b> (everything assigned to you) and <b>File Movement</b> (files by stage).</li><li><b>Tutorial mode</b> – in this guide, a step-by-step walkthrough of the main journeys with screenshots.</li></ul>
     <h4>Help</h4><p>The <b>Q-BITS AI</b> button (bottom right) opens AI chat, screen capture for reporting problems, and this guide.</p>` },
   { id: 'journey', title: 'How a file moves', icon: 'route', body: `
     <p>Files always pass back through the Registry between officers:</p>
@@ -346,7 +346,7 @@ const TUTORIAL = [
   { id: 'start', icon: 'compass', title: 'Getting around', who: 'Everyone', role: null, summary: 'Overview, side navigation, search, theme and Q-BITS AI', steps: [
     { id: 's-overview', title: 'Your Overview', text: 'The tiles are the things you do most. The numbers show what is waiting for you.', path: '/', target: '.tiles' },
     { id: 's-notifs', title: 'What needs you today', text: 'Recent Notifications and AI Suggestions show what changed and what to look at first.', path: '/', target: '.notif-panel, .ai-sugg' },
-    { id: 's-nav', title: 'Side navigation', text: 'Every other page has the side navigation: Overview, Registries & Files and File Routing. Everything else is under Settings.', path: '/files', target: '.sidebar .nav' },
+    { id: 's-nav', title: 'Side navigation', text: 'Every other page has the side navigation, with the same items as the top navigation on the Overview. Everything else is under Settings.', path: '/files', target: '.sidebar .nav' },
     { id: 's-search', title: 'Search everything', text: 'Search finds files, letters and pages. Type a subject, reference, folio or sender.', path: '/files', target: '.side-search' },
     { id: 's-theme', title: 'Light or dark', text: 'Switch between light and dark mode here. Your choice is remembered.', path: '/files', target: '.ph-icons .qb-theme-toggle' },
     { id: 's-ai', title: 'Get help from Q-BITS AI', text: 'Q-BITS AI opens User Manual, Capture Screen and Chat. Capture Screen reports a problem with a screenshot of this page.', path: '/files', target: '#fab .qb-fab' },
@@ -362,7 +362,7 @@ const TUTORIAL = [
   { id: 'route', icon: 'send', title: 'Submit a file for marking', who: 'Registry Officer', role: 'registry', summary: 'Open the file, choose the letters, send it', steps: [
     { id: 'm-open', title: 'Open the file', text: 'Every file opens on its cover. The side panel lists its folios and lets you update the cover.', path: '/file/{reg}', target: '.pages, .file-view' },
     { id: 'm-submit', title: 'Submit to the Marking Officer', text: 'Choose the letters the Marking Officer can see; the ones you untick are kept back. Leave Send to blank to send it to the Marking Officer role.', path: '/file/{reg}', button: 'Send to Marking Officer', open: 'click' },
-    { id: 'm-track', title: 'Track it in File Routing', text: 'Search by name, reference or sender, and use the Stage filter to see where every file is.', path: '/routing', target: '.route-toolbar' },
+    { id: 'm-track', title: 'Track it in File Movement', text: 'In My Queue, open the File Movement tab. Search by name, reference or sender, and use the stage tabs to see where every file is.', path: '/routing', target: '.route-toolbar' },
   ] },
   { id: 'mark', icon: 'pen', title: 'Mark a file', who: 'Marking Officer', role: 'marking', summary: 'Files to mark, record the instruction', steps: [
     { id: 'k-list', title: 'Files to mark', text: 'Your Overview lists the files the Registry has sent you, with who sent each one and when.', path: '/', target: '.dash-main .panel' },

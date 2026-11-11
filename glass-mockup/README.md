@@ -9,19 +9,20 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 ## What's in it
 
 ### Overview (first page, every role)
-- A glass header with the **top navigation**: Overview · Registries & Files · File Routing · My Queue · Bring Up Diary · Settings for the Registry, and Overview · Registries & Files · My Queue · Request file · Settings for the Marking and Action Officers; the Republic of Kenya / Ministry of Health logo, "Hello, <name>", then their title · department · Ministry of Health (stacked one per line on narrow screens), and the covers of the three most recent files.
+- A glass header with the **top navigation**: Overview · Registries & Files · My Queue · Bring Up Diary · Settings for the Registry, and Overview · Registries & Files · My Queue · Request file · Settings for the Marking and Action Officers; the Republic of Kenya / Ministry of Health logo, "Hello, <name>", then their title · department · Ministry of Health (stacked one per line on narrow screens), and the covers of the three most recent files.
 - **Recent Notifications** and an **AI Suggestions** card on the left. Suggestions are worked out from the files: files waiting to be routed, bring-ups due today, documents to validate, access requests, drafts. Each has a button that takes you there, and the dots switch between them. On wide screens this column stays in place while the tiles and files scroll.
 - **Six large tiles** on the right, with counts. Upload, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary use the supplied tile artwork (`assets/tiles/`); the other tiles' icons are drawn to match. The Registry gets Upload Document, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary. Marking and Action Officers get their own six.
 - The Action Officer only sees their own registry.
-- The **top navigation is only on the Overview**. Every other screen has the **side navigation** with the **Q-BITS AI** button first (it opens the Q-BITS AI page), then Overview · Registries & Files · File Routing (and **Request file** for the Marking and Action Officers), plus search, recent notifications, and Settings and Sign out next to your name. Its collapse button shrinks it to icons on desktop and closes it on phones.
+- The **top navigation is only on the Overview**. Every other screen has the **side navigation** with the **Q-BITS AI** button first (it opens the Q-BITS AI page), then the same items as the Overview's top navigation (Overview · Registries & Files · My Queue · Bring Up Diary or Request file · Settings), plus search, recent notifications, and Settings and Sign out next to your name. Its collapse button shrinks it to icons on desktop and closes it on phones.
 - **Files to act on / Files I have marked or acted on** tiles use the supplied clock and double-tick icons (`assets/tiles/to-act.svg`, `acted.svg`); the **Request file** tile uses `assets/tiles/request.svg`.
 - **Q-BITS AI page** (`#/ai`, from the side-nav Q-BITS AI button, as in the Q-Bits ERM): a full-height chat in shades of blue with the Q-BITS mark, starter questions, "What needs my attention today?" answered from your files, Try asking, What I can do, and New chat. It shares the conversation with the Chat pop-up from the bottom-right Q-BITS AI button.
+- **My Queue** is one page with two tabs: **My Queue** (Files to Act On, Notes for Me, Pending Approvals, Landing Queue, My Submissions) and **File Movement** (what used to be File Routing: search plus stage tabs with counts — the Stage dropdown is gone). Switching tabs doesn't add a step to Back.
 - **Request file** (Marking and Action Officers) asks the Registry for any file, with a reason; the Registry sees it under My Queue › Pending Approvals.
 - **Back to <screen>** sits above the title on every screen (the Q-BITS BackLink): it names and returns to the screen you came from, or the parent page when you arrived directly.
 - **Account menu:** the avatar at the top right opens your name, title and department, with **My Profile**, **Change Password** (checked: current password, 8+ characters with letters and a number, matching confirmation) and **Logout**. Escape or a click outside closes it.
 - **Registries & Files:** picking a registry shows only that registry, with **View all registries** to bring the rest back.
 - **Contrast, light and dark:** every screen for all three officers, plus the AI page, a picked registry and the account menu, is checked by pixel (text against what is actually behind it); all text meets 4.5:1, large text 3:1.
-- **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, File Movements, and for the Registry the Inward and Outward Registers and Access Requests.
+- **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, Movement Sheets, and for the Registry the Inward and Outward Registers and Access Requests.
 - **Marking and Action Officers can add files too**: New File and Upload are on Registries & Files, Upload Document is one of their tiles, and an open file has Add document.
 - The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 5262 × 2949, darkened in dark mode).
 
@@ -135,7 +136,7 @@ The toggle is the Q-BITS design skill's sky switch (CSS in `css/qbits-shell.css`
 The reason lists for Files & Records come from the live system's database, which wasn't loading on the live site, so the mockup uses sample reasons.
 
 ### Registry tools behind the quick actions
-Inward Register, Outward Register (with Dispatch), File Movements, Bring-up Diary and Access Requests (approve or decline, with an expiry date).
+Inward Register, Outward Register (with Dispatch), Movement Sheets, Bring-up Diary and Access Requests (approve or decline, with an expiry date).
 
 ### Sign-in page
 The left panel is #0052BD with the Kenya coat of arms, the system name and the Q-BITS lockup ("Powered by CodexAI Kenya"). The form side uses dark text on lighter fields so every label reads clearly against the teal background.
@@ -148,7 +149,7 @@ The User Manual opens from the Q-BITS AI hub. At the top is the design system's 
 **Tutorial mode** lists seven journeys (32 steps), each with a screenshot of this system (`assets/tutorial/`):
 1. **Getting around** (everyone): the Overview, what needs you today, side navigation, search, light or dark, and Q-BITS AI.
 2. **Receive and file a letter** (Registry): choose the file, add the document, OCR and AI, check the details, the Inward Mail Register, Mail Senders.
-3. **Submit a file for marking** (Registry): open the file, choose which letters the Marking Officer sees, track it in File Routing.
+3. **Submit a file for marking** (Registry): open the file, choose which letters the Marking Officer sees, track it in My Queue › File Movement.
 4. **Mark a file** (Marking Officer): Files to mark, record what should be done and by whom, the file grid.
 5. **Act on a file** (Action Officer): read the marking, write a response, comment, request another file, Done.
 6. **Close the loop** (Registry): file it away, send it outside, the Outward Mail Register.
@@ -163,7 +164,7 @@ Each journey has two ways in:
 | ![](docs/screens/tutorial.jpg) | ![](docs/screens/tour.jpg) |
 
 ### Journeys added from the live source
-- **File Routing:** a search box (file name, reference, letter, sender) and the stage tabs as a **Stage** dropdown with counts.
+- **My Queue › File Movement:** a search box (file name, reference, letter, sender) and the stages as tabs with counts (they scroll sideways on phones).
 - **Submit to Marking Officer:** tick the letters and documents the Marking Officer should see. Unticked ones are kept back and hidden from them.
 - **Send outside:** records a letter sent out of the Ministry (send to, date, our reference, how it went, remarks) in the **Outward Mail Register**.
 - **Mail Senders:** the names offered under Received From and Send to. Add, edit, search, and switch names off without losing history. It's under Settings and linked from both mail registers.

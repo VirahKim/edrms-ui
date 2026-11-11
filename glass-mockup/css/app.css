@@ -1497,3 +1497,15 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
   .phead.is-hero .topnav a, .phead.is-hero .topnav button { padding: 8px 13px; font-size: 15.5px; }
   .phead.is-hero .phead-top { column-gap: 14px; }
 }
+/* "File Movement" is a little longer: tighten the Overview top nav where it is tight */
+@media (min-width: 1180px) and (max-width: 1479px) { .phead.is-hero .topnav a, .phead.is-hero .topnav button { padding: 8px 12px; font-size: 15px; } }
+@media (max-width: 900px) { .phead.is-hero .topnav a, .phead.is-hero .topnav button { padding: 8px 11px; font-size: 14.5px; } }
+/* My Queue: My Queue / File Movement tabs under the header */
+.queue-switch { display: flex; width: max-content; max-width: 100%; margin: 0 0 18px; background: var(--glass); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); }
+.queue-switch button { padding: 10px 20px; font-size: 15px; color: var(--ink); }
+.queue-switch button svg { width: 18px; height: 18px; }
+.queue-switch .n { background: rgba(14,21,37,.1); border-radius: var(--pill); padding: 0 8px; font-size: 12px; }
+.queue-switch button.on .n { background: rgba(255,255,255,.25); }
+@media (max-width: 480px) { .queue-switch { width: 100%; } .queue-switch button { flex: 1; padding: 10px 12px; } }
+[data-theme="dark"] .queue-switch button:not(.on) { color: var(--ink); }
+@media (max-width: 640px) { .tabs.stage-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 -4px 16px; padding: 2px 4px 6px; scrollbar-width: thin; } .tabs.stage-tabs button { flex: none; white-space: nowrap; } }

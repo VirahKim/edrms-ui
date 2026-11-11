@@ -273,7 +273,7 @@ function encodeRoute(h) {
   return '#' + seg.join('-');
 }
 /* Names used by Back links: "Back to Registries & Files" */
-const SCREEN_NAME = { files: 'Registries & Files', routing: 'File Routing', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'File Movements', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'File Census', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'File Census', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
@@ -306,7 +306,7 @@ function render() {
   if (parts[0] === 'login') { go('#/'); return; }
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
   let view, nav = 'dashboard', after = null;
-  curNav = { files: 'files', file: 'files', routing: 'routing', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
+  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
     case 'files': view = viewFiles(q); nav = 'files'; break;
     case 'file': {
@@ -317,7 +317,7 @@ function render() {
       if (target) after = () => scrollToPage(target, true);
       break;
     }
-    case 'routing': view = viewRouting(q); nav = 'routing'; break;
+    case 'routing': view = viewRouting(q); nav = 'queue'; break;
     case 'queue': view = viewQueue(q); nav = 'queue'; break;
     case 'upload': view = viewUpload(q); nav = 'upload'; break;
     case 'ai': view = viewAI(); nav = 'ai'; after = () => $('#aip-q')?.focus(); break;
@@ -343,7 +343,7 @@ function render() {
   watchPages();
   if (after) requestAnimationFrame(after);
 }
-window.addEventListener('hashchange', () => { ui.sel = null; ui.editing = null; const st = ui.navStack || (ui.navStack = []), h = location.hash; if (st.length > 1 && st[st.length - 2] === h) st.pop(); else if (st[st.length - 1] !== h) st.push(h); render(); });
+window.addEventListener('hashchange', () => { ui.sel = null; ui.editing = null; const st = ui.navStack || (ui.navStack = []), h = location.hash; if (st.length > 1 && st[st.length - 2] === h) st.pop(); else if (st[st.length - 1] !== h) { if (st.length && screenName(st[st.length - 1]) === screenName(h)) st[st.length - 1] = h; else st.push(h); } render(); });
 
 /* ==========================================================================
    Login
@@ -384,11 +384,7 @@ const QB_MARK = cls => `<svg class="qb-mark-svg ${cls}" viewBox="100 140 1770 12
 const themeToggle = (cls = '') => `<button class="qb-theme-toggle ${cls} ${theme === 'dark' ? 'is-dark' : ''}" role="switch" aria-checked="${theme === 'dark'}" aria-label="Dark mode" data-act="toggleTheme"><span class="qb-tt-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="qb-tt-clouds" aria-hidden="true"><i></i><i></i></span><span class="qb-tt-knob" aria-hidden="true"><span class="qb-tt-crater"></span><span class="qb-tt-crater"></span><span class="qb-tt-crater"></span></span></button>`;
 function sidebar(active) {
   const r = role();
-  const items = [
-    ['dashboard', '#/', 'grid', 'Overview'],
-    ['files', '#/files', 'folders', 'Registries & Files'],
-    ['routing', '#/routing', 'route', 'File Routing'],
-  ];
+  const items = navItems();
   const recent = myNotifs().slice(0, 2);
   return `<aside class="sidebar glass" aria-label="Main navigation">
     <div class="side-top">
@@ -399,13 +395,13 @@ function sidebar(active) {
     <a class="qb-side-ai ${active === 'ai' ? 'is-active' : ''}" href="#/ai" ${active === 'ai' ? 'aria-current="page"' : ''} title="Q-BITS AI"><span class="qb-side-ai__rim" aria-hidden="true"></span>${QB_MARK('qb-side-ai__mark')}<span class="qb-side-ai__label">Q-BITS AI</span></a>
     <div class="side-scroll">
       <div class="side-h">Navigation</div>
-      <nav class="nav">${items.map(([k, h, i, l, c]) => `<a href="${h}" class="${active === k ? 'on' : ''}">${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}${r !== 'registry' ? `<button type="button" data-act="requestAny">${ic('filePlus')} Request file</button>` : ''}</nav>
+      <nav class="nav">${items.map(([k, h, l, c, i]) => k === 'request' ? `<button type="button" data-act="requestAny">${ic(i)} ${l}</button>` : `<a href="${h}" class="${active === k ? 'on' : ''}" ${active === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>
       <div class="side-h">Recent Notifications</div>
       ${recent.length ? recent.map(notifCard).join('') : '<p class="muted" style="margin:0 8px;font-size:14px">You are all caught up.</p>'}
     </div>
     <div class="side-bottom">
       <div class="side-user">${avatar(meId(), 'av-lg')}<div><b>${esc(me().name)}</b><span>${ROLE_LABEL[r]}</span></div>
-        <a class="btn btn-glass btn-icon ${['settings', 'queue', 'upload', 'bringup', 'guide', 'more'].includes(active) ? 'on' : ''}" href="#/settings" title="Settings" aria-label="Settings">${ic('settings')}</a>
+        <a class="btn btn-glass btn-icon ${['settings', 'guide'].includes(active) ? 'on' : ''}" href="#/settings" title="Settings" aria-label="Settings">${ic('settings')}</a>
         <button class="btn btn-glass btn-icon" data-act="logout" title="Sign out" aria-label="Sign out">${ic('logout')}</button></div>
     </div>
   </aside>`;
@@ -417,9 +413,16 @@ function notifCard(n) {
     <span class="ago">${ago(n.at)}</span><p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div></div>`;
 }
-function topNav() {
+/* One navigation list for the Overview top nav and the side nav on every other page */
+function navItems() {
   const reg = role() === 'registry';
-  const items = [['dashboard', '#/', 'Overview'], ['files', '#/files', 'Registries & Files'], ...(reg ? [['routing', '#/routing', 'File Routing']] : []), ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length], ...(reg ? [['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length]] : [['request']]), ['settings', '#/settings', 'Settings']];
+  return [['dashboard', '#/', 'Overview', 0, 'grid'], ['files', '#/files', 'Registries & Files', 0, 'folders'],
+    ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length, 'listChecks'],
+    reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
+    ['settings', '#/settings', 'Settings', 0, 'settings']];
+}
+function topNav() {
+  const items = navItems();
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
 }
 function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = null, meta = '', hero = '' }) {
@@ -483,7 +486,7 @@ function quickActions() {
     qa('file', 'My Documents', 'View all my files', '#/queue?tab=subs'),
     qa('inboxIn', 'Inward Register', 'Receive and register mail', '#/inward', landingDocs().length),
     qa('refresh', 'Returned Files', 'Review returned work', '#/routing?stage=returned'),
-    qa('swap', 'File Movements', 'Track one routing per file', '#/movements'),
+    qa('swap', 'Movement Sheets', 'Track one routing per file', '#/movements'),
     qa('send', 'Outward Register', 'Dispatch completed letters', '#/outward'),
     qa('lock', 'Access Requests', 'Read-only, with expiry', '#/access', S.access.filter(a => a.status === 'open').length),
     qa('calendar', 'Bring-up Diary', 'Files needed again', '#/bringup'),
@@ -507,7 +510,7 @@ function tiles() {
     tile('upload', 'Upload Document', 'Add a file, letter or document', '#/upload'),
     tile('folders', 'Registries and Files', 'View all registries and files', '#/files'),
     tile('listChecks', 'My Tasks', 'View all my tasks', '#/queue', myQueue().length),
-    tile('swap', 'File Movements', 'Track files', '#/routing'),
+    tile('swap', 'File Movement', 'Track files', '#/routing'),
     tile('send', 'Outward Register', 'Dispatch completed letters', '#/outward', S.files.flatMap(f => f.docs).filter(d => d.kind === 'response' && !S.dispatch[d.id]).length),
     tile('inboxIn', 'Inward Register', 'Receive and register mail', '#/inward', landingDocs().length),
     tile('enter', 'Files Requested', 'Letter & File Access', '#/access', S.access.filter(a => a.status === 'open').length),
@@ -611,7 +614,7 @@ function routePanel() {
   if (t) list = list.filter(f => (f.name + ' ' + f.ref).toLowerCase().includes(t));
   list.sort((a, b) => (D.dir === 'desc' ? -1 : 1) * lastDocDate(a).localeCompare(lastDocDate(b)));
   return `<section class="route-panel glass">
-    <div class="panel-h"><h2>File routing</h2><div class="right"><a href="#/routing">View All</a></div></div>
+    <div class="panel-h"><h2>File movement</h2><div class="right"><a href="#/routing">View All</a></div></div>
     <div class="route-tools">
       <div class="seg">${[['all', 'All'], ['priority', 'Priority'], ['amber', 'Amber'], ['done', 'Done']].map(([k, l]) => `<button class="${D.tab === k ? 'on' : ''}" data-act="dashTab" data-k="${k}" title="${plural(counts[k], 'file')}">${l}</button>`).join('')}</div>
       <label class="input-icon">${ic('search')}<input class="input" id="dash-q" data-input="dashQ" value="${esc(D.q)}" placeholder="Search..."><span class="sr">Search files</span></label>
@@ -953,7 +956,7 @@ document.addEventListener('pointerup', () => {
 });
 
 /* ==========================================================================
-   File Routing / My Queue
+   File Movement / My Queue
    ========================================================================== */
 function fileRow(f, cols) {
   return `<tr data-href="#/file/${f.id}">
@@ -971,6 +974,11 @@ function fileTable(files, cols, emptyText) {
   const head = { stage: 'Stage', with: 'With', docs: 'Documents', sent: 'Sent by', since: 'Since' };
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>File</th>${cols.map(c => `<th>${head[c]}</th>`).join('')}<th></th></tr></thead><tbody>${files.map(f => fileRow(f, cols)).join('')}</tbody></table></div>`;
 }
+/* My Queue is one page with two tabs: My Queue and File Movement */
+function queueHead(which, sub) {
+  return pageHead({ crumbs: [['My Queue', which === 'routing' ? '#/queue' : ''], ...(which === 'routing' ? [['File Movement']] : [])], title: 'My Queue', sub, right: `<a class="btn btn-white" href="#/files">${ic('folders')} Files</a>` }) +
+    `<div class="queue-switch seg solid" role="tablist" aria-label="My Queue">${[['queue', '#/queue', 'My Queue', 'listChecks', myQueue().length + notesForMe().length], ['routing', '#/routing', 'File Movement', 'route', 0]].map(([k, h, l, i, n]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}${n ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
+}
 function viewRouting(q) {
   const stage = q.stage || 'active';
   const mine = S.files.filter(f => !f.draft && involved(f));
@@ -983,13 +991,12 @@ function viewRouting(q) {
   const hit = f => !term || [f.name, f.ref, regName(f.registry), STAGES[f.stage].short, person(f.withUser)?.name || '', ...liveDocs(f).map(d => d.title + ' ' + (d.from || ''))].join(' ').toLowerCase().includes(term);
   const list = pick(stage).filter(hit).sort((a, b) => b.updated.localeCompare(a.updated));
   const cur = tabs.find(([k]) => k === stage) || tabs[0];
-  return pageHead({ crumbs: [['File Routing']], title: 'File Routing', sub: role() === 'registry' ? 'Every file sent for marking or action. To send a file, open it and press Submit to Marking Officer.' : 'Files that have been sent to you.', right: `<a class="btn btn-white" href="#/files">${ic('folders')} Files</a>` }) + `
+  return queueHead('routing', role() === 'registry' ? 'Every file sent for marking or action. To send a file, open it and press Submit to Marking Officer.' : 'Where every file sent to you is now.') + `
     <div class="files-toolbar glass route-toolbar">
-      <label class="input-icon">${ic('search')}<input class="input" id="route-q" value="${esc(ui.routeQ || '')}" placeholder="Search files – name, reference, letter, sender or officer…" data-input="routeQuery" autocomplete="off"><span class="sr">Search File Routing</span></label>
-      <label class="lbl-select">${ic('filter')} Stage<select data-change="routeStage" aria-label="Filter by stage">${tabs.map(([k, l]) => `<option value="${k}" ${stage === k ? 'selected' : ''}>${l} (${pick(k).length})</option>`).join('')}</select></label>
+      <label class="input-icon">${ic('search')}<input class="input" id="route-q" value="${esc(ui.routeQ || '')}" placeholder="Search files – name, reference, letter, sender or officer…" data-input="routeQuery" autocomplete="off"><span class="sr">Search File Movement</span></label>
       ${term || stage !== 'active' ? `<button class="btn btn-light btn-sm" data-act="routeClear">${ic('x')} Clear</button>` : ''}
     </div>
-    <section class="panel glass">
+    <section class="panel glass"><div class="tabs stage-tabs" role="tablist" aria-label="Stage">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${stage === k}" class="${stage === k ? 'on' : ''}" data-href="#/routing?stage=${k}">${l} <span class="n">${pick(k).length}</span></button>`).join('')}</div>
       <div class="panel-h"><h2>${esc(cur[1])}</h2><span class="n">${list.length}</span>${term ? `<span class="muted" style="font-size:14px">matching “${esc(ui.routeQ.trim())}”</span>` : ''}</div>
       ${fileTable(list, ['stage', 'with', 'docs', 'sent', 'since'], term ? 'No files match your search. Try a reference number or a sender.' : 'No files at this stage.')}
     </section>`;
@@ -1009,7 +1016,7 @@ function viewQueue(q) {
       <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : `<div class="card empty">No requests.${r === 'action' ? ' Use <b>Request files</b> inside a file that is with you.' : ''}</div>`;
   if (tab === 'landing') body = `<p class="muted" style="margin:0 0 14px">Documents recently uploaded, still awaiting OCR/classification or validation.</p>` + (landingDocs().length ? `<div class="results">${landingDocs().map(({ f, d }) => `<div class="result card"><span class="pg">${ic('file')}</span><div data-href="#/file/${f.id}/doc/${d.id}" style="cursor:pointer"><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} · ${esc(d.from)} · into ${esc(f.name)} · ${ago(d.date)}</small></div><span style="margin-left:auto">${r === 'registry' ? `<button class="btn btn-primary btn-sm" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate &amp; add to file</button>` : '<span class="chip t-violet">Processing</span>'}</span></div>`).join('')}</div>` : '<div class="card empty">The landing queue is empty.</div>');
   if (tab === 'subs') body = subs.length ? `<div class="results">${subs.map(({ f, d }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} in ${esc(f.name)} · ${fmtDT(d.date)}</small></div><span style="margin-left:auto" class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></a>`).join('')}</div>` : '<div class="card empty">You have not submitted anything yet.</div>';
-  return pageHead({ crumbs: [['My Queue']], title: 'My Queue', sub: 'Everything assigned to you.' }) + `
+  return queueHead('queue', 'Everything assigned to you.') + `
     <section class="panel glass"><div class="tabs">${tabs.map(([k, l, n]) => `<button class="${tab === k ? 'on' : ''}" data-href="#/queue?tab=${k}">${l} <span class="n">${n}</span></button>`).join('')}</div>${body}</section>`;
 }
 
@@ -1031,7 +1038,7 @@ function viewOutward() {
 function viewMovements() {
   const files = S.files.filter(involved);
   const rows = files.filter(f => !ui.mvFile || f.id === ui.mvFile).flatMap(f => f.movements.map(m => ({ f, m }))).sort((a, b) => b.m.date.localeCompare(a.m.date));
-  return pageHead({ crumbs: [['File Movements']], title: 'File Movements', sub: 'Every move written on the movement sheets.', right: `<label class="lbl-select">${ic('folder')}<select data-change="mvFile" aria-label="File"><option value="">All files</option>${files.map(f => `<option value="${f.id}" ${ui.mvFile === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></label>` }) +
+  return pageHead({ crumbs: [['Movement Sheets']], title: 'Movement Sheets', sub: 'Every move written on the movement sheets.', right: `<label class="lbl-select">${ic('folder')}<select data-change="mvFile" aria-label="File"><option value="">All files</option>${files.map(f => `<option value="${f.id}" ${ui.mvFile === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></label>` }) +
     `<section class="panel glass">${simpleTable(['Date', 'File', 'From', 'Officer to see', "Officer's initials"], rows.map(({ f, m }) => `<tr data-href="#/file/${f.id}"><td>${fmtDT(m.date)}</td><td>${fileLink(f)}</td><td>${esc(person(m.from).name)}</td><td>${m.to === 'registry' ? 'Registry' : `${avatar(m.to)} ${esc(person(m.to).name)}`}</td><td style="font-family:var(--hand);font-size:18px">${m.to === 'registry' ? '' : initials(person(m.to).name)}</td></tr>`), 'No movements yet.')}</section>`;
 }
 function viewBringup() {
@@ -1163,7 +1170,7 @@ function viewRecords(q) {
     body = `<div class="tabs sub-tabs">${[['all', 'All files'], ['Open', 'Open'], ['Closed', 'Closed'], ['Disposed', 'Disposed']].map(([k, l]) => `<button class="${fl === k ? 'on' : ''}" data-act="recFState" data-k="${k}">${l} <span class="n">${S.files.filter(f => !f.draft && (k === 'all' || f.state === k)).length}</span></button>`).join('')}</div>
       ${simpleTable(['Reference', 'Subject', 'State', 'Location', 'Documents', 'Last folio', ''], list.map(f => `<tr><td class="mono">${esc(f.ref)}</td><td><a href="#/file/${f.id}"><b>${esc(f.name)}</b></a></td><td><span class="chip ${f.state === 'Open' ? 't-green' : f.state === 'Closed' ? 't-amber' : 't-neutral'}">${f.state}</span></td><td>${esc(f.location)}</td><td>${f.docs.length}</td><td class="mono">${f.docs.length ? esc(nextFolio(f) - 1) : '—'}</td><td><a class="btn btn-light btn-xs" href="#/file/${f.id}">${ic('folder')} Cover</a></td></tr>`), 'No files.')}`;
   } else if (tab === 'registers') {
-    body = `<div class="more-grid">${[['inboxIn', 'Inward Mail Register', 'Every document filed through Upload — Single, Bulk and Email.', '#/inward'], ['send', 'Outward Mail Register', 'Every file or letter sent outside the organisation.', '#/outward'], ['archive', 'File Movement Register', 'Physical files and where they are.', '#/physical'], ['swap', 'File Movements', 'Every move on the movement sheets.', '#/movements']].map(([i, l, sub, h]) => `<a class="more-it" href="${h}"><span class="mi">${ic(i)}</span><span><b>${l}</b><small>${sub}</small></span></a>`).join('')}</div>`;
+    body = `<div class="more-grid">${[['inboxIn', 'Inward Mail Register', 'Every document filed through Upload — Single, Bulk and Email.', '#/inward'], ['send', 'Outward Mail Register', 'Every file or letter sent outside the organisation.', '#/outward'], ['archive', 'File Movement Register', 'Physical files and where they are.', '#/physical'], ['swap', 'Movement Sheets', 'Every move on the movement sheets.', '#/movements']].map(([i, l, sub, h]) => `<a class="more-it" href="${h}"><span class="mi">${ic(i)}</span><span><b>${l}</b><small>${sub}</small></span></a>`).join('')}</div>`;
   } else {
     const docs = S.files.flatMap(f => f.docs);
     const inward = docs.filter(d => d.kind !== 'response'), outward = docs.filter(d => d.kind === 'response');
@@ -1435,7 +1442,7 @@ function viewSettings() {
     ['calendar', 'Bring Up Diary', 'Files needed again on a date', '#/bringup', bringupsDue().length],
     ['bell', 'Notifications', 'Everything sent to you', 'openNotifs', unread()],
     ['book', 'User Guide', 'How the system works', '#/guide'],
-    ['swap', 'File Movements', 'Where every file has been', '#/movements'],
+    ['swap', 'Movement Sheets', 'Where every file has been', '#/movements'],
     ...(reg ? [['inboxIn', 'Inward Register', 'Mail received and filed', '#/inward', landingDocs().length], ['send', 'Outward Register', 'Dispatch completed letters', '#/outward'], ['lock', 'Access Requests', 'Read-only, with expiry', '#/access', S.access.filter(a => a.status === 'open').length], ['archive', 'Physical Files', 'Paper custody', '#/physical'], ['layers', 'Files & Records', 'Open, close, dispose', '#/records'], ['checkCircle', 'File Census', 'Check files in racks', '#/census'], ['users', 'Mail Senders', 'Names used in the mail registers', '#/senders']] : []),
   ];
   return pageHead({ crumbs: [['Settings']], title: 'Settings', sub: 'Your tools, profile and appearance.' }) + `
@@ -1792,7 +1799,7 @@ function notifDrawer() {
   document.body.appendChild(d);
 }
 function paletteModal() {
-  const navs = [['Overview', '#/', 'grid'], ['Registries & Files', '#/files', 'folders'], ['File Routing', '#/routing', 'route'], ['My Queue', '#/queue', 'listChecks'], ['User Guide', '#/guide', 'book'], ['Upload', '#/upload', 'upload'], ['Bring Up Diary', '#/bringup', 'calendar'], ['Settings', '#/settings', 'settings'], ...(role() === 'registry' ? [['Physical Files', '#/physical', 'archive'], ['Files & Records', '#/records', 'layers'], ['File Census', '#/census', 'checkCircle'], ['Inward Register', '#/inward', 'inboxIn'], ['Outward Register', '#/outward', 'send']] : [])];
+  const navs = [['Overview', '#/', 'grid'], ['Registries & Files', '#/files', 'folders'], ['My Queue', '#/queue', 'listChecks'], ['File Movement', '#/routing', 'route'], ['User Guide', '#/guide', 'book'], ['Upload', '#/upload', 'upload'], ['Bring Up Diary', '#/bringup', 'calendar'], ['Settings', '#/settings', 'settings'], ...(role() === 'registry' ? [['Physical Files', '#/physical', 'archive'], ['Files & Records', '#/records', 'layers'], ['File Census', '#/census', 'checkCircle'], ['Inward Register', '#/inward', 'inboxIn'], ['Outward Register', '#/outward', 'send']] : [])];
   const items = [...navs.map(([l, h, i]) => ({ l, h, i, s: 'Go to' })), ...S.files.map(f => ({ l: f.name, h: `#/file/${f.id}`, i: 'folder', s: f.ref })), ...S.files.flatMap(f => f.docs.map(d => ({ l: d.title, h: `#/file/${f.id}/doc/${d.id}`, i: 'file', s: `Folio ${d.folio} · ${f.name}` })))];
   modal(`<div class="modal-b" style="padding:18px"><label class="input-icon">${ic('search')}<input class="input" id="pal-q" placeholder="Search files, letters and pages…" data-input="palette"></label><div class="list" id="pal-list"></div></div>`, 'palette');
   ui.paletteDraw = term => { const t = term.toLowerCase(); $('#pal-list').innerHTML = items.filter(x => (x.l + ' ' + x.s).toLowerCase().includes(t)).slice(0, 12).map((x, i) => `<a href="${x.h}" class="${i === 0 ? 'on' : ''}" data-act="close">${ic(x.i)}<span><b>${esc(x.l)}</b><br><small class="muted">${esc(x.s)}</small></span></a>`).join('') || '<p class="muted">No matches.</p>'; };
@@ -2239,7 +2246,7 @@ const ACT = {
     S.requests.unshift({ id: nid('r'), by: meId(), fileId: null, wantId: f.id, want: f.ref, reason: why, at: now(), status: 'open' });
     notify('registry', `Requested file ${f.ref}.`, meId(), f.id); save(); closeModal(); render(); toast('Request sent to the Registry. You will be notified when the file is sent.');
   },
-  goBack: el => { if ((ui.navStack || []).length > 1) history.back(); else go(el.dataset.fallback || '#/'); },
+  goBack: el => { const st = ui.navStack || []; go(st.length > 1 ? st[st.length - 2] : (el.dataset.fallback || '#/')); },
   approveReq: el => { const x = S.requests.find(r => r.id === el.dataset.id); x.status = 'sent'; notify(x.by, `Requested file ${x.want} sent to you.`, meId(), x.fileId); save(); render(); toast(`Sent ${x.want} to ${person(x.by).name}`); },
   delegate: el => delegateModal(getFile(el.dataset.id)),
   confirmDelegate: el => {
