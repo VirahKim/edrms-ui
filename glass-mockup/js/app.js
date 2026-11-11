@@ -278,7 +278,7 @@ const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: '
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
-  if (parts[0] === 'file' || parts[0] === 'grid') { const f = getFile(parts[1]); if (f) return parts[0] === 'grid' ? `File grid – ${f.name}` : f.name; }
+  if (parts[0] === 'file' || parts[0] === 'grid') { const f = getFile(parts[1]); if (f) { if (parts[2] === 'letter') { const d = getDoc(f, parts[3]); if (d) return `Folio ${d.folio} – ${d.title}`; } return parts[0] === 'grid' ? `File grid – ${f.name}` : f.name; } }
   return SCREEN_NAME[parts[0]] || 'previous page';
 }
 function unslug(v) { return Object.keys(STAGES).find(k => k.replace(/_/g, '') === v) || v; }
@@ -289,7 +289,7 @@ function parseHash(h) {
   let name = seg[0] || 'overview';
   if (name === 'overview') return { parts: [], q: {} };
   name = Object.keys(ROUTE_ALIAS).find(k => ROUTE_ALIAS[k] === name) || name;
-  if (name === 'file') return { parts: seg[2] === 'doc' ? ['file', seg[1], 'doc', seg[3]] : ['file', seg[1]], q: {} };
+  if (name === 'file') return { parts: ['doc', 'letter'].includes(seg[2]) ? ['file', seg[1], seg[2], seg[3]] : ['file', seg[1]], q: {} };
   const key = ROUTE_PARAM[name], q = {};
   if (key && seg[1]) q[key] = unslug(seg.slice(1).join('-'));
   return { parts: [name], q };
@@ -314,6 +314,7 @@ function render() {
     case 'file': {
       const f = getFile(parts[1]); nav = 'files';
       if (!f) { view = notFound(); break; }
+      if (parts[2] === 'letter') { const d = getDoc(f, parts[3]); if (!d) { view = notFound(); break; } ui.curFile = f.id; view = viewLetter(f, d); break; }
       const target = parts[2] === 'doc' ? parts[3] : q.pg;
       view = viewFile(f, q, target);
       if (target) after = () => scrollToPage(target, true);
@@ -753,6 +754,7 @@ function folioBar(f, d) {
   const canAct = role() === 'action' && f.stage === 'action' && f.withUser === meId() && d.kind !== 'response';
   return `<div class="folio-bar glass"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
     <div class="tools">
+      <a class="btn btn-light btn-xs" href="#/file/${f.id}/letter/${d.id}">${ic('info')} View letter details</a>
       ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic('stamp')} ${d.signed ? 'Unstamp' : 'Sign / stamp'}</button>` : ''}
       ${canAct ? `<button class="btn btn-primary btn-xs" data-act="respond" data-id="${f.id}" data-folio="${esc(d.folio)}">${ic('reply')} Respond</button>` : ''}
       ${d.status === 'landing' && role() === 'registry' ? `<button class="btn btn-primary btn-xs" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate</button>` : ''}
@@ -798,6 +800,7 @@ function viewFile(f, q, target) {
     </div>` : ''}`;
 }
 /* Folio table: the first thing on an open file. A row opens that folio in the pages below. */
+const curLetter = () => { const { parts } = parseHash(); const f = getFile(parts[1]); return { f, d: getDoc(f, parts[3]) }; };
 function folioTable(f, docs) {
   const term = (ui.folioQ || '').trim().toLowerCase();
   const by = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
@@ -806,7 +809,62 @@ function folioTable(f, docs) {
   const list = docs.filter(d => !term || [d.title, d.edms, d.senderRef || '', d.folio, KIND[d.kind][0], by(d), st(d)[0], conf(d)].join(' ').toLowerCase().includes(term));
   if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('search')}<div>${term ? 'No folios match your search. Try a folio number or a reference.' : 'No folios yet.'}</div></div></div>`;
   return `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
-    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-act="openFolio" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td>${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`;
+    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td>${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`;
+}
+/* Letter details: Overview · Metadata · Versions · Cross-references, with comments on the side */
+const LT_TABS = [['overview', 'Overview', 'grid'], ['metadata', 'Metadata', 'fileEdit'], ['versions', 'Versions', 'layers'], ['xrefs', 'Cross-References', 'swap']];
+const docStatus = d => d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : d.kind === 'response' && S.dispatch[d.id] ? ['Sent', 't-blue'] : ['Filed', 't-green'];
+const docBy = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
+const docVersions = d => d.versions || (d.versions = [{ v: 1, name: d.title.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() + '.pdf', sizeKB: d.sizeKB, by: docBy(d), at: d.date, tier: 'Hot — Immediate', scan: 'Clean' }]);
+function viewLetter(f, d) {
+  const tab = LT_TABS.some(t => t[0] === ui.letterTab) ? ui.letterTab : 'overview';
+  const [sl, sc] = docStatus(d), conf = d.confidentiality || f.confidentiality || 'Internal', reg = role() === 'registry';
+  const meta = `<span class="chip ${sc}">${sl}</span><span class="chip ghost">${ic('lock')} ${esc(conf)}</span><span class="chip ghost">${KIND[d.kind][0]}</span><span class="chip ghost mono">${esc(d.edms)}</span>`;
+  let body = '';
+  if (tab === 'overview') body = `<dl class="lt-facts">
+      <div><dt>Created by</dt><dd>${esc(docBy(d))}</dd></div><div><dt>Type</dt><dd>${KIND[d.kind][0]}</dd></div><div><dt>Created</dt><dd>${fmtDT(d.date)}</dd></div>
+      <div><dt>Folio</dt><dd>${esc(d.folio)}</dd></div><div><dt>Expiry date</dt><dd>${d.expiry ? fmtDay(d.expiry) : 'None'}</dd></div>
+      <div><dt>File</dt><dd><a class="chip t-amber" href="#/file/${f.id}">${ic('folder')} ${esc(f.name)}</a></dd></div>
+      <div class="wide"><dt>Tags</dt><dd><div class="x-chips">${(d.tags || []).map((t, i) => `<span class="x-chip">${esc(t)}<button data-act="rmTag" data-i="${i}" aria-label="Remove tag ${esc(t)}">${ic('x')}</button></span>`).join('') || '<span class="muted">No tags</span>'}</div>
+        <input class="input input-sm" id="lt-tag" placeholder="Add a tag and press Enter" aria-label="Add a tag" autocomplete="off"></dd></div></dl>
+    <div class="lt-preview"><div class="lt-preview-h"><button class="btn btn-light btn-xs" data-act="print">${ic('printer')} Print</button><a class="btn btn-light btn-xs" href="#/file/${f.id}/doc/${d.id}">${ic('scrollDown')} Read in the file</a></div>${pageHTML(f, d)}</div>`;
+  if (tab === 'metadata') { const dis = reg ? '' : 'disabled';
+    body = `<p class="hint" style="margin-top:0">${reg ? 'The details captured when the letter was registered. Change them and save.' : 'The details captured by the Registry when the letter was registered.'}</p>
+    <div class="lt-form">
+      <div class="field"><label for="lm-from">From who</label><input class="input" id="lm-from" value="${esc(d.from || '')}" ${dis}></div>
+      <div class="field"><label for="lm-ref">Reference number</label><input class="input mono" id="lm-ref" value="${esc(d.senderRef || '')}" placeholder="e.g. NYS/ADM/12/4" ${dis}></div>
+      <div class="field"><label for="lm-rdate">Reference date</label><input class="input" type="date" id="lm-rdate" value="${esc((d.senderRefDate || '').slice(0, 10))}" ${dis}></div>
+      <div class="field"><label for="lm-subj">Subject</label><input class="input" id="lm-subj" value="${esc(d.subject || d.title)}" ${dis}></div>
+      <div class="field"><label for="lm-recv">Date received</label><input class="input" type="date" id="lm-recv" value="${esc((d.received || d.date || '').slice(0, 10))}" ${dis}></div>
+      <div class="field"><label for="lm-conf">Confidentiality</label><select class="select" id="lm-conf" ${dis}>${['Public', 'Internal', 'Confidential', 'Secret'].map(c => `<option ${conf === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    </div>${reg ? `<button class="btn btn-primary" data-act="saveLetterMeta">${ic('check')} Save metadata</button>` : ''}`; }
+  if (tab === 'versions') body = `${reg ? `<button class="btn btn-primary btn-sm" data-act="newVersion" style="margin-bottom:14px">${ic('upload')} Upload new version</button>` : ''}
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Version</th><th>File name</th><th>Size</th><th>Tier</th><th>Uploaded by</th><th>Uploaded</th><th>Scan</th><th></th></tr></thead><tbody>
+    ${[...docVersions(d)].reverse().map((v, i) => `<tr><td><span class="chip t-neutral mono">v${v.v}</span>${i === 0 ? ' <span class="chip t-blue">Current</span>' : ''}</td><td>${ic('file')} ${esc(v.name)}</td><td>${fmtSize(v.sizeKB)}</td><td><span class="chip t-teal">${esc(v.tier)}</span></td><td>${esc(v.by)}</td><td>${ago(v.at)}</td><td><span class="chip ${v.scan === 'Clean' ? 't-green' : 't-neutral'}">${esc(v.scan)}</span></td><td><button class="btn btn-light btn-icon btn-xs" data-act="toastMsg" data-msg="This is a mockup, so nothing downloads." aria-label="Download v${v.v}">${ic('download')}</button></td></tr>`).join('')}</tbody></table></div>`;
+  if (tab === 'xrefs') { const refs = (d.crossRefs || []).map(docById).filter(Boolean), by = S.files.flatMap(ff => ff.docs.filter(x => (x.crossRefs || []).includes(d.id)).map(x => ({ f: ff, d: x })));
+    const link = r => `<a class="result card" href="#/file/${r.f.id}/letter/${r.d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(r.d.title)}</b><small>Folio ${esc(r.d.folio)} in ${esc(r.f.name)} · ${esc(r.d.edms)}</small></div></a>`;
+    const pool = S.files.flatMap(ff => ff.docs.filter(x => x.id !== d.id && !(d.crossRefs || []).includes(x.id)).map(x => ({ ff, x })));
+    body = `<h3 class="lt-h">This letter refers to</h3>${refs.length ? `<div class="results">${refs.map(link).join('')}</div>` : '<p class="muted">No cross-references.</p>'}
+    <h3 class="lt-h">Referred to by</h3>${by.length ? `<div class="results">${by.map(link).join('')}</div>` : '<p class="muted">No other letter refers to this one.</p>'}
+    ${reg ? `<div class="lt-add"><div class="field" style="flex:1"><label for="lx-doc">Add a cross-reference</label><select class="select" id="lx-doc"><option value="">Choose a letter…</option>${pool.map(({ ff, x }) => `<option value="${x.id}">${esc(ff.name)} · F.${esc(x.folio)} – ${esc(x.title)}</option>`).join('')}</select></div><button class="btn btn-primary" data-act="addXrefDoc">${ic('plus')} Add</button></div>` : ''}
+    <h3 class="lt-h">Physical enclosures</h3><p class="hint" style="margin:0 0 8px">Items that came with this letter but are kept on paper.</p>
+    ${(d.enclosures || []).length ? `<ul class="lt-list">${d.enclosures.map(e => `<li><b>${esc(e.description)}</b>${e.quantity ? ` · ${esc(e.quantity)}` : ''}${e.kept_at ? ` · kept at ${esc(e.kept_at)}` : ''}</li>`).join('')}</ul>` : '<p class="muted">None recorded.</p>'}
+    ${reg ? `<div class="lt-add"><input class="input" id="lx-enc" placeholder="Title and number of copies, e.g. Annual Report – 3 copies" aria-label="Physical enclosure"><button class="btn btn-primary" data-act="addEncDoc">${ic('plus')} Add</button></div>` : ''}
+    <h3 class="lt-h">Books and legal documents referenced</h3><p class="hint" style="margin:0 0 8px">A book, legal document or other source too big to scan. Give its subject and author, or a link to it.</p>
+    ${(d.books || []).length ? `<ul class="lt-list">${d.books.map(b => `<li><b>${esc(b.title)}</b>${b.author ? ` · ${esc(b.author)}` : ''}${b.url ? ` · <a href="${esc(b.url)}" target="_blank" rel="noopener">link</a>` : ''}</li>`).join('')}</ul>` : '<p class="muted">None referenced.</p>'}
+    ${reg ? `<div class="lt-add"><input class="input" id="lx-bt" placeholder="Subject / title" aria-label="Book subject or title"><input class="input" id="lx-ba" placeholder="Author" aria-label="Author"><input class="input" id="lx-bu" placeholder="Link (https://…) – optional" aria-label="Link"><button class="btn btn-primary" data-act="addBookDoc">${ic('plus')} Add</button></div>` : ''}`; }
+  const minutes = d.minutes.filter(m => m.n), sticks = d.stickies.filter(seesSticky), comments = d.comments || [];
+  const side = `<div class="np-h"><h2>${ic('chat')} Comments</h2><span class="n">${minutes.length + sticks.length + comments.length}</span></div>
+    ${minutes.map(m => `<div class="note-item" style="cursor:default"><span class="n">${m.n}.</span>${esc(m.text)}<div class="by">${avatar(m.by)} ${esc(person(m.by).name)} · ${fmtDT(m.at)} · minute</div></div>`).join('')}
+    ${sticks.map(s => `<div class="note-item sticky" style="--sn:${stickyCol(s.color)};cursor:default">${ic('sticky')} ${esc(s.text)}<div class="by">${avatar(s.by)} ${esc(person(s.by).name)} → ${esc(person(s.to).name)}</div></div>`).join('')}
+    ${comments.map(c => `<div class="note-item" style="cursor:default">${esc(c.text)}<div class="by">${avatar(c.by)} ${esc(person(c.by).name)} · ${ago(c.at)}</div></div>`).join('')}
+    ${minutes.length + sticks.length + comments.length ? '' : '<p class="muted" style="margin:0 0 12px">No comments yet.</p>'}
+    <div class="field" style="margin-top:12px"><label for="lt-cm">Add a comment</label><textarea class="textarea" id="lt-cm" rows="3" placeholder="Write a comment…"></textarea></div>
+    <button class="btn btn-primary btn-sm" data-act="postLetterComment" style="margin-top:10px">${ic('send')} Post comment</button>
+    ${canAnnotate(f) && d.status !== 'landing' ? `<p class="hint">To write an official minute on the page, use <a href="#/file/${f.id}/doc/${d.id}">Read in the file</a>.</p>` : ''}`;
+  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name, `#/file/${f.id}`], [`Folio ${d.folio}`]], back: [`Back to ${f.name}`, `#/file/${f.id}`], title: `${esc(d.title)} <button class="star ${d.starred ? 'on' : ''}" data-act="starDoc" aria-label="Star letter" aria-pressed="${!!d.starred}">${ic('star')}</button>`, sub: `${KIND[d.kind][0]} · Folio ${esc(d.folio)} in ${esc(f.name)}`, meta }) + `
+    <div class="queue-switch seg solid lt-tabs" role="tablist" aria-label="Letter details">${LT_TABS.map(([k, l, i]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}" data-act="letterTab" data-k="${k}">${ic(i)} ${l}</button>`).join('')}</div>
+    <div class="lt-grid"><section class="panel glass lt-main">${body}</section><aside class="panel glass lt-side" aria-label="Comments">${side}</aside></div>`;
 }
 function sidePanel(f) {
   const tab = ui.fileTab === 'cover' && role() !== 'registry' ? 'folios' : ui.fileTab;
@@ -2087,6 +2145,18 @@ const ACT = {
   fileTab: el => { ui.fileTab = el.dataset.k; const f = currentFile(); refreshSide(f); if (ui.fileTab === 'cover' && $('#side')) { $('#side').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); scrollToPage('cover'); } },
   fileView: el => { ui.fileView = el.dataset.k; render(); if (ui.fileView === 'pages') requestAnimationFrame(() => $('.folio-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); },
   openFolio: el => { ui.fileView = 'pages'; render(); requestAnimationFrame(() => scrollToPage(el.dataset.pg, true)); },
+  toastMsg: el => toast(el.dataset.msg),
+  letterTab: el => { ui.letterTab = el.dataset.k; render(); },
+  starDoc: () => { const { f, d } = curLetter(); d.starred = !d.starred; save(); render(); },
+  rmTag: el => { const { d } = curLetter(); d.tags.splice(+el.dataset.i, 1); save(); render(); },
+  saveLetterMeta: () => { const { f, d } = curLetter(); const v = id => $('#' + id).value.trim();
+    if (!v('lm-subj')) { toast('Give the letter a subject.'); $('#lm-subj').focus(); return; }
+    Object.assign(d, { from: v('lm-from'), senderRef: v('lm-ref'), senderRefDate: v('lm-rdate'), subject: v('lm-subj'), received: v('lm-recv') || d.received, confidentiality: v('lm-conf') }); d.modified = now(); f.updated = now(); save(); render(); toast('Metadata saved'); },
+  newVersion: () => { const { d } = curLetter(); const vs = docVersions(d), last = vs[vs.length - 1]; vs.push({ ...last, v: last.v + 1, by: me().name, at: now(), scan: 'Clean' }); d.version = last.v + 1; d.modified = now(); save(); render(); toast(`Version ${last.v + 1} uploaded`); },
+  addXrefDoc: () => { const { d } = curLetter(); const id = $('#lx-doc').value; if (!id) { toast('Choose a letter to cross-reference.'); return; } (d.crossRefs = d.crossRefs || []).push(id); save(); render(); toast('Cross-reference added'); },
+  addEncDoc: () => { const { d } = curLetter(); const t = $('#lx-enc').value.trim(); if (!t) { toast('Describe the enclosure first.'); return; } (d.enclosures = d.enclosures || []).push({ description: t, quantity: '', kept_at: '' }); save(); render(); },
+  addBookDoc: () => { const { d } = curLetter(); const t = $('#lx-bt').value.trim(), u = $('#lx-bu').value.trim(); if (!t) { toast('Give the subject or title.'); return; } if (u && !/^https?:\/\//.test(u)) { toast('Links start with http:// or https://'); return; } (d.books = d.books || []).push({ title: t, author: $('#lx-ba').value.trim(), url: u }); save(); render(); },
+  postLetterComment: () => { const { d } = curLetter(); const t = $('#lt-cm').value.trim(); if (!t) { toast('Write a comment first.'); $('#lt-cm').focus(); return; } (d.comments = d.comments || []).push({ text: t, by: meId(), at: now() }); save(); render(); toast('Comment posted'); },
   goPage: (el, e) => { e.preventDefault(); scrollToPage(el.dataset.pg); },
   coverColour: el => { const f = currentFile(); f.cover.color = el.dataset.v; f.updated = now(); save(); repaintCovers(f); refreshSide(f); },
   print: () => printFile(),
@@ -2394,7 +2464,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#acct-menu')) { closeAcct(true); return; }
   if (e.key === 'Escape') { if (ui.editing) ACT.mnCancel(); else if (ui.fabOpen) setFab(false); else if ($('#ai-panel') && !$('#overlay')) $('#ai-panel').remove(); else closeModal(); }
   if (e.key === 'Enter' && e.target.classList?.contains('fcard')) go(e.target.dataset.href);
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.folio-tbl tr[data-pg]')) { e.preventDefault(); ACT.openFolio(e.target); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.folio-tbl tr[data-href]')) { e.preventDefault(); go(e.target.dataset.href); }
+  if (e.key === 'Enter' && e.target.id === 'lt-tag') { const t = e.target.value.trim(); if (t) { const { d } = curLetter(); (d.tags = d.tags || []).push(t); save(); render(); $('#lt-tag')?.focus(); } }
   if (e.key === 'Enter' && e.target.id === 'pal-q') { const a = $('#pal-list a'); if (a) { closeModal(); go(a.getAttribute('href')); } }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'mn-edit') ACT.mnSave();
 });
