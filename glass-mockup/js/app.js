@@ -29,6 +29,7 @@ const ICONS = {
   send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  scrollDown: '<path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/>',
   arrowUp: '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
   arrowR: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
@@ -305,6 +306,7 @@ function render() {
   if (!S.session) { root.innerHTML = viewLogin(); return; }
   if (parts[0] === 'login') { go('#/'); return; }
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
+  if (parts[0] !== 'file') ui.curFile = null; // entering a file again starts on the folio table
   let view, nav = 'dashboard', after = null;
   curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
@@ -312,8 +314,8 @@ function render() {
     case 'file': {
       const f = getFile(parts[1]); nav = 'files';
       if (!f) { view = notFound(); break; }
-      view = viewFile(f, q);
       const target = parts[2] === 'doc' ? parts[3] : q.pg;
+      view = viewFile(f, q, target);
       if (target) after = () => scrollToPage(target, true);
       break;
     }
@@ -759,23 +761,26 @@ function pageHTML(f, d) {
     ${d.status === 'landing' ? `<div class="landing-veil"><div><span class="chip t-violet" style="font-size:14px;height:32px">In the Landing Queue</span><p class="muted">Awaiting OCR and validation by the Registry.</p></div></div>` : ''}
   </article>`;
 }
-function viewFile(f, q) {
-  if (ui.curFile !== f.id) { ui.curFile = f.id; ui.folioQ = ''; }
+function viewFile(f, q, target) {
+  if (ui.curFile !== f.id) { ui.curFile = f.id; ui.folioQ = ''; ui.fileView = 'table'; }
+  if (target) ui.fileView = 'pages';
+  const pagesView = ui.fileView === 'pages';
   if (q.tab) ui.fileTab = q.tab;
   const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort(byFolio).reverse();
   const meta = `${stageChip(f.stage)}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
   const who = f.withUser === 'registry' ? '<span class="muted">In the Registry</span>' : `${avatar(f.withUser)}<span>With <b>${esc(person(f.withUser).name)}</b></span>`;
   const acts = actionButtons(f);
   return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name]], back: ['Back to Registries & Files', '#/files'], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
-    <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who"><button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>${who}</div></div>
+    <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who">${pagesView ? `<button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>` : ''}${who}</div></div>
     ${f.draft ? `<div class="instruction">${ic('fileEdit')}<div><b>This file is a draft.</b> Finish the cover and details, then press <b>Open file</b> to start using it. Draft files are only listed under <b>Show → Draft files</b>.</div></div>` : ''}
     ${f.instruction && ['returned_marking', 'action'].includes(f.stage) ? `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}</div></div>` : ''}
     <section class="panel glass folio-panel" aria-labelledby="ft-h">
       <div class="panel-h"><h2 id="ft-h">Folios</h2><span class="n">${docs.length}</span>
-        <label class="input-icon folio-search">${ic('search')}<input class="input" id="folio-q" value="${esc(ui.folioQ || '')}" placeholder="Search folios – title, reference, folio, type or officer…" data-input="folioQuery" autocomplete="off"><span class="sr">Search folios</span></label></div>
-      <div id="folio-tbl">${folioTable(f, docs)}</div>
+        <div class="seg icons" role="group" aria-label="How to view the folios">${[['table', 'list', 'Folio table'], ['pages', 'scrollDown', 'Scroll through the pages']].map(([k, i, l]) => `<button class="${ui.fileView === k ? 'on' : ''}" data-act="fileView" data-k="${k}" aria-pressed="${ui.fileView === k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
+        ${pagesView ? '' : `<label class="input-icon folio-search">${ic('search')}<input class="input" id="folio-q" value="${esc(ui.folioQ || '')}" placeholder="Search folios – title, reference, folio, type or officer…" data-input="folioQuery" autocomplete="off"><span class="sr">Search folios</span></label>`}</div>
+      ${pagesView ? '' : `<div id="folio-tbl">${folioTable(f, docs)}</div>`}
     </section>
-    <div class="fview">
+    ${pagesView ? `<div class="fview">
       <div class="pages ${ui.hideNotes ? 'hide-notes' : ''}">
         <div class="pg-wrap" id="pg-cover">
           <div class="folio-bar glass"><span class="fn">Cover</span><b>${esc(f.name)}</b><span class="muted" style="font-size:13px">${plural(f.docs.length, 'folio')} · movement sheet</span>
@@ -785,7 +790,7 @@ function viewFile(f, q) {
         ${docs.map(d => `<div class="pg-wrap" id="pg-${d.id}">${folioBar(f, d)}${pageHTML(f, d)}</div>`).join('') || `<div class="card empty">${ic('file')}<p>No folios yet. <a href="#/upload?file=${f.id}">Upload the first document</a>.</p></div>`}
       </div>
       <aside class="side-panel glass" id="side">${sidePanel(f)}</aside>
-    </div>`;
+    </div>` : ''}`;
 }
 /* Folio table: the first thing on an open file. A row opens that folio in the pages below. */
 function folioTable(f, docs) {
@@ -796,7 +801,7 @@ function folioTable(f, docs) {
   const list = docs.filter(d => !term || [d.title, d.edms, d.senderRef || '', d.folio, KIND[d.kind][0], by(d), st(d)[0], conf(d)].join(' ').toLowerCase().includes(term));
   if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('search')}<div>${term ? 'No folios match your search. Try a folio number or a reference.' : 'No folios yet.'}</div></div></div>`;
   return `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
-    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-act="goPage" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td>${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`;
+    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-act="openFolio" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td>${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function sidePanel(f) {
   const tab = ui.fileTab === 'cover' && role() !== 'registry' ? 'folios' : ui.fileTab;
@@ -2069,7 +2074,9 @@ const ACT = {
   },
 
   /* file view */
-  fileTab: el => { ui.fileTab = el.dataset.k; const f = currentFile(); refreshSide(f); if (ui.fileTab === 'cover') { $('#side').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); scrollToPage('cover'); } },
+  fileTab: el => { ui.fileTab = el.dataset.k; const f = currentFile(); refreshSide(f); if (ui.fileTab === 'cover' && $('#side')) { $('#side').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); scrollToPage('cover'); } },
+  fileView: el => { ui.fileView = el.dataset.k; render(); if (ui.fileView === 'pages') requestAnimationFrame(() => $('.folio-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); },
+  openFolio: el => { ui.fileView = 'pages'; render(); requestAnimationFrame(() => scrollToPage(el.dataset.pg, true)); },
   goPage: (el, e) => { e.preventDefault(); scrollToPage(el.dataset.pg); },
   coverColour: el => { const f = currentFile(); f.cover.color = el.dataset.v; f.updated = now(); save(); repaintCovers(f); refreshSide(f); },
   print: () => printFile(),
@@ -2249,7 +2256,7 @@ const ACT = {
     const d = { id: nid('d'), folio: nextSubFolio(f, R.folio), title: R.subject.trim(), kind: R.mode === 'upload' ? 'attachment' : 'response', template: R.tpl, from: me().name, date: now(),
       edms: 'EDMS-0001-2026-' + String(S.seq + 40).padStart(7, '0'), pages: 1, sizeKB: 120, minutes: [], stickies: [], signed: R.sign, status: 'filed', to: R.to,
       subject: c.subject, body: R.body.trim() ? c.body : LOREM.slice(0, 2), mime: R.mode === 'upload' ? R.fname.split('.').pop().toUpperCase() : undefined };
-    f.docs.push(d); f.updated = d.date; ui.resp = null; save(); closeModal(); render(); scrollToPage(d.id, true); toast(`Response sent as folio ${d.folio}`);
+    f.docs.push(d); f.updated = d.date; ui.resp = null; ui.fileView = 'pages'; save(); closeModal(); render(); scrollToPage(d.id, true); toast(`Response sent as folio ${d.folio}`);
   },
   requestFiles: el => requestModal(getFile(el.dataset.id)),
   confirmRequest: el => {
@@ -2377,7 +2384,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#acct-menu')) { closeAcct(true); return; }
   if (e.key === 'Escape') { if (ui.editing) ACT.mnCancel(); else if (ui.fabOpen) setFab(false); else if ($('#ai-panel') && !$('#overlay')) $('#ai-panel').remove(); else closeModal(); }
   if (e.key === 'Enter' && e.target.classList?.contains('fcard')) go(e.target.dataset.href);
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.folio-tbl tr[data-pg]')) { e.preventDefault(); scrollToPage(e.target.dataset.pg, true); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.folio-tbl tr[data-pg]')) { e.preventDefault(); ACT.openFolio(e.target); }
   if (e.key === 'Enter' && e.target.id === 'pal-q') { const a = $('#pal-list a'); if (a) { closeModal(); go(a.getAttribute('href')); } }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'mn-edit') ACT.mnSave();
 });
