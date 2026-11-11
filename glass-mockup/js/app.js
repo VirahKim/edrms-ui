@@ -120,7 +120,8 @@ try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
 if (!S || S.v !== 6) S = seedState();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or blocked: keep in memory */ } };
 const nid = p => p + (++S.seq);
-const ensureIds = () => { S.files.forEach(f => f.docs.forEach(d => { d.stickies = d.stickies || []; d.minutes.forEach(m => { if (!m.id) m.id = nid('m'); }); })); ensureRecords(); };
+const ensureIds = () => { S.files.forEach(f => f.docs.forEach(d => { d.stickies = d.stickies || []; d.minutes.forEach(m => { if (!m.id) m.id = nid('m'); });
+  d.minutes.filter(m => m.n).sort((a, b) => (a.at || '').localeCompare(b.at || '')).forEach((m, i) => { m.n = toRoman(i + 1); }); })); ensureRecords(); };
 /* Physical custody, file opening/closing/disposal and census, as in the live Registry */
 function ensureRecords() {
   S.files.forEach((f, i) => { f.state = f.state || 'Open'; f.location = f.location || `Registry Room ${f.registry === 'hr' ? 4 : 2} · Rack ${String.fromCharCode(65 + i % 4)} · Shelf ${1 + i % 5}`; });
@@ -202,8 +203,9 @@ function notify(to, text, from, fileId) { S.notifications.unshift({ id: nid('n')
 const myNotifs = () => S.notifications.filter(n => n.to === inboxKey());
 const unread = () => myNotifs().filter(n => !n.read).length;
 
-function nextMinuteNo(f) {
-  let max = 0; f.docs.forEach(d => d.minutes.forEach(m => { if (m.n) max = Math.max(max, fromRoman(m.n)); }));
+/* Minutes are numbered per letter: every letter's first minute is I */
+function nextMinuteNo(f, d) {
+  let max = 0; (d ? [d] : f.docs).forEach(x => x.minutes.forEach(m => { if (m.n) max = Math.max(max, fromRoman(m.n)); }));
   return toRoman(max + 1);
 }
 function autoPlace(d) {
@@ -212,7 +214,7 @@ function autoPlace(d) {
 }
 function addMinute(f, d, text, by, extra = {}) {
   if (!d) return;
-  d.minutes.push({ id: nid('m'), n: nextMinuteNo(f), text, by, at: new Date().toISOString(), w: 40, ink: 'blue', font: 'neat', ...autoPlace(d), ...extra });
+  d.minutes.push({ id: nid('m'), n: nextMinuteNo(f, d), text, by, at: new Date().toISOString(), w: 40, ink: 'blue', font: 'neat', ...autoPlace(d), ...extra });
 }
 function nextFolio(f) {
   const nums = f.docs.map(d => parseInt(d.folio, 10)).filter(n => !isNaN(n));
@@ -869,7 +871,7 @@ function viewLetter(f, d) {
 function sidePanel(f) {
   const tab = ui.fileTab === 'cover' && role() !== 'registry' ? 'folios' : ui.fileTab;
   const visibleStickies = f.docs.flatMap(d => d.stickies.filter(seesSticky).map(s => ({ s, d })));
-  const minutes = f.docs.flatMap(d => d.minutes.filter(m => m.n).map(m => ({ m, d }))).sort((a, b) => fromRoman(a.m.n) - fromRoman(b.m.n));
+  const minutes = [...f.docs].sort(byFolio).flatMap(d => d.minutes.filter(m => m.n).sort((a, b) => fromRoman(a.n) - fromRoman(b.n)).map(m => ({ m, d })));
   const tabs = [['folios', 'Folios'], ['notes', `Notes ${minutes.length + visibleStickies.length}`], ['movement', 'Movement'], ...(role() === 'registry' ? [['cover', 'Cover']] : []), ['details', 'Details']];
   let body = '';
   if (tab === 'folios') {
@@ -967,7 +969,7 @@ function minuteHTML(f, d, m, can) {
   const mov = can && m.by === meId();
   const editing = ui.editing === m.id;
   return `<div class="mn ${mov ? 'movable' : ''} ${ui.sel?.id === m.id ? 'sel' : ''}" data-kind="minute" data-f="${f.id}" data-d="${d.id}" data-id="${m.id}" style="left:${m.x}%;top:${m.y}%;width:${m.w}%;--mnink:${inkOf(m.ink)};font-family:${handOf(m.font).css};font-size:${minuteFs(m)}cqw" ${mov ? 'title="Drag to move · corner to resize · click for ink and hand"' : ''}>
-    ${editing ? `<span class="mn-n">${m.n || nextMinuteNo(f)}.</span><textarea id="mn-edit" placeholder="Write your comment…" aria-label="Comment text">${esc(m.text)}</textarea>` : `<span class="mn-n">${m.n}.</span>${esc(m.text)}`}
+    ${editing ? `<span class="mn-n">${m.n || nextMinuteNo(f, d)}.</span><textarea id="mn-edit" placeholder="Write your comment…" aria-label="Comment text">${esc(m.text)}</textarea>` : `<span class="mn-n">${m.n}.</span>${esc(m.text)}`}
     <div class="mn-sig"><span class="sig">${esc(person(m.by).name)}</span><span>${fmtDate(m.at)}</span></div>
     ${mov ? '<span class="rz" aria-hidden="true"></span>' : ''}
   </div>`;
@@ -1690,7 +1692,7 @@ function markModal(f) {
       <div class="field"><label for="mk-ins">Instruction <span class="req">*</span></label><textarea class="textarea" id="mk-ins" placeholder="e.g. Head NVS – please prepare a response by Friday"></textarea></div>
       <div class="field"><label for="mk-sticky">Sticky note for the officer <span class="muted" style="font-weight:500">(optional)</span></label><input class="input" id="mk-sticky" placeholder="e.g. Urgent"></div>
       <div class="field"><label for="mk-folio">Write the minute on</label><select class="select" id="mk-folio">${liveDocs(f).map(d => `<option value="${d.id}" ${lastDoc && d.id === lastDoc.id ? 'selected' : ''}>Folio ${esc(d.folio)} – ${esc(d.title)}</option>`).join('')}</select>
-        <span class="hint">Saved as minute ${nextMinuteNo(f)} with your signature. You can move it on the page afterwards.</span></div>
+        <span class="hint">Saved with your signature as the next minute on that letter (each letter's minutes start at I). You can move it on the page afterwards.</span></div>
     </div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmMark" data-id="${f.id}">${ic('undo')} Return to Registry</button></div>`);
 }
@@ -2298,7 +2300,7 @@ const ACT = {
   mnSave: () => {
     const { f, d, m } = selMinute(); if (!m) return;
     const text = ($('#mn-edit')?.value || '').trim(); if (!text) { toast('Write your comment first'); $('#mn-edit')?.focus(); return; }
-    m.text = text; if (!m.n) m.n = nextMinuteNo(f); m.at = now(); ui.editing = null; f.updated = now();
+    m.text = text; if (!m.n) m.n = nextMinuteNo(f, d); m.at = now(); ui.editing = null; f.updated = now();
     save(); repaintLayer(f.id, d.id); refreshSide(f); toast(`Minute ${m.n} added – drag it anywhere on the page`);
   },
   mnCancel: () => {
