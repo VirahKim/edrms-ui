@@ -1351,3 +1351,36 @@ body { overflow-x: clip; }
 .profile-card b { display: block; font-size: 18px; } .profile-card div > span { color: var(--ink-2); }
 .field-err { margin: 6px 0 0; font-size: 13px; color: #b42323; }
 [data-theme="dark"] .field-err { color: #ff9a9a; }
+/* Q-BITS AI pop-up: the Q-BITS mark in place of the stars */
+.ai-panel .mh-ic.is-qbits { background: #fff; box-shadow: 0 4px 12px rgba(0,50,48,.18); display: grid; place-items: center; }
+.ai-panel .mh-ic.is-qbits .ai-panel__mark { width: 30px; height: 21px; }
+[data-theme="dark"] .ai-panel .mh-ic.is-qbits { background: #fff; }
+
+/* ---- Q-BITS AI pop-up: Q-BITS mark and shades of blue ---- */
+.ai-panel { --ai-b1: #0b3d7a; --ai-b2: #1565c0; --ai-b3: #4f9be8; --ai-b4: #e8f1fd; --ai-b5: #cfe0f7;
+  background: linear-gradient(180deg, #f2f7fe 0%, #ffffff 38%); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--ai-b5); }
+.ai-panel::before { height: 4px; background: linear-gradient(90deg, var(--ai-b1), var(--ai-b2), var(--ai-b3)); }
+.ai-panel .modal-h { border-bottom-color: var(--ai-b5); }
+.ai-panel .modal-h h3 { color: var(--ai-b1); }
+.ai-panel .modal-h p { color: #47607f; }
+.ai-panel .mh-ic.is-qbits { width: 54px; height: 40px; padding: 0; background: none; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(11,61,122,.18); }
+.ai-panel .mh-ic.is-qbits img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ai-panel .bubble.bot { background: var(--ai-b4); color: #10233d; border: 1px solid var(--ai-b5); box-shadow: none; }
+.ai-panel .bubble.me { background: var(--ai-b2); color: #fff; }
+.ai-panel .bubble .btn-light { background: #fff; color: var(--ai-b1); border-color: var(--ai-b5); }
+.ai-panel .faq-chips button { background: #fff; color: var(--ai-b1); border: 1px solid var(--ai-b5); }
+.ai-panel .faq-chips button:hover { background: var(--ai-b4); }
+.ai-panel .ai-input { border-top-color: var(--ai-b5); }
+.ai-panel .ai-input .input { border-color: var(--ai-b5); }
+.ai-panel .ai-input .input:focus { border-color: var(--ai-b2); box-shadow: 0 0 0 4px rgba(21,101,192,.18); }
+.ai-panel .ai-input .btn-primary { background: var(--ai-b2); border-color: var(--ai-b2); color: #fff; }
+.ai-panel .ai-input .btn-primary:hover { background: var(--ai-b1); }
+[data-theme="dark"] .ai-panel { --ai-b4: #13294a; --ai-b5: #24436d; background: linear-gradient(180deg, #0d1d33 0%, #0a1626 40%); color: #e6eefb; }
+[data-theme="dark"] .ai-panel .modal-h h3 { color: #e6eefb; }
+[data-theme="dark"] .ai-panel .modal-h p { color: #a9bedb; }
+[data-theme="dark"] .ai-panel .bubble.bot { color: #e6eefb; }
+[data-theme="dark"] .ai-panel .bubble.me { background: #2f7de1; }
+[data-theme="dark"] .ai-panel .bubble .btn-light, [data-theme="dark"] .ai-panel .faq-chips button { background: #10233f; color: #cfe2fb; border-color: var(--ai-b5); }
+[data-theme="dark"] .ai-panel .faq-chips button:hover { background: #17325a; }
+[data-theme="dark"] .ai-panel .ai-input .input { background: #0b1a2e; color: #e6eefb; }
+[data-theme="dark"] .ai-panel .ai-input .btn-primary { background: #2f7de1; border-color: #2f7de1; }

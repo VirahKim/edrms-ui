@@ -1827,11 +1827,12 @@ function openChat() {
   setFab(false);
   if ($('#ai-panel')) { $('#ai-panel').remove(); return; }
   ui.aiSeen = true; renderFab();
-  if (!ui.chat.length) ui.chat.push({ bot: true, html: `Hi ${esc(me().name.split(' ')[0])}! I'm the Qbits assistant. Ask me anything about EDRMS, or pick one of the questions below.` });
+  if (!ui.chat.length) ui.chat.push({ bot: true, html: `Hi ${esc(me().name.split(' ')[0])}! I'm the Q-BITS assistant. Ask me anything about EDRMS, or pick one of the questions below.` });
   const p = document.createElement('section'); p.className = 'ai-panel glass'; p.id = 'ai-panel'; p.setAttribute('aria-label', 'AI chat');
   p.innerHTML = `${mHead('sparkles', 'Q-BITS AI', 'Answers from the EDRMS user guide')}<div class="ai-msgs" id="ai-msgs" aria-live="polite"></div><div class="faq-chips" id="ai-chips"></div>
     <form class="ai-input" onsubmit="ACT.aiSend();return false"><input class="input" id="ai-q" placeholder="Ask a question…" aria-label="Ask a question" autocomplete="off"><button class="btn btn-primary btn-icon" aria-label="Send">${ic('send')}</button></form>`;
   p.querySelector('[data-act=close]').dataset.act = 'closeChat';
+  const hi = p.querySelector('.mh-ic'); if (hi) { hi.innerHTML = '<img src="assets/qbits-mark-on-mint.png" alt="Q-BITS">'; hi.classList.add('is-qbits'); }
   document.body.appendChild(p); drawChat(); setTimeout(() => $('#ai-q')?.focus(), 50);
 }
 function drawChat() {
