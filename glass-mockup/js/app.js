@@ -760,6 +760,7 @@ function pageHTML(f, d) {
   </article>`;
 }
 function viewFile(f, q) {
+  if (ui.curFile !== f.id) { ui.curFile = f.id; ui.folioQ = ''; }
   if (q.tab) ui.fileTab = q.tab;
   const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort(byFolio).reverse();
   const meta = `${stageChip(f.stage)}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
@@ -769,6 +770,11 @@ function viewFile(f, q) {
     <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who"><button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>${who}</div></div>
     ${f.draft ? `<div class="instruction">${ic('fileEdit')}<div><b>This file is a draft.</b> Finish the cover and details, then press <b>Open file</b> to start using it. Draft files are only listed under <b>Show → Draft files</b>.</div></div>` : ''}
     ${f.instruction && ['returned_marking', 'action'].includes(f.stage) ? `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}</div></div>` : ''}
+    <section class="panel glass folio-panel" aria-labelledby="ft-h">
+      <div class="panel-h"><h2 id="ft-h">Folios</h2><span class="n">${docs.length}</span>
+        <label class="input-icon folio-search">${ic('search')}<input class="input" id="folio-q" value="${esc(ui.folioQ || '')}" placeholder="Search folios – title, reference, folio, type or officer…" data-input="folioQuery" autocomplete="off"><span class="sr">Search folios</span></label></div>
+      <div id="folio-tbl">${folioTable(f, docs)}</div>
+    </section>
     <div class="fview">
       <div class="pages ${ui.hideNotes ? 'hide-notes' : ''}">
         <div class="pg-wrap" id="pg-cover">
@@ -780,6 +786,17 @@ function viewFile(f, q) {
       </div>
       <aside class="side-panel glass" id="side">${sidePanel(f)}</aside>
     </div>`;
+}
+/* Folio table: the first thing on an open file. A row opens that folio in the pages below. */
+function folioTable(f, docs) {
+  const term = (ui.folioQ || '').trim().toLowerCase();
+  const by = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
+  const st = d => d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : d.kind === 'response' && S.dispatch[d.id] ? ['Sent', 't-blue'] : ['Filed', 't-green'];
+  const conf = d => d.confidentiality || f.confidentiality || 'Internal';
+  const list = docs.filter(d => !term || [d.title, d.edms, d.senderRef || '', d.folio, KIND[d.kind][0], by(d), st(d)[0], conf(d)].join(' ').toLowerCase().includes(term));
+  if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('search')}<div>${term ? 'No folios match your search. Try a folio number or a reference.' : 'No folios yet.'}</div></div></div>`;
+  return `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
+    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-act="goPage" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td>${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function sidePanel(f) {
   const tab = ui.fileTab === 'cover' && role() !== 'registry' ? 'folios' : ui.fileTab;
@@ -2360,6 +2377,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#acct-menu')) { closeAcct(true); return; }
   if (e.key === 'Escape') { if (ui.editing) ACT.mnCancel(); else if (ui.fabOpen) setFab(false); else if ($('#ai-panel') && !$('#overlay')) $('#ai-panel').remove(); else closeModal(); }
   if (e.key === 'Enter' && e.target.classList?.contains('fcard')) go(e.target.dataset.href);
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.folio-tbl tr[data-pg]')) { e.preventDefault(); scrollToPage(e.target.dataset.pg, true); }
   if (e.key === 'Enter' && e.target.id === 'pal-q') { const a = $('#pal-list a'); if (a) { closeModal(); go(a.getAttribute('href')); } }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'mn-edit') ACT.mnSave();
 });
@@ -2368,6 +2386,7 @@ function refocus(id, pos) { const i = $('#' + id); if (i) { i.focus(); i.setSele
 document.addEventListener('input', e => {
   const t = e.target, k = t.dataset.input;
   if (k === 'sendersQuery') { ui.senders.q = t.value; const p = t.selectionStart; render(); refocus('ms-q', p); }
+  if (k === 'folioQuery') { ui.folioQ = t.value; const p = t.selectionStart, f = getFile(ui.curFile); if (f) { const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort(byFolio).reverse(); $('#folio-tbl').innerHTML = folioTable(f, docs); } refocus('folio-q', p); }
   if (k === 'routeQuery') { ui.routeQ = t.value; const p = t.selectionStart; render(); refocus('route-q', p); }
   if (k === 'filesQuery') { ui.files.q = t.value; const p = t.selectionStart; render(); refocus('files-q', p); }
   if (k === 'dashQ') { ui.dash.q = t.value; const p = t.selectionStart; $('#route-panel').innerHTML = routePanel(); refocus('dash-q', p); }

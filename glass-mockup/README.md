@@ -23,6 +23,7 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 - **Registries & Files:** picking a registry shows only that registry, with **View all registries** to bring the rest back.
 - **Contrast, light and dark:** every screen for all three officers, plus the AI page, a picked registry and the account menu, is checked by pixel (text against what is actually behind it); all text meets 4.5:1, large text 3:1.
 - **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, Movement Sheets, and for the Registry the Inward and Outward Registers and Access Requests.
+- **An open file starts with a searchable Folios table**: Title · Reference · Folio · Type · Created by · Status · Confidentiality · v · Modified. Search by title, reference, folio number, type or officer; clicking a row (or Enter) jumps to that folio in the pages below.
 - **Marking and Action Officers can add files too**: New File and Upload are on Registries & Files, Upload Document is one of their tiles, and an open file has Add document.
 - The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 5262 × 2949, darkened in dark mode).
 

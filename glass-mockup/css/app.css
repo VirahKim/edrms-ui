@@ -1509,3 +1509,19 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 @media (max-width: 480px) { .queue-switch { width: 100%; } .queue-switch button { flex: 1; padding: 10px 12px; } }
 [data-theme="dark"] .queue-switch button:not(.on) { color: var(--ink); }
 @media (max-width: 640px) { .tabs.stage-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 -4px 16px; padding: 2px 4px 6px; scrollbar-width: thin; } .tabs.stage-tabs button { flex: none; white-space: nowrap; } }
+/* Open file: searchable folio table first */
+.folio-panel { margin-bottom: 22px; }
+.folio-panel .panel-h { flex-wrap: wrap; gap: 10px 12px; }
+.folio-panel .folio-search { margin-left: auto; flex: 0 1 420px; min-width: 220px; }
+.folio-tbl tbody tr { cursor: pointer; }
+.folio-tbl tbody tr:hover td { background: rgba(0,127,123,.06); }
+.folio-tbl tbody tr:focus-visible { outline: 3px solid var(--blue-600); outline-offset: -3px; }
+.folio-tbl td svg.i { width: 15px; height: 15px; vertical-align: -2px; margin-right: 4px; color: var(--ink-2); }
+.folio-tbl td, .folio-tbl th { white-space: nowrap; }
+.folio-tbl td:first-child { white-space: normal; min-width: 180px; }
+.folio-tbl abbr { text-decoration: none; }
+@media (max-width: 640px) { .folio-panel .folio-search { flex: 1 1 100%; margin-left: 0; } }
+.tbl.folio-tbl > thead > tr > th, .tbl.folio-tbl > tbody > tr > td { padding-left: 11px; padding-right: 11px; }
+.folio-tbl td.mono { font-size: 12.5px; }
+.folio-tbl td:first-child { min-width: 150px; }
+.folio-tbl td:nth-child(5) { white-space: normal; min-width: 120px; }
