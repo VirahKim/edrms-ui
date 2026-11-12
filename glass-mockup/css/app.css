@@ -1572,3 +1572,30 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 .phead h1 .star:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
 /* Side-nav Q-BITS AI button: both shapes of the mark in white */
 .qb-side-ai__mark path, .qb-side-ai__mark circle { stroke: #fff; }
+
+/* ==========================================================================
+   Table search and filters — one bar above every table
+   ========================================================================== */
+.tf-block { min-width: 0; }
+.tf { margin: 0 0 6px; }
+.tf-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; }
+.tf-f { display: grid; gap: 6px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+.tf-f > label { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 4px; }
+.tf-f.tf-d { flex: 0 1 170px; }
+.tf-f.tf-q { order: -1; flex: 1 1 100%; max-width: none; }
+.tf .input, .tf .select { height: 42px; font-size: 14.5px; background: var(--field, #fff); border-color: var(--line); }
+.tf .select { padding-left: 16px; text-overflow: ellipsis; }
+.tf .input[type=date] { padding: 0 14px; }
+.tf .tf-check { align-self: center; padding-bottom: 4px; }
+.tf-meta { display: flex; align-items: center; gap: 14px; min-height: 30px; margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
+.tf-meta .tf-clear { display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; }
+.tf-meta .tf-clear svg { width: 14px; height: 14px; }
+.tbl tr[hidden], .tbl tbody tr[hidden] { display: none; }
+.tbl .tf-none td { padding: 0; }
+.tbl .tf-none .empty { padding: 26px; }
+.panel.dense .tf .input, .panel.dense .tf .select { height: 40px; }
+@media (max-width: 640px) {
+  .tf-row { gap: 10px; }
+  .tf-f, .tf-f.tf-d { flex: 1 1 calc(50% - 5px); min-width: 0; max-width: none; }
+  .tf-f.tf-q { flex: 1 1 100%; min-width: 0; }
+}
