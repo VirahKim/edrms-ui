@@ -1603,3 +1603,13 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 /* Sign-in: the State Department as a small tab under Ministry of Health */
 .login-brand .crest .dept-tab { display: table; margin: 12px auto 0; padding: 7px 16px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.38); font-size: 14px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; }
 @media (max-width: 640px) { .login-brand .crest .dept-tab { font-size: 13px; padding: 6px 14px; } }
+
+/* Overview: action tiles first, then notifications and AI suggestions side by side, then the table */
+.dash2.dash-stack { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.dash-stack > .tiles { order: 0; }
+.dash-stack > .dash-left { position: static; max-height: none; overflow: visible; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: stretch; }
+.dash-stack > .dash-left > * { margin: 0; min-width: 0; }
+@media (max-width: 900px) { .dash-stack > .dash-left { grid-template-columns: minmax(0, 1fr); } }
+.dash-stack > .tiles .tile, .dash-stack > .tiles.many .tile { min-height: 222px; }
+.dash-stack > .tiles, .dash-stack > .dash-left, .dash-stack > .dash-main { order: 0; }
+@media (max-width: 640px) { .dash-stack > .tiles .tile, .dash-stack > .tiles.many .tile { min-height: 172px; } }

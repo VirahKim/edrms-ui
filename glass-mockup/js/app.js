@@ -593,16 +593,14 @@ function viewDashboard() {
       <div class="cover-stack" aria-hidden="true">${recent.map((f, k) => `<a href="#/file/${f.id}" tabindex="-1" class="cs cs${k}">${coverHTML(f, 6)}</a>`).reverse().join('')}</div>
     </div>`;
   const notes = myNotifs().slice(0, 3);
-  return pageHead({ hero }) + `<div class="dash2">
-    <aside class="dash-left">
+  return pageHead({ hero }) + `<div class="dash2 dash-stack">
+    <section class="tiles" aria-label="Quick actions">${tiles().join('')}</section>
+    <div class="dash-left" role="region" aria-label="Notifications and AI suggestions">
       <section class="notif-panel card"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
         ${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</section>
       ${aiCard()}
-    </aside>
-    <div class="dash-main">
-      <section class="tiles" aria-label="Quick actions">${tiles().join('')}</section>
-      ${r === 'registry' ? movementsPanel() : roleFilesPanel()}
     </div>
+    <div class="dash-main">${r === 'registry' ? movementsPanel() : roleFilesPanel()}</div>
   </div>`;
 }
 function movementsPanel() {
