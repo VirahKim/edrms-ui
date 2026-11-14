@@ -536,6 +536,15 @@ function tiles() {
     tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
   const mk = r === 'marking';
+  /* Marking Officer: the six tiles from the agreed layout */
+  if (mk) return [
+    tile('pen', 'Files awaiting marking', `${plural(roleQueue().length, 'file')} waiting for you`, '#/routing?stage=marking', roleQueue().length),
+    tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),
+    tile('swap', 'Start a new correspondence', 'A letter, memo, circular or notice', '#/mycorrespondence?new=1'),
+    tile('check', 'Files I have marked', `${plural(roleDone().length, 'file')} marked`, '#/routing'),
+    tile('filePlus', 'Request Files', 'Ask the Registry for another file or letter', '#/requestfiles'),
+    tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
+  ];
   return [
     tile('send', 'Files sent to me', 'Whole files for marking or action', '#/routing'),
     tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),

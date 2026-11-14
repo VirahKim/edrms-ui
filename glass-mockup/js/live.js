@@ -328,6 +328,27 @@ function decorateSide(root) {
   if (['approvals', 'messages', 'correspondence', 'reports', 'mycorrespondence', 'requestfiles'].includes(cur)) root.querySelectorAll('.sidebar nav a.on').forEach(a => { if (!a.getAttribute('href').includes(cur)) { a.classList.remove('on'); a.removeAttribute('aria-current'); } });
 }
 
+/* ---------- User Manual in a side panel (opened from the Q-BITS AI hub) ---------- */
+ui.man = ui.man || { q: '', open: false };
+const MAN_FOR = () => ({ registry: 'registry', marking: 'marking', action: 'action' })[role()] || 'start';
+function manualPanelHTML() {
+  const t = ui.man.q.trim().toLowerCase(), strip = h => h.replace(/<[^>]+>/g, ' ').toLowerCase();
+  const secs = GUIDE.filter(g => !t || g.title.toLowerCase().includes(t) || strip(g.body).includes(t));
+  return `${mHead('book', 'User Manual', 'Keep it open while you work')}
+    <div class="man-tools"><label class="input-icon">${ic('search')}<input class="input" id="man-q" value="${esc(ui.man.q)}" placeholder="Search the manual…" autocomplete="off"><span class="sr">Search the manual</span></label>
+      <div class="man-toc">${GUIDE.map(g => `<button type="button" data-act="manGo" data-id="${g.id}" class="${g.id === MAN_FOR() ? 'on' : ''}">${g.title}</button>`).join('')}</div></div>
+    <div class="man-body" id="man-body">${secs.length ? secs.map(g => `<article id="man-${g.id}"><h3><span class="ic">${ic(g.icon)}</span>${g.title}</h3>${g.body}</article>`).join('') : '<p class="muted">Nothing in the manual matches that. Try Q-BITS AI → Chat.</p>'}</div>
+    <div class="modal-f"><button class="btn btn-light btn-sm" data-act="manTour">${ic('play')} Tutorial mode</button><a class="btn btn-primary btn-sm" href="#/guide" data-act="manFull">${ic('book')} Open full manual</a></div>`;
+}
+function openManual(scrollTo) {
+  let p = $('#man-panel');
+  if (!p) { p = document.createElement('aside'); p.id = 'man-panel'; p.className = 'man-panel glass'; p.setAttribute('aria-label', 'User Manual'); document.body.appendChild(p); }
+  p.innerHTML = manualPanelHTML(); ui.man.open = true; document.body.classList.add('man-open');
+  p.querySelector('[data-act=close]').dataset.act = 'manClose';
+  const id = scrollTo || MAN_FOR(); setTimeout(() => { const a = $('#man-' + id); if (a) $('#man-body').scrollTop = a.offsetTop - $('#man-body').offsetTop; $('#man-q')?.focus({ preventScroll: true }); }, 0);
+}
+function closeManual() { $('#man-panel')?.remove(); ui.man.open = false; document.body.classList.remove('man-open'); }
+
 /* ---------- routes, actions and inputs ---------- */
 LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrespondence, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
 Object.assign(SCREEN_NAME, { approvals: 'Pending Approvals', messages: 'Messages', correspondence: 'Correspondence from officers', reports: 'Reports Dashboard', 'mycorrespondence': 'My correspondence', 'requestfiles': 'Request Files' });
@@ -391,6 +412,12 @@ Object.assign(ACT, {
     save(); closeModal(); render(); toast(`${c.subject} sent on`);
   },
   repRefresh: () => { render(); toast('Reports refreshed'); },
+  logout: (orig => (...a) => { closeManual(); return orig(...a); })(ACT.logout),
+  fabGuide: () => { setFab(false); if ($('#man-panel')) closeManual(); else openManual(); },
+  manClose: () => closeManual(),
+  manGo: el => { $$('.man-toc button').forEach(b => b.classList.toggle('on', b === el)); const a = $('#man-' + el.dataset.id), body = $('#man-body'); if (!a) { ui.man.q = ''; openManual(el.dataset.id); return; } body.scrollTo({ top: a.offsetTop - body.offsetTop, behavior: 'smooth' }); },
+  manTour: () => { closeManual(); ui.guideMode = 'tour'; go('#/guide'); },
+  manFull: () => { closeManual(); },
   corrStart: () => corrStartModal(),
   corrStartGo: () => {
     const subj = $('#cw-subj').value.trim(), kind = ($$('[name=cw-kind]').find(i => i.checked) || {}).value || 'letter';
@@ -433,6 +460,14 @@ document.addEventListener('input', e => {
     $('#cw-prev').innerHTML = tplHTML(CORR_TPL(kind), { ref: 'Draft', date: new Date().toISOString(), to: $('#cw-to').value || 'Recipient', subject: ($('#cw-subj2').value || '').toUpperCase(), body: toParas($('#cw-body').value), signer: { name: p.name, title: p.title }, signed: false, org: '' });
   }
 });
+document.addEventListener('input', e => {
+  if (e.target.id !== 'man-q') return;
+  ui.man.q = e.target.value;
+  const t = ui.man.q.trim().toLowerCase(), strip = h => h.replace(/<[^>]+>/g, ' ').toLowerCase(), body = $('#man-body');
+  const secs = GUIDE.filter(g => !t || g.title.toLowerCase().includes(t) || strip(g.body).includes(t));
+  body.innerHTML = secs.length ? secs.map(g => `<article id="man-${g.id}"><h3><span class="ic">${ic(g.icon)}</span>${g.title}</h3>${g.body}</article>`).join('') : '<p class="muted">Nothing in the manual matches that. Try Q-BITS AI → Chat.</p>';
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#man-panel') && !$('#overlay')) closeManual(); });
 document.addEventListener('submit', e => {
   const f = e.target.closest('.chat-send'); if (!f) return; e.preventDefault();
   const inp = f.querySelector('#chat-in'), text = inp.value.trim(); if (!text) return;

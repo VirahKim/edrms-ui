@@ -8,6 +8,12 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 
 ## What's in it
 
+### Marking Officer tiles
+Files awaiting marking · My tasks · Start a new correspondence · Files I have marked · Request Files · Bring Up Diary.
+
+### User Manual on the side
+Q-BITS AI → User Manual opens the manual in a panel on the right instead of leaving the page. On desktop the page moves over so both stay visible; on phones it covers the screen. It opens at your role's section, with a search box, section chips, Tutorial mode and Open full manual. Close it with × or Escape.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`
