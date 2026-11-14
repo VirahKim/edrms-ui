@@ -1737,7 +1737,6 @@ a.ph-ic { text-decoration: none; }
 /* Overview: quick links, Open Q-BITS AI, notification channel */
 .qlinks { display: flex; flex-wrap: wrap; gap: 10px; }
 .dash-stack > .qlinks { grid-area: auto; }
-@media (min-width: 1200px) { .dash2.dash-stack { grid-template-areas: "side tiles" "side links" "main main"; } .dash-stack > .qlinks { grid-area: links; } }
 .qlink { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.7); backdrop-filter: blur(12px); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer; box-shadow: var(--shadow-sm); }
 .qlink:hover { background: #fff; }
 .qlink svg { width: 18px; height: 18px; color: var(--primary, #007F7B); }
@@ -1762,3 +1761,25 @@ a.ph-ic { text-decoration: none; }
 #ap-note, #crt, #rq-why, #cn-msg { height: auto; min-height: 96px; border-radius: 20px; padding: 12px 16px; resize: vertical; }
 .chat-m .count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--primary, #007F7B); color: #fff; font-size: 11.5px; font-weight: 700; }
 @media (max-width: 640px) { .phead .ph-icons .ph-ic[data-act=palette] { display: none; } .phead .ph-icons { gap: 6px; } }
+
+/* Records lifecycle tag: Active / Semi-active */
+.chip.t-sand { background: #f3ead6; color: #6b4e16; }
+.chip.t-sand .dot { background: #b7862b; }
+.chip.act-tag { white-space: nowrap; }
+button.chip.act-tag { border: 0; font: inherit; font-size: inherit; cursor: pointer; }
+button.chip.act-tag:hover { filter: brightness(.96); }
+.fcard .cover-tag { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.fcard .cover-tag .act-tag { box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+.fcard .cover-tag .t-green { background: #e3f5ea; }
+button.chip.act-tag { font-size: 12.5px; height: 26px; }
+
+/* Overview header on phones: logo and icons on one row, the greeting underneath */
+@media (max-width: 640px) {
+  .hero-compact .hero-row { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "logo icons" "hello hello"; align-items: center; row-gap: 12px; }
+  .hero-compact .dash-hero { display: contents; }
+  .hero-compact .dash-hero .disc-big { grid-area: logo; }
+  .hero-compact .hero-row > .ph-icons { grid-area: icons; justify-self: end; margin: 0; }
+  .hero-compact .dash-hello { grid-area: hello; }
+  .hero-compact .dash-hello h1 { font-size: 23px; }
+}
+.tbl .fname .act-tag { margin-top: 4px; font-size: 11.5px; padding: 2px 9px; }

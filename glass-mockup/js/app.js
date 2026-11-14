@@ -183,6 +183,10 @@ const getDoc = (f, id) => f && f.docs.find(d => d.id === id);
 const liveDocs = f => f.docs.filter(d => d.status !== 'landing');
 const regName = id => (REGISTRIES.find(r => r.id === id) || {}).name || '—';
 const byFolio = (a, b) => a.folio.localeCompare(b.folio, undefined, { numeric: true });
+/* Records lifecycle: Active while in use; Semi-active once filed away, closed or untouched for 30 days (the Registry can change it) */
+const activity = f => f.activity || ((f.stage === 'filed' || f.state === 'Closed' || daysSince(f.updated) > 30) ? 'Semi-active' : 'Active');
+const actChip = (f, btn) => { const a = activity(f), cls = `chip act-tag ${a === 'Active' ? 't-green' : 't-sand'}`, inner = `<span class="dot"></span>${a}`;
+  return btn ? `<button type="button" class="${cls}" data-act="setActivity" data-id="${f.id}" title="Change to ${a === 'Active' ? 'Semi-active' : 'Active'}">${inner}</button>` : `<span class="${cls}">${inner}</span>`; };
 const stageChip = st => { const s = STAGES[st]; return `<span class="chip t-${s.tone}"><span class="dot"></span>${s.short}</span>`; };
 const withLabel = f => f.withUser === 'registry' ? 'Registry Officer' : person(f.withUser).name;
 const fileSizeKB = f => f.docs.reduce((a, d) => a + (d.sizeKB || 200), 0);
@@ -646,7 +650,7 @@ function routePanel() {
 function fileCard(f) {
   return `<article class="fcard" data-href="#/file/${f.id}" tabindex="0" aria-label="${esc(f.name)}">
     <div class="cover">${coverHTML(f, 3)}
-      <button class="star ${f.starred ? 'on' : ''}" data-act="star" data-id="${f.id}" aria-label="Star file">${ic('star')}</button>${f.draft ? '<span class="chip t-amber draft-chip">Draft</span>' : ''}
+      <button class="star ${f.starred ? 'on' : ''}" data-act="star" data-id="${f.id}" aria-label="Star file">${ic('star')}</button>${f.draft ? '<span class="chip t-amber draft-chip">Draft</span>' : `<span class="cover-tag">${actChip(f)}</span>`}
       <button class="menu" data-act="fileMenu" data-id="${f.id}" aria-label="File options">${ic('moreH')}</button>
     </div>
     <div class="body">
@@ -676,9 +680,9 @@ function sortFiles(list) {
 }
 function filesTable(files) {
   const [, key, dir] = ui.files.sort.split(':');
-  return tfWrap({ key: 'files', search: false, date: [7, 'Modified from', 'Modified to'], facets: [[3, 'Type'], [4, 'Created by'], [5, 'Status'], [6, 'Confidentiality']] }, `<div class="tbl-wrap"><table class="tbl wide"><thead><tr>${COLS.map(([k, l]) => `<th><button data-act="colSort" data-k="${k}" class="${key === k ? 'on' : ''}" aria-label="Sort by ${l}">${l} ${ic(key === k ? (dir === 'desc' ? 'chevD' : 'arrowUp') : 'sortUD')}</button></th>`).join('')}</tr></thead><tbody>
+  return tfWrap({ key: 'files', search: false, date: [7, 'Modified from', 'Modified to'], facets: [[3, 'Type'], [4, 'Created by'], [5, 'Status'], [0, 'Activity'], [6, 'Confidentiality']] }, `<div class="tbl-wrap"><table class="tbl wide"><thead><tr>${COLS.map(([k, l]) => `<th><button data-act="colSort" data-k="${k}" class="${key === k ? 'on' : ''}" aria-label="Sort by ${l}">${l} ${ic(key === k ? (dir === 'desc' ? 'chevD' : 'arrowUp') : 'sortUD')}</button></th>`).join('')}</tr></thead><tbody>
     ${files.map(f => `<tr data-href="#/file/${f.id}">
-      <td><div class="fname"><span class="thumb-cover">${coverHTML(f, 2)}</span><div><b>${esc(f.name)}</b><small>${regName(f.registry)}</small></div></div></td>
+      <td data-v="${f.draft ? 'Draft' : activity(f)}"><div class="fname"><span class="thumb-cover">${coverHTML(f, 2)}</span><div><b>${esc(f.name)}</b><small>${regName(f.registry)}</small>${f.draft ? '' : actChip(f)}</div></div></td>
       <td class="mono" style="font-size:12.5px">${esc(f.ref)}</td>
       <td>${liveDocs(f).length ? `${liveDocs(f).length} <small class="sub">latest F.${esc([...liveDocs(f)].sort(byFolio).pop().folio)}</small>` : '0'}</td>
       <td>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : 'Ordinary'}</td>
@@ -779,7 +783,7 @@ function viewFile(f, q, target) {
   const pagesView = ui.fileView === 'pages';
   if (q.tab) ui.fileTab = q.tab;
   const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort(byFolio).reverse();
-  const meta = `${stageChip(f.stage)}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
+  const meta = `${stageChip(f.stage)}${actChip(f, role() === 'registry')}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
   const who = f.withUser === 'registry' ? '<span class="muted">In the Registry</span>' : `${avatar(f.withUser)}<span>With <b>${esc(person(f.withUser).name)}</b></span>`;
   const acts = actionButtons(f);
   return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name]], back: ['Back to Registries & Files', '#/files'], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
@@ -2254,6 +2258,7 @@ const ACT = {
   gridExcel: el => { const f = getFile(el.dataset.id), q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = [['Date', 'Folio', 'Document', 'Step', 'Officer to see', 'Initials', 'Acknowledged'], ...gridRows(f).map(r => [fmtDT(r.date), r.folio, r.doc, r.step, r.to, r.initials, r.ack])];
     saveFile(`File grid – ${f.ref.replace(/\//g, '-')}.csv`, rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv'); },
+  setActivity: el => { const f = getFile(el.dataset.id); f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} marked ${f.activity}`); },
   tfClear: el => { ui.tf[el.dataset.k] = { fac: {} }; render(); },
   guideMode: el => { ui.guideMode = el.dataset.k; render(); },
   tutorial: () => { ui.guideMode = 'tour'; go('#/guide'); render(); },

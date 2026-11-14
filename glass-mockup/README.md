@@ -8,6 +8,10 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 
 ## What's in it
 
+### Active / Semi-active tag on files
+Every file carries a records-lifecycle tag: **Active** while it is in use, **Semi-active** once it is filed away, closed, or untouched for 30 days. It shows on the top-right of each file cover, under the file name in the list view (with an Activity filter), and in the file's header — where the Registry Officer can click it to switch between Active and Semi-active.
+On phones the Overview header puts the logo and the icons on one row, with the greeting underneath.
+
 ### Carried over from the live system (`js/live.js`)
 Checked on edrms.qbits.africa as the Registry Officer and the Action Officer (viewing only), then rebuilt in the glass style:
 - **Header buttons on every page:** Pending approvals (with a count) and Messages (unread count), between Search and Notifications.
@@ -17,7 +21,7 @@ Checked on edrms.qbits.africa as the Registry Officer and the Action Officer (vi
 - **My correspondence** (Marking and Action Officers, `#/mycorrespondence`): Start new correspondence asks "What are you writing?" — Official Letter, Forwarding Letter, Internal Memo, Savingram, Circular, Notice or Minutes of a Meeting — and a subject, then a writing form with a live letterhead preview. Save a draft or Send to Registry; returned items show the Registry's note and can be fixed and resent.
 - **Request Files** (officers, `#/requestfiles`): search other files by subject, reference, name or folio — you see only what each one is — and request access with a reason and a duration. My requests shows what you asked for and the answer.
 - **Reports Dashboard** (`#/reports`): Total Files, Total Documents, Pending Tasks, SLA Breaches, Expiring Soon, Missing Documents, Under Legal Hold, Awaiting Disposal, OCR Review and OCR Jobs, each linking to its list, with Refresh.
-- **Overview:** quick links under the tiles (Registry: Create File, Search Documents, Correspondence from officers, Files & Records, File Census, Reports Dashboard; officers: Search Documents, My correspondence, Messages, Pending approvals, Reports Dashboard), "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles match the live set: Files sent to me, My tasks, Start new correspondence, Request files, Files to act on / awaiting my marking, Files I have acted on / marked.
+- **Overview:** "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles match the live set: Files sent to me, My tasks, Start new correspondence, Request files, Files to act on / awaiting my marking, Files I have acted on / marked.
 - **Side navigation:** the Registry section gains Correspondence and Reports Dashboard; officers get My correspondence, Request files and Reports Dashboard.
 
 ### Overview (first page, every role)

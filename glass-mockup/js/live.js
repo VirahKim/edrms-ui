@@ -307,15 +307,8 @@ function viewReports() {
     `<section class="rep-grid">${cards.map(([i, n, l, cta, h, tone]) => `<a class="rep-card glass" href="${h}"><span class="rep-ic t-${tone}">${ic(i)}</span><b class="rep-n">${n}</b><span class="rep-l">${l}</span><span class="rep-cta">${cta} ${ic('arrowR')}</span></a>`).join('')}</section>`;
 }
 
-/* ---------- Overview extras: quick links, Open Q-BITS AI, notification channel ---------- */
-const quickLinks = () => role() === 'registry' ? [
-  ['folderPlus', 'Create File', 'newFile'], ['search', 'Search Documents', 'palette'], ['inboxIn', 'Correspondence from officers', '#/correspondence', corrWaiting().length],
-  ['layers', 'Files & Records', '#/records'], ['scan', 'File Census', '#/census'], ['zap', 'Reports Dashboard', '#/reports']]
-  : [['search', 'Search Documents', 'palette'], ['fileEdit', 'My correspondence', '#/mycorrespondence'], ['mail', 'Messages', '#/messages', msgUnread()], ['listChecks', 'Pending approvals', '#/approvals', myApprovals().length], ['zap', 'Reports Dashboard', '#/reports']];
+/* ---------- Overview extras: Open Q-BITS AI, notification channel ---------- */
 function decorateOverview(root) {
-  const tiles = root.querySelector('.dash-stack > .tiles');
-  if (tiles && !root.querySelector('.qlinks')) tiles.insertAdjacentHTML('afterend', `<nav class="qlinks" aria-label="Quick links">${quickLinks().map(([i, l, t, n]) =>
-    t.startsWith('#') ? `<a class="qlink" href="${t}">${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</a>` : `<button class="qlink" data-act="${t}">${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</button>`).join('')}</nav>`);
   root.querySelectorAll('.ai-sugg').forEach(a => { if (!a.querySelector('.ai-open')) a.insertAdjacentHTML('beforeend', `<a class="ai-open" href="#/ai">${ic('sparkles')} Open Q-BITS AI ${ic('chevR')}</a>`); });
   const emp = root.querySelector('.dash-main .empty');
   if (emp && role() !== 'registry' && !emp.querySelector('.ask-link')) emp.insertAdjacentHTML('beforeend', `<p class="muted" style="margin:6px 0 0">You see the files sent to you and the ones you have worked on. To see any other file, ask the Registry Officer for access.</p><a class="btn btn-light btn-sm ask-link" href="#/requestfiles">${ic('search')} Find a file and ask for access</a>`);
