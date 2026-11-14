@@ -150,6 +150,7 @@ function ensureRecords() {
 ensureIds();
 
 let theme = 'light';
+let LIVE_ROUTES = {}, LIVE_AFTER = null; // filled by js/live.js
 try { theme = localStorage.getItem('edrms-theme') || 'light'; } catch (e) { /* storage blocked */ }
 document.documentElement.dataset.theme = theme;
 try { if (localStorage.getItem('edrms-side-mini') === '1') document.body.classList.add('side-mini'); } catch (e) { /* storage blocked */ }
@@ -339,13 +340,14 @@ function render() {
     case 'tutorial': view = viewTutorial(parts[1]); nav = 'more'; break;
     case 'guide': view = viewGuide(); nav = 'guide'; if (q.s) after = () => $('#g-' + q.s)?.scrollIntoView({ block: 'start' }); break;
     case 'settings': view = viewSettings(); nav = 'settings'; break;
-    default: view = viewDashboard();
+    default: if (LIVE_ROUTES[parts[0]]) { view = LIVE_ROUTES[parts[0]](q); nav = parts[0]; } else view = viewDashboard();
   }
   root.innerHTML = parts.length ? `<div class="app">${sidebar(nav)}<main class="main">${view}</main></div>` : `<div class="app no-side"><main class="main">${view}</main></div>`;
 
   const path = location.hash;
   if (path !== lastPath) { lastPath = path; window.scrollTo(0, 0); }
   watchPages();
+  if (LIVE_AFTER) LIVE_AFTER(root);
   tfInit(); tfWatch();
   if (after) requestAnimationFrame(after);
 }
@@ -445,7 +447,6 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
   /* Overview: a compact header — logo and greeting with the icons on the right, the navigation underneath */
   if (hero) return `<section class="phead glass is-hero hero-compact">
     <div class="hero-row">${hero}${icons}</div>
-    <div class="hero-nav">${topNav()}</div>
   </section>`;
   return `<section class="phead glass">
     <div class="phead-top">
@@ -537,8 +538,8 @@ function tiles() {
   return [
     tile('send', 'Files sent to me', 'Whole files for marking or action', '#/routing'),
     tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),
-    tile('folders', 'All files', 'Browse files and letters', '#/files'),
-    tile('filePlus', 'Request file', 'Ask the Registry for a file', 'requestAny'),
+    tile('fileEdit', 'Start new correspondence', 'A letter, memo, circular or notice', '#/mycorrespondence?new=1'),
+    tile('filePlus', 'Request files', 'Ask the Registry for another file or letter', '#/requestfiles'),
     tile(mk ? 'pen' : 'checkCircle', mk ? 'Files awaiting my marking' : 'Files to act on', `${plural(roleQueue().length, 'file')} waiting`, '#/routing', roleQueue().length),
     tile('check', mk ? 'Files I have marked' : 'Files I have acted on', `${plural(roleDone().length, 'file')}`, '#/routing'),
   ];
@@ -2624,5 +2625,4 @@ document.addEventListener('drop', e => {
   const files = [...e.dataTransfer.files]; if (!files.length) return;
   ui.upload.files = (ui.upload.tab === 'bulk' ? files : files.slice(0, 1)).map(asUpload); ui.upload.err = ''; render();
 });
-
-render();
+/* first render happens at the end of js/live.js */
