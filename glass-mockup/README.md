@@ -11,6 +11,9 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 ### Marking Officer tiles
 Files awaiting marking · My tasks · Start a new correspondence · Files I have marked · Request Files · Bring Up Diary.
 
+### Action Officer tiles
+Files to act on · My tasks · New correspondence (a pencil tile, `assets/tiles/correspondence.svg`) · Files I have acted on · Request Files · Bring Up Diary.
+
 ### User Manual on the side
 Q-BITS AI → User Manual opens the manual in a panel on the right instead of leaving the page. On desktop the page moves over so both stay visible; on phones it covers the screen. It opens at your role's section, with a search box, section chips, Tutorial mode and Open full manual. Close it with × or Escape.
 
@@ -38,7 +41,7 @@ Checked on edrms.qbits.africa as the Registry Officer and the Action Officer (vi
 - **My correspondence** (Marking and Action Officers, `#/mycorrespondence`): Start new correspondence asks "What are you writing?" — Official Letter, Forwarding Letter, Internal Memo, Savingram, Circular, Notice or Minutes of a Meeting — and a subject, then a writing form with a live letterhead preview. Save a draft or Send to Registry; returned items show the Registry's note and can be fixed and resent.
 - **Request Files** (officers, `#/requestfiles`): search other files by subject, reference, name or folio — you see only what each one is — and request access with a reason and a duration. My requests shows what you asked for and the answer.
 - **Reports Dashboard** (`#/reports`): Total Files, Total Documents, Pending Tasks, SLA Breaches, Expiring Soon, Missing Documents, Under Legal Hold, Awaiting Disposal, OCR Review and OCR Jobs, each linking to its list, with Refresh.
-- **Overview:** "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles match the live set: Files sent to me, My tasks, Start new correspondence, Request files, Files to act on / awaiting my marking, Files I have acted on / marked.
+- **Overview:** "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles are set out under Marking Officer tiles and Action Officer tiles below.
 - **Side navigation:** the Registry section gains Correspondence and Reports Dashboard; officers get My correspondence, Request files and Reports Dashboard.
 
 ### Overview (first page, every role)

@@ -55,6 +55,7 @@ const ICONS = {
   reply: '<path d="M20 18v-2a4 4 0 0 0-4-4H4"/><path d="m9 17-5-5 5-5"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
   printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  penLine: '<path d="M14.5 4.5a2.1 2.1 0 0 1 3 3L9 16l-4 1 1-4Z"/><path d="m13 6 3 3"/><path d="M4 21c2-1.5 3.5-1.5 5 0s3 1.5 4.5 0 3-1.5 4.5 0"/>',
   pen: '<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>',
   stamp: '<path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
@@ -515,7 +516,7 @@ function quickActions() {
 const roleQueue = () => role() === 'marking' ? filesToMark() : filesToAct();
 const roleDone = () => S.files.filter(f => !f.draft && (role() === 'marking' ? ['returned_marking', 'action', 'returned_action', 'filed'] : ['returned_action', 'filed']).includes(f.stage) && f.movements.some(m => m.to === meId()));
 /* Home-page tile artwork (supplied SVGs); other tiles fall back to the drawn icon */
-const TILE_ART = { upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup', filePlus: 'request', pen: 'to-act', checkCircle: 'to-act', check: 'acted' };
+const TILE_ART = { penLine: 'correspondence', upload: 'upload', folders: 'files', listChecks: 'tasks', swap: 'movements', send: 'outward', inboxIn: 'inward', enter: 'requested', archive: 'physical', calendar: 'bringup', filePlus: 'request', pen: 'to-act', checkCircle: 'to-act', check: 'acted' };
 const tile = (icon, title, sub, target, badge) => {
   const art = TILE_ART[icon];
   const inner = `${art ? `<span class="tile-ic art"><img src="assets/tiles/${art}.svg" alt=""></span>` : `<span class="tile-ic"><i></i><span>${ic(icon)}</span></span>`}${badge ? `<span class="badge tile-badge">${badge}</span>` : ''}<b>${title}</b><span class="sub">${sub}</span>`;
@@ -545,13 +546,14 @@ function tiles() {
     tile('filePlus', 'Request Files', 'Ask the Registry for another file or letter', '#/requestfiles'),
     tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
+  /* Action Officer: the six tiles from the agreed layout */
   return [
-    tile('send', 'Files sent to me', 'Whole files for marking or action', '#/routing'),
+    tile('checkCircle', 'Files to act on', `${plural(roleQueue().length, 'file')} waiting for you`, '#/routing?stage=action', roleQueue().length),
     tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),
-    tile('fileEdit', 'Start new correspondence', 'A letter, memo, circular or notice', '#/mycorrespondence?new=1'),
-    tile('filePlus', 'Request files', 'Ask the Registry for another file or letter', '#/requestfiles'),
-    tile(mk ? 'pen' : 'checkCircle', mk ? 'Files awaiting my marking' : 'Files to act on', `${plural(roleQueue().length, 'file')} waiting`, '#/routing', roleQueue().length),
-    tile('check', mk ? 'Files I have marked' : 'Files I have acted on', `${plural(roleDone().length, 'file')}`, '#/routing'),
+    tile('penLine', 'New correspondence', 'A letter, memo, circular or notice', '#/mycorrespondence?new=1'),
+    tile('check', 'Files I have acted on', `${plural(roleDone().length, 'file')}`, '#/routing'),
+    tile('filePlus', 'Request Files', 'Ask the Registry for another file or letter', '#/requestfiles'),
+    tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
 }
 /* Suggestions worked out from the files themselves */
