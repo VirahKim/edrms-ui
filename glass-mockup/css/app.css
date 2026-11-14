@@ -1653,4 +1653,6 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
   .dash-stack > .dash-main { grid-area: main; }
   .dash-stack > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-@media (min-width: 1200px) and (max-width: 1399px) { .dash-stack > .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Action tiles: always three across, except on phones */
+@media (min-width: 700px) { .dash-stack > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 700px) and (max-width: 1399px) { .dash-stack > .tiles { gap: 16px; } .dash-stack > .tiles .tile b { font-size: 18px; } .dash-stack > .tiles .tile .sub { font-size: 14.5px; } }
