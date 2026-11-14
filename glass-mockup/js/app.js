@@ -110,7 +110,7 @@ function ago(iso) {
 const daysSince = iso => (Date.now() - new Date(iso)) / 864e5;
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-const AV_COLORS = ['#007F7B', '#7c4dff', '#0d9488', '#e0712b', '#c2410c', '#be185d', '#0369a1', '#4d7c0f'];
+const AV_COLORS = ['#007F7B', '#6d28d9', '#0f766e', '#b45309', '#c2410c', '#be185d', '#0369a1', '#3f6212']; // all at least 4.5:1 with white initials
 const avColor = s => AV_COLORS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_COLORS.length];
 const avatar = (pid, cls = '') => { const p = person(pid); return `<span class="av ${cls}" style="background:${avColor(p.name)}" title="${esc(p.name)}">${initials(p.name)}</span>`; };
 

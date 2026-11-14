@@ -1824,3 +1824,27 @@ button.chip.act-tag { font-size: 12.5px; height: 26px; }
 .folio-bar.to-me { background: rgba(255,240,200,.92); box-shadow: inset 5px 0 0 #e0a100, var(--shadow-sm); }
 [data-theme="dark"] .folio-tbl tbody tr.to-me > td { background: rgba(224,161,0,.16); }
 [data-theme="dark"] .folio-bar.to-me { background: rgba(224,161,0,.2); }
+
+/* Overview on desktop: the files table sits under the tiles (same width); AI Suggestions and notifications stay in view while you scroll */
+@media (min-width: 1200px) {
+  .dash2.dash-stack { grid-template-areas: "side tiles" "side main"; align-items: start; }
+  .dash-stack > .dash-left { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain; }
+}
+
+/* ---- Contrast fixes (axe colour-contrast audit, light and dark) ---- */
+.notif-card .ch { color: #00625f; }
+.chat-b.me time { opacity: 1; color: #e3fbf9; }
+a.btn-primary, .tbl a.btn-primary, .tbl .btn-primary, a.btn-primary:visited { color: #fff; }
+.chip.to-me-chip { background: #f2b724; color: #2e2000; }
+.folio-tbl tbody tr.to-me > td:first-child { box-shadow: inset 5px 0 0 #d99a00; }
+html:not([data-theme="dark"]) .tbl a.btn-primary, html[data-theme="dark"] .tbl a.btn-primary { color: #fff; }
+.chat-b.me time { color: #fff; }
+[data-theme="dark"] .notif-card .ch { color: #7fe0d8; }
+[data-theme="dark"] .fcard .cover-tag .t-green { background: #e3f5ea; color: #14532d; }
+[data-theme="dark"] .fcard .cover-tag .t-sand { background: #f3ead6; color: #5a410f; }
+[data-theme="dark"] .chat-b:not(.me) { background: var(--surface-2, #163230); color: var(--ink); }
+[data-theme="dark"] .chat-b:not(.me) time { color: var(--ink-2); opacity: 1; }
+[data-theme="dark"] .chat-list, [data-theme="dark"] .chat-ph, [data-theme="dark"] .chat-send { background: rgba(8,30,29,.55); }
+[data-theme="dark"] .chat-pane { background: rgba(8,30,29,.3); }
+[data-theme="dark"] .qlink, [data-theme="dark"] .man-toc button, [data-theme="dark"] .cn-p { background: var(--surface-2, #163230); color: var(--ink); }
+[data-theme="dark"] .btn-outline.danger { color: #fca5a5; border-color: rgba(252,165,165,.5); }
