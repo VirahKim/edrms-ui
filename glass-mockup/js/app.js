@@ -358,7 +358,7 @@ function viewLogin() {
   const roles = [['registry', 'Registry', 'John Kimani'], ['marking', 'Marking Officer', 'Vera Wambui'], ['action', 'Action Officer', 'Virah Creates']];
   return `<div class="login"><div class="login-frame glass">
     <section class="login-brand">
-      <div class="crest">REPUBLIC OF KENYA<img src="assets/coat-of-arms.png" alt="Coat of arms of Kenya">MINISTRY OF HEALTH</div>
+      <div class="crest">REPUBLIC OF KENYA<img src="assets/coat-of-arms.png" alt="Coat of arms of Kenya">MINISTRY OF HEALTH<span class="dept-tab">State Department for Medical Services</span></div>
       <h1>Electronic Document and Records Management System</h1>
       <p>EDRMS uses your Q-BITS ERP account. Your role, department and data scope come from the ERP.</p>
       <div class="foot"><span class="qb-lockup">${QB_MARK('qb-lockup__mark')}<span><b>Q-BITS</b><small>AI POWERED ERP</small></span></span><span>Powered by CodexAI Kenya</span></div>

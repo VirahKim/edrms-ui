@@ -144,7 +144,7 @@ The reason lists for Files & Records come from the live system's database, which
 Inward Register, Outward Register (with Dispatch), Movement Sheets, Bring-up Diary and Access Requests (approve or decline, with an expiry date).
 
 ### Sign-in page
-The left panel is #0052BD with the Kenya coat of arms, the system name and the Q-BITS lockup ("Powered by CodexAI Kenya"). The form side uses dark text on lighter fields so every label reads clearly against the teal background.
+The left panel is #0052BD with the Kenya coat of arms, Ministry of Health with **State Department for Medical Services** as a small tab beneath it, the system name and the Q-BITS lockup ("Powered by CodexAI Kenya"). The form side uses dark text on lighter fields so every label reads clearly against the teal background.
 
 ![Sign in](docs/screens/login.jpg)
 
