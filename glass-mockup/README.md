@@ -8,6 +8,17 @@ It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-ca
 
 ## What's in it
 
+### Signing in
+The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
+- Registry Officer — `john.kimani@health.go.ke`
+- Marking Officer — `vera.wambui@health.go.ke`
+- Action Officer — `virah.creates@health.go.ke`
+
+Any other email, a missing field or a wrong password shows a message under the form. (These are mockup-only details, kept in `js/data.js`.)
+
+### Notifications
+Each notification card shows the file and View on top, the message and sender, then when it arrived at the bottom-left and the channel (Email) at the bottom-right.
+
 ### Active / Semi-active tag on files
 Every file carries a records-lifecycle tag: **Active** while it is in use, **Semi-active** once it is filed away, closed, or untouched for 30 days. It shows on the top-right of each file cover, under the file name in the list view (with an Activity filter), and in the file's header — where the Registry Officer can click it to switch between Active and Semi-active.
 On phones the Overview header puts the logo and the icons on one row, with the greeting underneath.

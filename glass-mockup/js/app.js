@@ -361,7 +361,6 @@ window.addEventListener('hashchange', () => { ui.sel = null; ui.editing = null; 
    Login
    ========================================================================== */
 function viewLogin() {
-  const roles = [['registry', 'Registry', 'John Kimani'], ['marking', 'Marking Officer', 'Vera Wambui'], ['action', 'Action Officer', 'Virah Creates']];
   return `<div class="login"><div class="login-frame glass">
     <section class="login-brand">
       <div class="crest">REPUBLIC OF KENYA<img src="assets/coat-of-arms.png" alt="Coat of arms of Kenya">MINISTRY OF HEALTH<span class="dept-tab">State Department for Medical Services</span></div>
@@ -373,16 +372,13 @@ function viewLogin() {
       <h2>Sign in to EDRMS</h2>
       <p>EDRMS uses your Q-BITS ERP account. Your role, department and data scope come from the ERP.</p>
       <form class="stack" onsubmit="ACT.login();return false">
-        <label class="input-icon">${ic('mail')}<input class="input" type="email" placeholder="Work Email" autocomplete="username" value="${esc(PEOPLE[ACCOUNTS[ui.loginRole]].name.toLowerCase().replace(/\s+/g, '.'))}@health.go.ke"><span class="sr">Work Email</span></label>
-        <label class="input-icon">${ic('lock')}<input class="input" type="password" placeholder="Password" autocomplete="current-password" value="demo-password"><span class="sr">Password</span></label>
+        <label class="input-icon">${ic('mail')}<input class="input" type="email" id="lg-email" placeholder="Work Email" autocomplete="username" value="${esc(ui.lgEmail || '')}"><span class="sr">Work Email</span></label>
+        <label class="input-icon">${ic('lock')}<input class="input" type="password" id="lg-pass" placeholder="Password" autocomplete="current-password"><span class="sr">Password</span></label>
+        ${ui.lgErr ? `<p class="form-err login-err" role="alert">${esc(ui.lgErr)}</p>` : ''}
         <button class="btn btn-primary" data-act="login">Sign In ${ic('arrowR')}</button>
         <div class="or">or</div>
         <button type="button" class="btn btn-white" data-act="login"><span class="ms-logo"><i style="background:#f25022"></i><i style="background:#7fba00"></i><i style="background:#00a4ef"></i><i style="background:#ffb900"></i></span> Continue with Microsoft</button>
       </form>
-      <div class="demo-roles">
-        <span class="label">Mockup: choose which account to sign in as</span>
-        <div class="row">${roles.map(([r, l, n]) => `<button type="button" class="${ui.loginRole === r ? 'on' : ''}" data-act="pickRole" data-role="${r}"><b>${l}</b>${n}</button>`).join('')}</div>
-      </div>
     </section>
   </div></div>`;
 }
@@ -424,8 +420,9 @@ function notifCard(n) {
   const f = getFile(n.fileId) || {}; const p = person(n.from);
   return `<div class="notif-card ${n.read ? '' : 'unread'}" data-act="openNotif" data-id="${n.id}">
     <div class="top"><span>${esc(f.name || 'File')}</span><a>View</a></div>
-    <span class="ago">${ago(n.at)}</span><p>${esc(n.text)}</p>
-    <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div></div>`;
+    <p>${esc(n.text)}</p>
+    <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
+    <div class="nfoot"><span class="ago">${ago(n.at)}</span></div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
@@ -2155,8 +2152,16 @@ const currentFile = () => getFile(parseHash().parts[1]);
 
 const ACT = {
   close: () => closeModal(),
-  pickRole: el => { ui.loginRole = el.dataset.role; render(); },
-  login: () => { S.session = ui.loginRole; save(); go('#/'); toast(`Signed in as ${me().name}`); },
+  login: () => {
+    const email = ($('#lg-email')?.value || '').trim().toLowerCase(), pass = $('#lg-pass')?.value || '';
+    ui.lgEmail = email;
+    const r = LOGINS[email];
+    if (!email || !pass) ui.lgErr = 'Enter your work email and password.';
+    else if (!r) ui.lgErr = 'That email does not have an EDRMS account. Check it, or ask your administrator.';
+    else if (pass !== DEMO_PASSWORD) ui.lgErr = 'That password is not right. Try again.';
+    else { ui.lgErr = ''; ui.lgEmail = ''; S.session = r; save(); go('#/'); toast(`Signed in as ${me().name}`); return; }
+    render(); setTimeout(() => (r && email ? $('#lg-pass') : $('#lg-email'))?.focus(), 0);
+  },
   logout: () => { closeAcct(); S.session = null; save(); closeModal(); ui.fabOpen = false; history.replaceState(null, '', '#login'); render(); },
   switchRole: () => switchRoleModal(),
   acctMenu: el => { if ($('#acct-menu')) closeAcct(); else openAcct(el); },

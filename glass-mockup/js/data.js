@@ -23,6 +23,9 @@ const PEOPLE = {
   otieno:   { id: 'otieno',   name: 'Brian Otieno',    title: 'Head, Public Communication',          role: 'action',   registry: 'main', dept: 'Public Communication' },
 };
 const ACCOUNTS = { registry: 'john', marking: 'vera', action: 'virah' };
+/* Mockup sign-in: work email -> account. Every account uses the same demo password. */
+const LOGINS = { 'john.kimani@health.go.ke': 'registry', 'vera.wambui@health.go.ke': 'marking', 'virah.creates@health.go.ke': 'action' };
+const DEMO_PASSWORD = 'Edrms@2026';
 const ROLE_LABEL = { registry: 'Registry Officer', marking: 'Marking Officer', action: 'Action Officer' };
 
 /* ---- Registries -------------------------------------------------------- */
