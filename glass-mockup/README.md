@@ -17,6 +17,9 @@ Files to act on · My tasks · New correspondence (a pencil tile, `assets/tiles/
 ### User Manual on the side
 Q-BITS AI → User Manual opens the manual in a panel on the right instead of leaving the page. On desktop the page moves over so both stay visible; on phones it covers the screen. It opens at your role's section, with a search box, section chips, Tutorial mode and Open full manual. Close it with × or Escape.
 
+### Documents sent to you stand out
+When a Marking or Action Officer opens a file that is with them, the documents sent to them are highlighted in the Folios table (warm yellow rows with a gold edge and a **Sent to you** tag), with a line above the table saying how many. The same tag and colour mark those folios in the scroll-through pages view. For files the Registry sends from now on, these are exactly the letters it ticked in *Send to Marking*; for older files they are the folios added since the file last left the officer, or else the newest incoming letter. The Registry sees no highlight.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`

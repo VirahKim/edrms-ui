@@ -236,6 +236,21 @@ function nextInSeries(series) {
   const n = S.files.filter(f => f.ref.startsWith(s + '/')).map(f => parseInt(f.ref.slice(s.length + 1), 10)).filter(x => !isNaN(x));
   return `${s}/${(n.length ? Math.max(...n) : 0) + 1}`;
 }
+/* Documents sent to the officer who is viewing (Marking / Action Officer):
+   the letters the Registry ticked when it sent the file; for older files, the folios added since the
+   file last left this officer, or else the newest incoming letter. */
+function sentToMe(f) {
+  const id = meId();
+  if (role() === 'registry' || !(f.withUser === id || f.markedTo === id) || !['marking', 'action'].includes(f.stage)) return new Set();
+  const live = liveDocs(f);
+  if (f.sentDocs && f.sentDocs.length) return new Set(f.sentDocs.filter(x => live.some(d => d.id === x)));
+  const mv = f.movements, lastIn = [...mv].reverse().find(m => m.to === id);
+  const prevOut = lastIn ? [...mv].reverse().find(m => m.from === id && m.date < lastIn.date) : null;
+  const inbound = live.filter(d => d.kind !== 'response');
+  let pick = inbound.filter(d => (!prevOut || d.date > prevOut.date) && (!lastIn || d.date <= lastIn.date));
+  if (!pick.length || pick.length === inbound.length && inbound.length > 2) pick = [...inbound].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 1);
+  return new Set(pick.map(d => d.id));
+}
 function move(f, from, to) { f.movements.push({ date: new Date().toISOString(), from, to }); f.updated = new Date().toISOString(); }
 
 function involved(f) {
@@ -769,7 +784,8 @@ function actionButtons(f) {
 function folioBar(f, d) {
   const can = canAnnotate(f) && d.status !== 'landing';
   const canAct = role() === 'action' && f.stage === 'action' && f.withUser === meId() && d.kind !== 'response';
-  return `<div class="folio-bar glass"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
+  const toMe = sentToMe(f).has(d.id);
+  return `<div class="folio-bar glass${toMe ? ' to-me' : ''}"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b>${toMe ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}<span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
     <div class="tools">
       <a class="btn btn-light btn-xs" href="#/file/${f.id}/letter/${d.id}">${ic('info')} View letter details</a>
       ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic('stamp')} ${d.signed ? 'Unstamp' : 'Sign / stamp'}</button>` : ''}
@@ -802,6 +818,7 @@ function viewFile(f, q, target) {
       <div class="panel-h"><h2 id="ft-h">Folios</h2><span class="n">${docs.length}</span>
         <div class="seg icons" role="group" aria-label="How to view the folios">${[['table', 'list', 'Folio table'], ['pages', 'scrollDown', 'Scroll through the pages']].map(([k, i, l]) => `<button class="${ui.fileView === k ? 'on' : ''}" data-act="fileView" data-k="${k}" aria-pressed="${ui.fileView === k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
 </div>
+      ${(() => { const n = sentToMe(f).size; return n ? `<p class="to-me-legend"><span class="sw"></span>${n === 1 ? 'The document sent to you is' : `The ${n} documents sent to you are`} highlighted — ${role() === 'marking' ? 'mark' : 'act on'} ${n === 1 ? 'it' : 'these'}.</p>` : ''; })()}
       ${pagesView ? '' : `<div id="folio-tbl">${folioTable(f, docs)}</div>`}
     </section>
     ${pagesView ? `<div class="fview">
@@ -822,10 +839,10 @@ function folioTable(f, docs) {
   const by = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
   const st = d => d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : d.kind === 'response' && S.dispatch[d.id] ? ['Sent', 't-blue'] : ['Filed', 't-green'];
   const conf = d => d.confidentiality || f.confidentiality || 'Internal';
-  const list = docs;
+  const list = docs, mine = sentToMe(f);
   if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('file')}<div>No folios yet.</div></div></div>`;
   return tfWrap({ key: 'folios-' + f.id, search: 'Search folios – title, reference, folio, type or officer…', date: [8, 'Modified from', 'Modified to'], facets: [[3, 'Type'], [4, 'Created by'], [5, 'Status'], [6, 'Confidentiality']] }, `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
-    ${list.map(d => { const [sl, sc] = st(d); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"><td><b>${esc(d.title)}</b></td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
+    ${list.map(d => { const [sl, sc] = st(d), me2 = mine.has(d.id); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"${me2 ? ' class="to-me"' : ''}><td><b>${esc(d.title)}</b>${me2 ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}</td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
 }
 /* Letter details: Overview · Metadata · Versions · Cross-references, with comments on the side */
 const LT_TABS = [['overview', 'Overview', 'grid'], ['metadata', 'Metadata', 'fileEdit'], ['versions', 'Versions', 'layers'], ['xrefs', 'Cross-References', 'swap']];
@@ -2353,6 +2370,7 @@ const ACT = {
       const picks = $$('[data-change=smPick]');
       if (!picks.some(c => c.checked)) { const e = $('#sm-err'); e.textContent = 'Tick at least one letter or document to send.'; e.hidden = false; return; }
       f.keptBack = picks.filter(c => !c.checked).map(c => c.value);
+      f.sentDocs = picks.filter(c => c.checked).map(c => c.value);
       if (!to) to = 'vera';
     }
     if (note) addMinute(f, [...liveDocs(f)].sort(byFolio).pop(), note, meId());
