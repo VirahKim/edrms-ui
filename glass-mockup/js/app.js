@@ -437,15 +437,20 @@ function topNav() {
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
 }
 function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = null, meta = '', hero = '' }) {
-  return `<section class="phead glass ${hero ? 'is-hero' : ''}">
-    <div class="phead-top">
-      ${hero ? topNav() : `<button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button><nav class="crumbs" aria-label="Breadcrumb"><a href="#/">EDRMS</a>${crumbs.map(([t, h]) => `${ic('chevR')}${h ? `<a href="${h}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join('')}</nav>`}
-      <div class="ph-icons">
+  const icons = `<div class="ph-icons">
         <button class="ph-ic" data-act="palette" aria-label="Search">${ic('search')}</button>
-        ${themeToggle()}
         <button class="ph-ic" data-act="openNotifs" aria-label="Notifications">${ic('bell')}${unread() ? `<span class="badge">${unread()}</span>` : ''}</button>
         <button class="ph-ic me" data-act="acctMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)}">${avatar(meId())}</button>
-      </div>
+      </div>`;
+  /* Overview: a compact header — logo and greeting with the icons on the right, the navigation underneath */
+  if (hero) return `<section class="phead glass is-hero hero-compact">
+    <div class="hero-row">${hero}${icons}</div>
+    <div class="hero-nav">${topNav()}</div>
+  </section>`;
+  return `<section class="phead glass">
+    <div class="phead-top">
+      ${hero ? topNav() : `<button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button><nav class="crumbs" aria-label="Breadcrumb"><a href="#/">EDRMS</a>${crumbs.map(([t, h]) => `${ic('chevR')}${h ? `<a href="${h}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join('')}</nav>`}
+      ${icons}
     </div>
     ${hero || ''}
     ${hero ? '' : `<div class="phead-main">${lead}
@@ -586,11 +591,9 @@ function viewDashboard() {
   const r = role(), p = me();
   const dept = (p.dept || regName(p.registry)).replace(/^Ministry of Health\s*[-–]\s*/i, '');
   const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(t => `<span class="hello-part">${esc(t)}</span>`).join('<span class="sep" aria-hidden="true"></span>');
-  const recent = [...dashFiles()].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3);
   const hero = `<div class="dash-hero">
       <div class="disc-big">${MOH_LOCKUP}</div>
       <div class="dash-hello"><h1>Hello, ${esc(p.name)}</h1><p class="hello-line">${line}</p></div>
-      <div class="cover-stack" aria-hidden="true">${recent.map((f, k) => `<a href="#/file/${f.id}" tabindex="-1" class="cs cs${k}">${coverHTML(f, 6)}</a>`).reverse().join('')}</div>
     </div>`;
   const notes = myNotifs().slice(0, 3);
   return pageHead({ hero }) + `<div class="dash2 dash-stack">

@@ -1617,3 +1617,29 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 /* Overview header: smaller Republic of Kenya disc */
 .dash-hero .disc-big { width: 136px; height: 136px; }
 @media (max-width: 640px) { .dash-hero .disc-big { width: 78px; height: 78px; } }
+
+/* ==========================================================================
+   Overview header — compact: logo + greeting, icons right, navigation below
+   ========================================================================== */
+.phead.hero-compact { padding: 16px 22px 12px; overflow: visible; }
+.hero-compact .hero-row { display: flex; align-items: center; gap: 16px; }
+.hero-compact .hero-row > .ph-icons { margin-left: auto; align-self: center; }
+.hero-compact .dash-hero { display: flex; align-items: center; gap: 16px; min-height: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
+.hero-compact .dash-hero .disc-big { width: 78px; height: 78px; flex: none; box-shadow: 0 6px 18px rgba(6,40,40,.18); }
+.hero-compact .dash-hello { min-width: 0; }
+.hero-compact .dash-hello h1 { font-size: 28px; line-height: 1.15; margin: 0 0 4px; }
+.hero-compact .hello-line { font-size: 15px; margin: 0; }
+.hero-compact .hero-nav { margin-top: 14px; }
+.hero-compact .hero-nav .topnav { justify-content: flex-start; margin: 0; flex-wrap: wrap; gap: 4px; }
+.hero-compact .hero-nav .topnav a, .hero-compact .hero-nav .topnav button { padding: 7px 14px; font-size: 14.5px; }
+@media (max-width: 640px) {
+  .phead.hero-compact { padding: 14px 14px 10px; }
+  .hero-compact .hero-row { align-items: flex-start; }
+  .hero-compact .dash-hero { gap: 12px; }
+  .hero-compact .dash-hero .disc-big { width: 58px; height: 58px; }
+  .hero-compact .dash-hello h1 { font-size: 21px; }
+  .hero-compact .hello-line { font-size: 13px; }
+  .hero-compact .hero-row > .ph-icons .ph-ic[data-act=palette] { display: none; }
+  .hero-compact .hero-nav .topnav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .hero-compact .hero-nav .topnav a, .hero-compact .hero-nav .topnav button { padding: 7px 12px; font-size: 14px; white-space: nowrap; }
+}
