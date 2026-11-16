@@ -303,27 +303,61 @@ function rqModal(f) {
 /* ---------- Reports Dashboard ---------- */
 function viewReports() {
   const files = S.files.filter(f => !f.draft), docs = files.flatMap(f => f.docs);
+  const toReg = role() === 'registry';
   const pending = files.filter(f => ['marking', 'action', 'returned_marking', 'returned_action'].includes(f.stage));
   const sla = pending.filter(f => daysSince(f.updated) > 7);
   const expiring = S.access.filter(a => a.status === 'approved' && a.expires && (new Date(a.expires) - Date.now()) / 864e5 <= 30);
   const missing = (S.censuses || []).flatMap(c => c.items || []).filter(i => i.status === 'MISSING');
   const disposal = S.recReqs.filter(q => q.type === 'DISPOSE' && q.status !== 'Rejected');
-  const ocrReview = landingDocs();
-  const cards = [
-    ['folders', files.length, 'Total Files', 'View files', role() === 'registry' ? '#/files' : '#/queue', 'teal'],
-    ['file', docs.length, 'Total Documents', 'View documents', role() === 'registry' ? '#/files?show=letters' : '#/queue', 'blue'],
-    ['listChecks', pending.length + myApprovals().length, 'Pending Tasks', 'View tasks', '#/queue', 'amber'],
-    ['clock', sla.length, 'SLA Breaches', 'View SLA', '#/routing', 'red'],
-    ['calendar', expiring.length, 'Expiring Soon', 'Within 30 days', '#/access', 'sky'],
-    ['scan', missing.length, 'Missing Documents', 'View documents', '#/census', 'grey'],
-    ['lock', 0, 'Under Legal Hold', 'View legal holds', '#/records?tab=files', 'red'],
-    ['trash', disposal.length, 'Awaiting Disposal', 'View schedules', '#/records', 'grey'],
-    ['eye', ocrReview.length, 'OCR Review', 'Review OCR', '#/queue?tab=landing', 'violet'],
-    ['scan', ocrReview.length + 1, 'OCR Jobs', 'View OCR jobs', '#/queue?tab=landing', 'sky'],
+  const ocrReview = landingDocs(), ocrDone = docs.filter(d => d.status !== 'landing').length;
+  const tasks = pending.length + myApprovals().length;
+  const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  /* headline numbers */
+  const kpi = (icon, n, label, sub, href, tone) => `<a class="kpi glass" href="${href}"><span class="kpi-ic t-${tone}">${ic(icon)}</span><b class="kpi-n">${n}</b><span class="kpi-l">${label}</span><small>${sub}</small></a>`;
+  const kpis = [
+    kpi('folders', files.length, 'Total files', `${files.filter(f => activity(f) === 'Active').length} active · ${files.filter(f => activity(f) !== 'Active').length} semi-active`, toReg ? '#/files' : '#/queue', 'teal'),
+    kpi('file', docs.length, 'Total documents', `${docs.filter(d => daysSince(d.date) <= 30).length} added in the last 30 days`, toReg ? '#/files?show=letters' : '#/queue', 'blue'),
+    kpi('listChecks', tasks, 'Pending tasks', `${pending.length} files moving · ${myApprovals().length} approvals`, '#/queue', 'amber'),
+    kpi('clock', sla.length, 'SLA breaches', sla.length ? 'Files with an officer for more than 7 days' : 'Every file is within 7 days', '#/routing', sla.length ? 'red' : 'green'),
+  ].join('');
+
+  /* files by stage — one series, one hue; horizontal bars sorted in workflow order */
+  const stages = ['registry', ...STAGE_ORDER].map(k => [k, STAGES[k].short, files.filter(f => f.stage === k).length]);
+  const maxS = Math.max(1, ...stages.map(x => x[2]));
+  const stageChart = `<div class="hbars" role="table" aria-label="Files by stage">${stages.map(([k, l, n]) => `<a class="hbar" role="row" href="${k === 'registry' ? (toReg ? '#/files' : '#/routing') : `#/routing?stage=${k}`}" title="${l}: ${plural(n, 'file')}">
+      <span class="hb-l" role="cell">${l}</span><span class="hb-track" role="cell"><span class="hb-fill" style="width:${n ? Math.max(4, n / maxS * 100) : 0}%"></span></span><span class="hb-n" role="cell">${n}</span></a>`).join('')}</div>`;
+
+  /* documents received per week — last 8 weeks (weeks start on Monday) */
+  const wk0 = new Date(); wk0.setHours(0, 0, 0, 0); wk0.setDate(wk0.getDate() - ((wk0.getDay() + 6) % 7));
+  const per = [...Array(8)].map((_, i) => { const st = new Date(wk0); st.setDate(st.getDate() - (7 - i) * 7); const en = new Date(st); en.setDate(en.getDate() + 7);
+    return [st.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), docs.filter(d => { const t = new Date(d.date); return t >= st && t < en; }).length]; });
+  const maxM = Math.max(1, ...per.map(x => x[1]));
+  const monthChart = `<div class="vbars" role="table" aria-label="Documents received per month">${per.map(([l, n], i) => `<div class="vbar${i === per.length - 1 ? ' cur' : ''}" role="row" tabindex="0" title="Week of ${l}: ${plural(n, 'document')}"><span class="vb-n" role="cell">${n || ''}</span><span class="vb-col"><span class="vb-fill" style="height:${n ? Math.max(6, n / maxM * 100) : 0}%"></span></span><span class="vb-l" role="cell">${l}</span></div>`).join('')}</div>`;
+
+  /* needs attention — status colours always with an icon and a word */
+  const att = [
+    ['clock', 'SLA breaches', sla.length, 'Files held by an officer for more than 7 days', '#/routing', 'critical'],
+    ['calendar', 'Access expiring soon', expiring.length, 'Approved access ending within 30 days', '#/access', 'warning'],
+    ['scan', 'Missing documents', missing.length, 'Marked missing in a file census', '#/census', 'serious'],
+    ['lock', 'Under legal hold', 0, 'Files that cannot be closed or disposed of', '#/records?tab=files', 'warning'],
+    ['trash', 'Awaiting disposal', disposal.length, 'Disposal requests not yet completed', '#/records', 'warning'],
   ];
-  const t = new Date().toLocaleTimeString('en-GB');
-  return pageHead({ crumbs: [['Reports Dashboard']], title: 'Reports', sub: `Updated ${t}`, right: `<button class="btn btn-white" data-act="repRefresh">${ic('refresh')} Refresh</button>` }) +
-    `<section class="rep-grid">${cards.map(([i, n, l, cta, h, tone]) => `<a class="rep-card glass" href="${h}"><span class="rep-ic t-${tone}">${ic(i)}</span><b class="rep-n">${n}</b><span class="rep-l">${l}</span><span class="rep-cta">${cta} ${ic('arrowR')}</span></a>`).join('')}</section>`;
+  const attList = `<ul class="att">${att.map(([i, l, n, d, h, sev]) => `<li><a href="${h}" class="${n ? 'sev-' + sev : 'sev-ok'}"><span class="att-ic">${ic(n ? i : 'checkCircle')}</span><span class="att-t"><b>${l}</b><small>${d}</small></span><span class="att-n">${n}</span><span class="att-s">${n ? { critical: 'Act now', serious: 'Check', warning: 'Watch' }[sev] : 'Clear'}</span></a></li>`).join('')}</ul>`;
+
+  /* OCR */
+  const jobs = ocrReview.length + 1, pct = Math.round(ocrDone / Math.max(1, ocrDone + ocrReview.length) * 100);
+  const ocr = `<div class="ocr"><div class="ocr-row"><span>Read and filed</span><b>${pct}%</b></div><div class="ocr-bar" role="img" aria-label="${pct}% of documents read and filed"><span style="width:${pct}%"></span></div>
+    <div class="ocr-grid"><a href="#/queue?tab=landing"><b>${ocrReview.length}</b><span>Waiting for review</span></a><a href="#/queue?tab=landing"><b>${jobs}</b><span>OCR jobs</span></a><div><b>${ocrDone}</b><span>Read</span></div></div></div>`;
+
+  return pageHead({ crumbs: [['Reports Dashboard']], title: 'Reports', sub: `How the registry is doing today · updated ${t}`, right: `<button class="btn btn-white" data-act="repRefresh">${ic('refresh')} Refresh</button>` }) +
+    `<section class="kpis">${kpis}</section>
+    <div class="rep-grid2">
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Files by stage</h2><span class="muted">${plural(files.length, 'file')}</span></div>${stageChart}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Documents received</h2><span class="muted">Per week · last 8 weeks</span></div>${monthChart}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Needs attention</h2><span class="muted">${att.filter(a => a[2]).length ? plural(att.filter(a => a[2]).length, 'item') + ' to look at' : 'All clear'}</span></div>${attList}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>OCR and AI reading</h2><span class="muted">Uploads</span></div>${ocr}</section>
+    </div>`;
 }
 
 /* ---------- Overview extras: Open Q-BITS AI, notification channel ---------- */

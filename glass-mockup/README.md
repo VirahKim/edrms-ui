@@ -41,6 +41,10 @@ Four choices in one connected strip at the top (two by two on phones): **Single 
 - **Folio No fills itself in** when you upload: it shows the next folio in the chosen file (marked *Automatic*) and can't be typed over; in a bulk upload each document takes the next number in turn.
 - **Newest to oldest:** in an open file the scroll-through pages (and the Folios table) list documents by when they came in, newest first — so a reply filed as 1a after folio 4 sits above folio 4. The cover stays on top.
 
+### Upload › Details (matches the live system)
+The document on the left in a viewer with a dark toolbar (annotate, download, print, full screen), **Sign or stamp** above it, and the AI summary below. The form follows the live order — Received From (pick a saved sender or type a new one, which is added to Mail Senders), Reference Number and Reference Date, Subject, **Where Filed** with Change, **Cross-references** (search by subject, sender, reference, file or folio), **Add a physical enclosure**, Confidentiality — then a Registry details box with Date Received, S/NO and the automatic Folio No. Every field uses the same white pill with one thin border; AI-filled fields only add a pale teal tint and an "AI · %" tag. Each label has an ⓘ hint. The finished step in the stepper shows a green tick. On phones the Back / Cancel / Save buttons line up full width.
+Upload › From Officers stays inside the page width at every size, with one padding scale (24px outside, 20px inside).
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`
@@ -64,7 +68,7 @@ Checked on edrms.qbits.africa as the Registry Officer and the Action Officer (vi
 - **Correspondence from officers** (Registry, `#/correspondence`): letters, memos, circulars and notices officers have written. Read, Return with a note, or Record and file (it gets an Inward Register number and the next folio in the chosen file); then Send on — by courier, email, hand delivery or registered post when it goes outside, or to an officer inside.
 - **My correspondence** (Marking and Action Officers, `#/mycorrespondence`): Start new correspondence asks "What are you writing?" — Official Letter, Forwarding Letter, Internal Memo, Savingram, Circular, Notice or Minutes of a Meeting — and a subject, then a writing form with a live letterhead preview. Save a draft or Send to Registry; returned items show the Registry's note and can be fixed and resent.
 - **Request Files** (officers, `#/requestfiles`): search other files by subject, reference, name or folio — you see only what each one is — and request access with a reason and a duration. My requests shows what you asked for and the answer.
-- **Reports Dashboard** (`#/reports`): Total Files, Total Documents, Pending Tasks, SLA Breaches, Expiring Soon, Missing Documents, Under Legal Hold, Awaiting Disposal, OCR Review and OCR Jobs, each linking to its list, with Refresh.
+- **Reports Dashboard** (`#/reports`): four headline numbers (Total files with active / semi-active split, Total documents with the last 30 days, Pending tasks, SLA breaches), **Files by stage** (one-colour bar chart, each bar opens that stage), **Documents received** per week for the last 8 weeks, **Needs attention** (SLA breaches, access expiring, missing documents, legal hold, awaiting disposal — each with a status colour, icon and word: Act now / Check / Watch / Clear) and **OCR and AI reading** (share read and filed, waiting for review, OCR jobs). Refresh updates the time.
 - **Overview:** "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles are set out under Marking Officer tiles and Action Officer tiles below.
 - **Side navigation:** the Registry section gains Correspondence and Reports Dashboard; officers get My correspondence, Request files and Reports Dashboard.
 

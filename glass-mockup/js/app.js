@@ -46,6 +46,7 @@ const ICONS = {
   chevL: '<path d="m15 18-6-6 6-6"/>',
   chevR: '<path d="m9 18 6-6-6-6"/>',
   chevD: '<path d="m6 9 6 6 6-6"/>',
+  expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   sortUD: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
   filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>',
   star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
@@ -1538,30 +1539,49 @@ function viewUpload(q) {
     const nAi = Object.keys(m._suggested).filter(k => !m._touched[k]).length;
     const restrictedUi = ['Confidential', 'Secret'].includes(m.confidentiality_level);
     const allDocs = S.files.flatMap(ff => ff.docs.map(d => ({ ff, d }))).filter(({ d }) => !m.cross_refs.includes(d.id));
-    step = `<div class="det">
+    const tip = t => `<span class="info-tip" tabindex="0" role="note" title="${esc(t)}" aria-label="${esc(t)}">${ic('info')}</span>`;
+    const xq = (u.xq || '').trim().toLowerCase();
+    const xHits = xq ? allDocs.filter(({ ff, d }) => [d.title, d.from || '', d.senderRef || '', d.edms, ff.name, ff.ref, 'f.' + d.folio, 'folio ' + d.folio].join(' ').toLowerCase().includes(xq)).slice(0, 6) : [];
+    const pageCtx = { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: m._signed ? me().name : 'Authorised Officer', title: m._signed ? me().title : 'For: ' + (m.source_name || '—') }, signed: !!m._signed, org: m.source_name || 'Sender' };
+    step = `<div class="det det2">
       <aside class="det-prev">
-        <div class="prev-card">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>Folio ${esc(String(+nextFolio(f) + u.idx))}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: 'Authorised Officer', title: 'For: ' + (m.source_name || '—') }, signed: false, org: m.source_name || 'Sender' })}</div></div>`}
-          <div class="cap"><span>${esc(x.name)}</span><span>${plural(m._pages, 'page')}</span></div></div>
+        <div class="det-prev-h"><b>The document</b><button class="btn btn-outline btn-sm" data-act="upSignDoc" aria-pressed="${!!m._signed}">${ic('pen')} ${m._signed ? 'Signed and stamped · Undo' : 'Sign or stamp'}</button></div>
+        <div class="viewer${u.full ? ' is-full' : ''}">
+          <div class="viewer-bar"><span class="vb-name">${esc(x.name)} · ${plural(m._pages, 'page')}</span>
+            <button class="vb-btn" data-act="upAnnot" aria-label="Annotate" title="Annotate">${ic('pen')}</button>
+            <button class="vb-btn" data-act="upDl" aria-label="Download" title="Download">${ic('download')}</button>
+            <button class="vb-btn" data-act="print" aria-label="Print" title="Print">${ic('printer')}</button>
+            <button class="vb-btn vb-on" data-act="upFull" aria-label="${u.full ? 'Exit full screen' : 'Full screen'}" title="${u.full ? 'Exit full screen' : 'Full screen'}">${ic(u.full ? 'x' : 'expand')}</button></div>
+          <div class="viewer-page">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>Folio ${esc(String(+nextFolio(f) + u.idx))}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', pageCtx)}</div></div>`}</div>
+        </div>
         <div class="ai-box"><b>${ic('sparkles')} AI summary</b><p>${esc(m._summary)}</p><small>OCR confidence ${m._ocr}% · going into ${esc(f?.name || '')}</small></div>
       </aside>
       <div class="det-form">
         ${n > 1 ? `<div class="pager"><button class="btn btn-light btn-sm btn-icon" data-act="upDoc" data-d="-1" ${u.idx === 0 ? 'disabled' : ''} aria-label="Previous document">${ic('chevL')}</button>Document ${u.idx + 1} of ${n} <span class="muted">· ${esc(x.name)}</span><button class="btn btn-light btn-sm btn-icon" data-act="upDoc" data-d="1" ${u.idx === n - 1 ? 'disabled' : ''} aria-label="Next document">${ic('chevR')}</button></div>` : ''}
         ${nAi ? `<div class="ai-banner">${ic('sparkles')} AI filled ${plural(nAi, 'field')} from the document. Check ${nAi === 1 ? 'it' : 'them'} before saving.</div>` : ''}
-        <div class="two"><div class="field"><label for="um-serial_no">S/NO</label><input class="input" id="um-serial_no" data-um="serial_no" inputmode="numeric" value="${esc(m.serial_no)}" placeholder="Auto"><span class="hint">Leave blank to auto-generate.</span></div>
-          <div class="field"><label for="um-date_received">Date Received <span class="req">*</span></label><input class="input" type="date" id="um-date_received" data-um="date_received" value="${esc(m.date_received)}"></div></div>
-        <div class="field"><label for="um-source_name">Received From <span class="req">*</span> ${ai('source_name')}</label><input class="input ${cls('source_name')}" id="um-source_name" data-um="source_name" value="${esc(m.source_name)}" placeholder="e.g. Kenyatta National Hospital" list="um-senders" autocomplete="off"><datalist id="um-senders">${S.senders.filter(x => x.on).map(x => `<option value="${esc(x.name)}"></option>`).join('')}</datalist></div>
-        <div class="two"><div class="field"><label for="um-sender_ref_no">Sender's Ref No ${ai('sender_ref_no')}</label><input class="input ${cls('sender_ref_no')}" id="um-sender_ref_no" data-um="sender_ref_no" value="${esc(m.sender_ref_no)}" placeholder="e.g. KNH/ADM/22/14"></div>
-          <div class="field"><label for="um-sender_ref_date">Sender's Ref Date ${ai('sender_ref_date')}</label><input class="input ${cls('sender_ref_date')}" type="date" id="um-sender_ref_date" data-um="sender_ref_date" value="${esc(m.sender_ref_date)}"></div></div>
-        <div class="field"><label for="um-subject">Subject <span class="req">*</span> ${ai('subject')}</label><input class="input ${cls('subject')}" id="um-subject" data-um="subject" value="${esc(m.subject)}"></div>
-        <div class="two"><div class="field"><label for="um-folio_no">Folio No <span class="auto-chip">${ic('zap')} Automatic</span></label><input class="input auto-val" id="um-folio_no" value="${esc(String(+nextFolio(f) + u.idx))}" readonly aria-readonly="true"><span class="hint">The next folio in ${esc(f?.name || 'the file')}${n > 1 ? ' — each document takes the next number' : ''}.</span></div>
-          <div class="field"><label for="um-confidentiality_level">Confidentiality Level ${ai('confidentiality_level')}</label><select class="select ${cls('confidentiality_level')}" id="um-confidentiality_level" data-change="umConf">${CONF_LEVELS.map(c => `<option ${m.confidentiality_level === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
-        ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.name)}</label>`).join('')}</div></div>` : ''}
-        <div class="field"><span class="label">Cross-references ${ai('cross_refs')}</span>
-          <div class="x-chips">${m.cross_refs.map(id => { const r = docById(id); return r ? `<span class="x-chip ${cls('cross_refs')}">${esc(r.f.name)} · F.${esc(r.d.folio)} ${esc(r.d.title)}<button data-act="rmXref" data-id="${id}" aria-label="Remove cross-reference">${ic('x')}</button></span>` : ''; }).join('') || '<span class="hint">None yet.</span>'}</div>
-          <select class="select" data-change="addXref" aria-label="Add a cross-reference"><option value="">Add a cross-reference to another document…</option>${allDocs.map(({ ff, d }) => `<option value="${d.id}">${esc(ff.name)} · F.${esc(d.folio)} – ${esc(d.title)}</option>`).join('')}</select></div>
-        <div class="field"><span class="label">Physical enclosures</span>
+        <div class="field"><label for="um-source_name">Received From <span class="req">*</span> ${tip('The person or office that sent it. Pick a saved name or type a new one – new names are added to Mail Senders.')} ${ai('source_name')}</label>
+          <span class="combo"><input class="input ${cls('source_name')}" id="um-source_name" data-um="source_name" value="${esc(m.source_name)}" placeholder="Select, or type a new name to add…" list="um-senders" autocomplete="off">${ic('chevD')}</span><datalist id="um-senders">${S.senders.filter(x => x.on).map(x => `<option value="${esc(x.name)}"></option>`).join('')}</datalist>
+          ${m.source_name && !S.senders.some(x => x.name.toLowerCase() === m.source_name.trim().toLowerCase()) ? `<span class="hint">${ic('plus')} “${esc(m.source_name.trim())}” will be added to Mail Senders.</span>` : ''}</div>
+        <div class="two"><div class="field"><label for="um-sender_ref_no">Reference Number ${tip('The sender’s own reference, as printed on the letter.')} ${ai('sender_ref_no')}</label><input class="input ${cls('sender_ref_no')}" id="um-sender_ref_no" data-um="sender_ref_no" value="${esc(m.sender_ref_no)}" placeholder="e.g. KNH/ADM/22/14"></div>
+          <div class="field"><label for="um-sender_ref_date">Reference Date ${tip('The date written on the letter.')} ${ai('sender_ref_date')}</label><input class="input ${cls('sender_ref_date')}" type="date" id="um-sender_ref_date" data-um="sender_ref_date" value="${esc(m.sender_ref_date)}"></div></div>
+        <div class="field"><label for="um-subject">Subject <span class="req">*</span> ${ai('subject')}</label><input class="input ${cls('subject')}" id="um-subject" data-um="subject" value="${esc(m.subject)}" placeholder="What the letter is about"></div>
+        <div class="field"><span class="label">Where Filed ${tip('The file this document goes into. It becomes the next folio there.')}</span>
+          ${u.changing ? `<select class="select" data-change="upMoveFile" aria-label="Choose another file">${S.files.filter(ff => !ff.draft).map(ff => `<option value="${ff.id}" ${ff.id === u.fileId ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}</option>`).join('')}</select>`
+          : `<div class="where-filed">${ic('folder')}<span><b>${esc(f?.name || '')}</b><small>${esc(f?.ref || '')} · ${esc(regName(f?.registry))}</small></span><button class="link-btn" data-act="upChangeFile">Change</button></div>`}</div>
+        <div class="field"><span class="label">Cross-references ${tip('Link this document to related letters in any file.')} ${ai('cross_refs')}</span>
+          ${m.cross_refs.length ? `<div class="x-chips">${m.cross_refs.map(id => { const r = docById(id); return r ? `<span class="x-chip">${esc(r.f.name)} · F.${esc(r.d.folio)} ${esc(r.d.title)}<button data-act="rmXref" data-id="${id}" aria-label="Remove cross-reference">${ic('x')}</button></span>` : ''; }).join('')}</div>` : ''}
+          <div class="xr-search"><label class="input-icon">${ic('search')}<input class="input" id="xr-q" value="${esc(u.xq || '')}" placeholder="Search by subject, sender, reference no., file or folio…" data-input="xrQuery" autocomplete="off"><span class="sr">Search documents to cross-reference</span></label>
+            ${xq ? `<div class="xr-list" role="listbox">${xHits.map(({ ff, d }) => `<button type="button" role="option" data-act="addXrefId" data-id="${d.id}">${ic('file')}<span><b>${esc(d.title)}</b><small>${esc(ff.name)} · Folio ${esc(d.folio)}${d.from ? ' · ' + esc(d.from) : ''}</small></span></button>`).join('') || '<p class="muted">No documents match.</p>'}</div>` : ''}</div></div>
+        <div class="field"><span class="label">Physical enclosures ${tip('Things that came with the letter but are kept on paper or elsewhere – e.g. a bound report.')}</span>
           ${m.enclosures.map((e, i) => `<div class="enc-row"><input class="input" data-enc="${i}:description" value="${esc(e.description)}" placeholder="Description" aria-label="Enclosure ${i + 1} description"><input class="input" data-enc="${i}:quantity" value="${esc(e.quantity)}" placeholder="Quantity" aria-label="Enclosure ${i + 1} quantity"><input class="input" data-enc="${i}:kept_at" value="${esc(e.kept_at)}" placeholder="Kept at" aria-label="Enclosure ${i + 1} kept at"><button class="btn btn-light btn-sm btn-icon" data-act="rmEnc" data-i="${i}" aria-label="Remove enclosure">${ic('trash')}</button></div>`).join('')}
-          <button class="btn btn-outline btn-sm" style="justify-self:start" data-act="addEnc">${ic('plus')} Add enclosure</button></div>
+          <button class="btn btn-outline btn-sm" style="justify-self:start" data-act="addEnc">${ic('plus')} Add a physical enclosure</button></div>
+        <div class="field"><label for="um-confidentiality_level">Confidentiality ${tip('Who may open it. Confidential and Secret can be limited to named people.')} ${ai('confidentiality_level')}</label><select class="select ${cls('confidentiality_level')}" id="um-confidentiality_level" data-change="umConf">${CONF_LEVELS.map(c => `<option ${m.confidentiality_level === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+        ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.name)}</label>`).join('')}</div></div>` : ''}
+        <fieldset class="reg-box"><legend>Registry details</legend>
+          <div class="three"><div class="field"><label for="um-date_received">Date Received <span class="req">*</span></label><input class="input" type="date" id="um-date_received" data-um="date_received" value="${esc(m.date_received)}"></div>
+            <div class="field"><label for="um-serial_no">S/NO ${tip('Inward Register number. Leave blank and it is given the next number.')}</label><input class="input" id="um-serial_no" data-um="serial_no" inputmode="numeric" value="${esc(m.serial_no)}" placeholder="Auto"></div>
+            <div class="field"><label for="um-folio_no">Folio No <span class="auto-chip">${ic('zap')} Automatic</span></label><input class="input auto-val" id="um-folio_no" value="${esc(String(+nextFolio(f) + u.idx))}" readonly aria-readonly="true"></div></div>
+          <span class="hint">The folio is the next number in ${esc(f?.name || 'the file')}${n > 1 ? ' — each document takes the next one' : ''}.</span></fieldset>
         ${u.err ? `<p class="form-err" role="alert">${esc(u.err)}</p>` : ''}
       </div>
     </div>`;
@@ -1572,7 +1592,7 @@ function viewUpload(q) {
     <div class="upload-wrap">
       <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
       ${u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
-        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on"><i>1</i>${{ bulk: 'Files', email: 'Find Emails' }[u.tab] || 'File &amp; Document'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
+        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on ${s2 ? 'done' : ''}"><i>${s2 ? ic('check') : '1'}</i>${{ bulk: 'Files', email: 'Find Emails' }[u.tab] || 'File &amp; Document'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
         ${step}
         <div class="up-foot">${foot}</div>
       </section>`}
@@ -2536,6 +2556,12 @@ const ACT = {
     if (!u.files.length) { u.err = u.tab === 'email' ? 'Pick at least one email to import.' : 'Add a document to upload.'; render(); return; }
     u.err = ''; runAI();
   },
+  upSignDoc: () => { const m = ui.upload.metas[ui.upload.idx]; m._signed = !m._signed; render(); toast(m._signed ? `Signed and stamped as ${me().name}` : 'Signature and stamp removed'); },
+  upFull: () => { ui.upload.full = !ui.upload.full; render(); },
+  upAnnot: () => toast('Annotate opens once the document is saved into the file'),
+  upDl: () => toast(`Downloading ${ui.upload.files[ui.upload.idx]?.name || 'document'}`),
+  upChangeFile: () => { ui.upload.changing = true; render(); setTimeout(() => $('[data-change=upMoveFile]')?.focus(), 0); },
+  addXrefId: el => { const m = ui.upload.metas[ui.upload.idx]; if (!m.cross_refs.includes(el.dataset.id)) m.cross_refs.push(el.dataset.id); m._touched.cross_refs = true; ui.upload.xq = ''; render(); setTimeout(() => $('#xr-q')?.focus(), 0); },
   upBack: () => { const u = ui.upload; u.err = ''; u.step = 1; render(); },
   upDoc: el => { const u = ui.upload; u.idx = clamp(u.idx + +el.dataset.d, 0, u.files.length - 1); u.err = ''; render(); },
   addEnc: () => { ui.upload.metas[ui.upload.idx].enclosures.push({ description: '', quantity: '', kept_at: '' }); render(); $$('[data-enc]').slice(-3)[0]?.focus(); },
@@ -2630,6 +2656,7 @@ document.addEventListener('input', e => {
   if (k === 'dashQ') { ui.dash.q = t.value; const p = t.selectionStart; $('#route-panel').innerHTML = routePanel(); refocus('dash-q', p); }
   if (k === 'guideQ') { ui.guideQ = t.value; const p = t.selectionStart; render(); refocus('guide-q', p); }
   if (k === 'palette') ui.paletteDraw?.(t.value);
+  if (k === 'xrQuery') { ui.upload.xq = t.value; const pos = t.selectionStart; render(); const nn = $('#xr-q'); if (nn) { nn.focus(); nn.setSelectionRange(pos, pos); } }
   if (k === 'mbxQuery') { ui.upload.mq = t.value; const pos = t.selectionStart; render(); const n = $('#mbx-q'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
   if (t.dataset.nf) {
     const nf = ui.newFile; nf[t.dataset.nf] = t.value; paintNf();
@@ -2682,6 +2709,7 @@ document.addEventListener('change', e => {
   if (k === 'pickUpload') { ui.upload.files = [...t.files].map(asUpload); ui.upload.err = ''; render(); }
   if (k === 'umConf') { const m = ui.upload.metas[ui.upload.idx]; m.confidentiality_level = t.value; m._touched.confidentiality_level = true; render(); }
   if (k === 'umRestrict') { const m = ui.upload.metas[ui.upload.idx]; m.restricted = t.checked ? [...m.restricted, t.value] : m.restricted.filter(x => x !== t.value); }
+  if (k === 'upMoveFile') { ui.upload.fileId = t.value; ui.upload.changing = false; render(); toast(`Will be filed in ${getFile(t.value).name}`); }
   if (k === 'addXref' && t.value) { const m = ui.upload.metas[ui.upload.idx]; m.cross_refs.push(t.value); render(); }
   if (k === 'mailPick') { const m = MAILBOX.find(x => x.id === t.value); ui.upload.files = t.checked ? [...ui.upload.files, { id: m.id, name: m.att, size: 'from email', kb: 180 }] : ui.upload.files.filter(x => x.id !== m.id); ui.upload.err = ''; render(); }
   if (k === 'capAttach') { ui.cap.attach = t.checked; $('.cap-stage')?.classList.toggle('off', !t.checked); }
