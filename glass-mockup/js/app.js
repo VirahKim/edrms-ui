@@ -1100,7 +1100,7 @@ function fileTable(files, cols, emptyText, key) {
 /* My Queue is one page with two tabs: My Queue and File Movement */
 function queueHead(which, sub) {
   const QN = { routing: 'File Movement', approvals: 'Pending Approvals', landing: 'Landing Queue', subs: 'My Submissions' };
-  return pageHead({ crumbs: [['My Queue', QN[which] ? '#/queue' : ''], ...(QN[which] ? [[QN[which]]] : [])], title: 'My Queue', sub, right: role() === 'registry' ? `<a class="btn btn-white" href="#/files">${ic('folders')} Files</a>` : '' }) +
+  return pageHead({ crumbs: [['My Queue', QN[which] ? '#/queue' : ''], ...(QN[which] ? [[QN[which]]] : [])], title: 'My Queue', sub, right: '' }) +
     `<div class="queue-switch seg solid" role="tablist" aria-label="My Queue">${[['queue', '#/queue', 'My Queue', 'listChecks', myQueue().length + notesForMe().length], ['routing', '#/routing', 'File Movement', 'route', 0],
       ['approvals', '#/queue?tab=approvals', 'Pending Approvals', 'checkCircle', (typeof myApprovals === 'function' ? myApprovals().length : 0) + (role() === 'registry' ? S.requests.filter(x => x.status === 'open').length : 0)],
       ...(role() === 'registry' ? [['landing', '#/queue?tab=landing', 'Landing Queue', 'inboxIn', landingDocs().length]] : []),

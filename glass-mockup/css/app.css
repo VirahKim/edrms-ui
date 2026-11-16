@@ -1935,3 +1935,48 @@ html:not([data-theme="dark"]) .tbl a.btn-primary, html[data-theme="dark"] .tbl a
   .up-officers { padding: 16px 12px; }
   .up-officers > .panel { padding: 16px 12px; }
 }
+
+/* ---- Page headers on phones ---- */
+@media (max-width: 640px) {
+  .phead .phead-top { flex-wrap: nowrap; justify-content: space-between; margin-bottom: 10px; }
+  .phead .phead-top .crumbs { display: none; }           /* the Back link below does this job on phones */
+  .phead .phead-top .ph-icons { margin-left: auto; gap: 6px; }
+  .phead .ph-ic { width: 40px; height: 40px; }
+  .phead h1 { font-size: 24px; line-height: 1.2; overflow-wrap: anywhere; }
+  .phead .phead-titles p, .phead .sub { font-size: 14px; }
+  .phead .phead-right { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 12px; }
+  .phead .phead-right > .btn, .phead .phead-right > a.btn { flex: 1 1 calc(50% - 4px); min-width: 0; justify-content: center; height: 42px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
+  .phead .phead-right > :only-child { flex-basis: 100%; }
+}
+@media (max-width: 360px) { .phead .ph-ic { width: 36px; height: 36px; } .phead .phead-top .ph-icons { gap: 4px; } }
+
+/* Overview on phones: the role details sit side by side under "Hello, …" */
+@media (max-width: 900px) {
+  .dash-hello .hello-line { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; gap: 2px 0; }
+  .dash-hello .hello-part + .hello-part::before { display: inline-block; }
+  .dash-hello .hello-part { white-space: nowrap; }
+  .hero-compact .dash-hello { text-align: left; justify-self: stretch; }
+}
+
+/* Upload: the four choices sit in one connected strip at the top, as in the live system */
+.upload-wrap { grid-template-columns: minmax(0, 1fr) !important; gap: 16px; justify-items: center; }
+.upload-wrap > .up-card { width: 100%; }
+.upload-wrap .up-tabs { display: inline-flex !important; flex-wrap: nowrap; gap: 0; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.75); box-shadow: var(--shadow-sm); backdrop-filter: blur(14px) saturate(150%); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.upload-wrap .up-tabs button { height: 40px !important; min-height: 0 !important; border-radius: 999px !important; padding: 0 16px !important; font-size: 14.5px !important; font-weight: 600; gap: 8px; background: transparent; color: var(--ink); white-space: nowrap; flex: none; justify-content: center; position: relative; }
+.upload-wrap .up-tabs button + button::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: rgba(0,0,0,.12); }
+.upload-wrap .up-tabs button.on::before, .upload-wrap .up-tabs button.on + button::before { display: none; }
+.upload-wrap .up-tabs button.on { background: var(--primary, #007F7B); color: #fff; box-shadow: 0 4px 12px rgba(0,80,78,.25); }
+.upload-wrap .up-tabs button:not(.on):hover { background: rgba(255,255,255,.7); }
+.upload-wrap .up-tabs button svg { width: 17px; height: 17px; }
+.upload-wrap .up-tabs button span { display: inline !important; }
+.upload-wrap .up-tabs button:disabled { opacity: .55; }
+[data-theme="dark"] .upload-wrap .up-tabs { background: rgba(8,30,29,.55); border-color: rgba(255,255,255,.12); }
+[data-theme="dark"] .upload-wrap .up-tabs button:not(.on) { color: var(--ink); }
+@media (max-width: 640px) {
+  .upload-wrap .up-tabs { display: grid !important; grid-template-columns: 1fr 1fr; border-radius: 22px; width: 100%; }
+  .upload-wrap .up-tabs button { border-radius: 18px !important; font-size: 13.5px !important; padding: 0 10px !important; }
+  .upload-wrap .up-tabs button::before { display: none; }
+}
+@media (max-width: 380px) { .phead .phead-right > .btn, .phead .phead-right > a.btn { flex-basis: 100%; } }
+.upload-wrap > .up-card { max-width: 980px; }
+@media (max-width: 640px) { .dash-hello .hello-part { white-space: normal; overflow-wrap: anywhere; } }
