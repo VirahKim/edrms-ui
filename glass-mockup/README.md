@@ -37,6 +37,10 @@ Registry only — Marking and Action Officers no longer see it in their navigati
 ### Upload Document (matches the live system)
 Four choices in one connected strip at the top (two by two on phones): **Single Document · Bulk Upload · Import from Email · From Officers** (the last for the Registry). Step 2 stays locked ("Select a file first") until a file is chosen. Import from Email first asks you to connect **Gmail** or **Outlook** — only what you search for is read, nothing is sent or changed — then lets you search and tick emails whose attachments become documents; the button shows how many (Next: Details (n)). **From Officers** shows the Correspondence from officers lists (Waiting to be recorded, Recorded – to send on) with Read, Return, Record and file and Send on. The step-1 label follows the tab (File & Document · Files · Find Emails), and there is an ⓘ next to Select a File.
 
+### Folio numbers and order
+- **Folio No fills itself in** when you upload: it shows the next folio in the chosen file (marked *Automatic*) and can't be typed over; in a bulk upload each document takes the next number in turn.
+- **Newest to oldest:** in an open file the scroll-through pages (and the Folios table) list documents by when they came in, newest first — so a reply filed as 1a after folio 4 sits above folio 4. The cover stays on top.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`

@@ -809,7 +809,8 @@ function viewFile(f, q, target) {
   if (target) ui.fileView = 'pages';
   const pagesView = ui.fileView === 'pages';
   if (q.tab) ui.fileTab = q.tab;
-  const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort(byFolio).reverse();
+  /* newest to oldest: by when the document came in, then by folio number */
+  const docs = [...f.docs].filter(d => !(role() === 'marking' && f.stage === 'marking' && (f.keptBack || []).includes(d.id))).sort((a, b) => (b.date || '').localeCompare(a.date || '') || byFolio(b, a));
   const meta = `${stageChip(f.stage)}${actChip(f, role() === 'registry')}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
   const who = f.withUser === 'registry' ? '<span class="muted">In the Registry</span>' : `${avatar(f.withUser)}<span>With <b>${esc(person(f.withUser).name)}</b></span>`;
   const acts = actionButtons(f);
@@ -1539,7 +1540,7 @@ function viewUpload(q) {
     const allDocs = S.files.flatMap(ff => ff.docs.map(d => ({ ff, d }))).filter(({ d }) => !m.cross_refs.includes(d.id));
     step = `<div class="det">
       <aside class="det-prev">
-        <div class="prev-card">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>Folio ${esc(m.folio_no || nextFolio(f))}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: 'Authorised Officer', title: 'For: ' + (m.source_name || '—') }, signed: false, org: m.source_name || 'Sender' })}</div></div>`}
+        <div class="prev-card">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>Folio ${esc(String(+nextFolio(f) + u.idx))}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: 'Authorised Officer', title: 'For: ' + (m.source_name || '—') }, signed: false, org: m.source_name || 'Sender' })}</div></div>`}
           <div class="cap"><span>${esc(x.name)}</span><span>${plural(m._pages, 'page')}</span></div></div>
         <div class="ai-box"><b>${ic('sparkles')} AI summary</b><p>${esc(m._summary)}</p><small>OCR confidence ${m._ocr}% · going into ${esc(f?.name || '')}</small></div>
       </aside>
@@ -1552,7 +1553,7 @@ function viewUpload(q) {
         <div class="two"><div class="field"><label for="um-sender_ref_no">Sender's Ref No ${ai('sender_ref_no')}</label><input class="input ${cls('sender_ref_no')}" id="um-sender_ref_no" data-um="sender_ref_no" value="${esc(m.sender_ref_no)}" placeholder="e.g. KNH/ADM/22/14"></div>
           <div class="field"><label for="um-sender_ref_date">Sender's Ref Date ${ai('sender_ref_date')}</label><input class="input ${cls('sender_ref_date')}" type="date" id="um-sender_ref_date" data-um="sender_ref_date" value="${esc(m.sender_ref_date)}"></div></div>
         <div class="field"><label for="um-subject">Subject <span class="req">*</span> ${ai('subject')}</label><input class="input ${cls('subject')}" id="um-subject" data-um="subject" value="${esc(m.subject)}"></div>
-        <div class="two"><div class="field"><label for="um-folio_no">Folio No</label><input class="input" id="um-folio_no" data-um="folio_no" inputmode="numeric" value="${esc(m.folio_no)}" placeholder="Next: ${esc(String(+nextFolio(f) + u.idx))}"></div>
+        <div class="two"><div class="field"><label for="um-folio_no">Folio No <span class="auto-chip">${ic('zap')} Automatic</span></label><input class="input auto-val" id="um-folio_no" value="${esc(String(+nextFolio(f) + u.idx))}" readonly aria-readonly="true"><span class="hint">The next folio in ${esc(f?.name || 'the file')}${n > 1 ? ' — each document takes the next number' : ''}.</span></div>
           <div class="field"><label for="um-confidentiality_level">Confidentiality Level ${ai('confidentiality_level')}</label><select class="select ${cls('confidentiality_level')}" id="um-confidentiality_level" data-change="umConf">${CONF_LEVELS.map(c => `<option ${m.confidentiality_level === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
         ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.name)}</label>`).join('')}</div></div>` : ''}
         <div class="field"><span class="label">Cross-references ${ai('cross_refs')}</span>
@@ -2554,7 +2555,7 @@ const ACT = {
     let serial = S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length;
     const added = u.files.map((x, i) => {
       const m = u.metas[i], ext = m._ext;
-      const fno = m.folio_no ? String(m.folio_no) : String(folio++);
+      const fno = String(folio++);   // always the next folio in the file
       const d = { id: nid('d'), folio: fno, title: m.subject.trim(), kind: ['PNG', 'JPG', 'JPEG', 'XLSX'].includes(ext) ? 'attachment' : 'letter', mime: ext,
         from: m.source_name.trim(), date: new Date(m.date_received + 'T09:00').toISOString(), edms: 'EDMS-0001-2026-' + String(S.seq + 40).padStart(7, '0'), pages: m._pages, sizeKB: x.kb || 240,
         minutes: [], stickies: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: m.subject.trim().toUpperCase(), body: LOREM,
