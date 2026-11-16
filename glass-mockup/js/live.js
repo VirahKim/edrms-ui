@@ -402,6 +402,72 @@ function openManual(scrollTo) {
 }
 function closeManual() { $('#man-panel')?.remove(); ui.man.open = false; document.body.classList.remove('man-open'); }
 
+/* ---------- File options menu (⋮ on each file card) — as in the live system ---------- */
+function openFileMenu(btn, f) {
+  closeFileMenu();
+  const reg = role() === 'registry', act = activity(f) === 'Active';
+  const it = (i, l, a, extra = '', cls = '') => `<button role="menuitem" class="${cls}" data-act="${a}" data-id="${f.id}" ${extra}><span class="i">${ic(i)}</span><span>${l}</span></button>`;
+  const groups = [
+    [`<div class="fm-stage">Stage: <b>${activity(f)}</b></div>`, ...(reg ? [it('archive', act ? 'Move to semi-active' : 'Move to active', 'fmStage')] : [])],
+    [it('info', 'View Details', 'fmDetails'),
+      ...(reg && f.stage === 'registry' ? [it('send', 'Submit to Marking Officer', 'fmSubmit')] : []),
+      ...(reg ? [it('send', 'Send outside', 'fmOutside'), it('calendar', 'Add to bring-up diary', 'fmBringup')] : [])],
+    ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub'), it('pen', 'Rename / Edit', 'fmRename'), it('swap', 'Move File', 'fmMove'), it('layers', 'Clone', 'fmClone')]] : []),
+    [it('share', 'Share', 'fmShare'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Turn notifications on' : 'Turn notifications off', 'fmNotify'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin'), it('star', f.starred ? 'Unstar File' : 'Star File', 'fmStar')],
+    ...(reg ? [[it('trash', 'Delete', 'fmDelete', '', 'danger')]] : []),
+  ];
+  const m = document.createElement('div');
+  m.id = 'file-menu'; m.className = 'acct-menu file-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', `Options for ${f.name}`);
+  m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), h = m.offsetHeight, w = m.offsetWidth;
+  m.style.top = Math.max(12, Math.min(r.bottom + 6, innerHeight - h - 12)) + 'px';
+  m.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + 'px';
+  m.querySelector('button')?.focus();
+  ui.fmBtn = btn;
+}
+function closeFileMenu(refocus) { const m = $('#file-menu'); if (!m) return; m.remove(); if (refocus) ui.fmBtn?.focus(); }
+document.addEventListener('click', e => { if ($('#file-menu') && !e.target.closest('#file-menu') && !e.target.closest('[data-act=fileMenu]')) closeFileMenu(); }, true);
+document.addEventListener('keydown', e => {
+  const m = $('#file-menu'); if (!m) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeFileMenu(true); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const b = [...m.querySelectorAll('button')], i = b.indexOf(document.activeElement); b[(i + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length].focus(); }
+});
+function textModal(icon, title, sub, label, val, act, id, btn) {
+  modal(`${mHead(icon, title, sub)}<div class="modal-b"><div class="field"><label for="tm-v">${label}</label><input class="input" id="tm-v" value="${esc(val || '')}"></div><p class="form-err" id="tm-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="${act}" data-id="${id}">${btn}</button></div>`, '', '#tm-v');
+}
+const fmFile = el => getFile(el.dataset.id);
+const fmDo = fn => el => { const f = fmFile(el); closeFileMenu(); fn(f, el); };
+
+/* ---------- Folio selection and bulk actions ---------- */
+const fSel = fid => ((ui.fsel = ui.fsel || {})[fid] = ui.fsel[fid] || []);
+const selDocs = fid => { const f = getFile(fid); return fSel(fid).map(id => f.docs.find(d => d.id === id)).filter(Boolean); };
+document.addEventListener('click', e => { if (e.target.closest('.row-sel')) e.stopPropagation(); }, true);
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.selall) { const f = getFile(t.dataset.selall); ui.fsel[f.id] = t.checked ? [...$$('.folio-tbl tbody tr:not([hidden]) [data-sel]')].map(c => c.dataset.sel.split(':')[1]) : []; render(); }
+  else if (t.dataset.sel) { const [fid, did] = t.dataset.sel.split(':'), s2 = fSel(fid); ui.fsel[fid] = t.checked ? [...new Set([...s2, did])] : s2.filter(x => x !== did); render(); }
+});
+function pickFileModal(title, sub, act, fid) {
+  modal(`${mHead('folder', title, sub)}<div class="modal-b"><div class="field"><label for="pf-f">File</label><select class="select" id="pf-f">${S.files.filter(x => !x.draft && x.id !== fid).map(x => `<option value="${x.id}">${esc(x.name)} — ${esc(x.ref)}</option>`).join('')}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="${act}" data-id="${fid}">${title}</button></div>`, '', '#pf-f');
+}
+function shareModal(what, link) {
+  modal(`${mHead('share', 'Share', esc(what))}<div class="modal-b"><p class="muted" style="margin-top:0">Only people who can already open it will be able to use the link.</p>
+    <div class="field"><label for="sh-l">Link</label><input class="input" id="sh-l" value="${esc(link)}" readonly></div>
+    <div class="field"><label for="sh-p">Send to an officer</label><select class="select" id="sh-p"><option value="">Choose…</option>${peopleOpts(p => p.id !== meId())}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="shCopy">${ic('layers')} Copy link</button><button class="btn btn-primary" data-act="shSend">${ic('send')} Send</button></div>`);
+}
+
+function bkTransfer(fromId, toId, move) {
+  const a = getFile(fromId), b = getFile(toId), ds = selDocs(fromId);
+  let fo = parseInt(nextFolio(b), 10);
+  ds.forEach(d => { const c = move ? d : { ...JSON.parse(JSON.stringify(d)), id: nid('d') }; c.folio = String(fo++); b.docs.push(c); });
+  if (move) a.docs = a.docs.filter(d => !ds.includes(d));
+  b.updated = new Date().toISOString(); ui.fsel[fromId] = []; save(); closeModal(); render();
+  toast(`${move ? 'Moved' : 'Copied'} ${plural(ds.length, 'folio')} to ${b.name}`);
+}
 /* ---------- routes, actions and inputs ---------- */
 LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrespondence, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
 Object.assign(SCREEN_NAME, { approvals: 'Pending Approvals', messages: 'Messages', correspondence: 'Correspondence from officers', reports: 'Reports Dashboard', 'mycorrespondence': 'My correspondence', 'requestfiles': 'Request Files' });
@@ -465,6 +531,48 @@ Object.assign(ACT, {
     save(); closeModal(); render(); toast(`${c.subject} sent on`);
   },
   repRefresh: () => { render(); toast('Reports refreshed'); },
+  fileMenu: (el, e) => { e.stopPropagation(); const f = getFile(el.dataset.id); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openFileMenu(el, f); },
+  fmStage: fmDo(f => { f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} moved to ${f.activity.toLowerCase()}`); }),
+  fmDetails: fmDo(f => { ui.fileTab = role() === 'registry' ? 'cover' : 'details'; go(`#/file/${f.id}`); }),
+  fmSubmit: fmDo(f => sendModal(f, 'marking')),
+  fmOutside: fmDo(f => sendOutsideModal(f)),
+  fmBringup: fmDo(f => bringupModal(f.id)),
+  fmSub: fmDo(f => textModal('folderPlus', 'New Sub-File', `Inside ${esc(f.name)}`, 'Sub-file name', '', 'fmSubSave', f.id, `${ic('folderPlus')} Create sub-file`)),
+  fmSubSave: el => { const p = getFile(el.dataset.id), v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'Give the sub-file a name.'; e2.hidden = false; return; }
+    const n = S.files.filter(x => x.parent === p.id).length + 1;
+    S.files.unshift({ ...JSON.parse(JSON.stringify(p)), id: nid('f'), name: v, ref: `${p.ref}/${n}`, parent: p.id, docs: [], movements: [], stage: 'registry', withUser: null, markedTo: null, updated: new Date().toISOString(), starred: false, pinned: false, activity: undefined });
+    save(); closeModal(); render(); toast(`Sub-file ${p.ref}/${n} created`); },
+  fmRename: fmDo(f => textModal('pen', 'Rename / Edit', esc(f.ref), 'File name', f.name, 'fmRenameSave', f.id, `${ic('check')} Save`)),
+  fmRenameSave: el => { const f = getFile(el.dataset.id), v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'The name cannot be empty.'; e2.hidden = false; return; } f.name = v; save(); closeModal(); render(); toast('File renamed'); },
+  fmMove: fmDo(f => modal(`${mHead('swap', 'Move File', esc(f.name))}<div class="modal-b"><div class="field"><label for="mv-r">Registry</label><select class="select" id="mv-r">${REGISTRIES.map(r => `<option value="${r.id}" ${r.id === f.registry ? 'selected' : ''}>${r.name}</option>`).join('')}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="fmMoveSave" data-id="${f.id}">${ic('swap')} Move</button></div>`, '', '#mv-r')),
+  fmMoveSave: el => { const f = getFile(el.dataset.id); f.registry = $('#mv-r').value; save(); closeModal(); render(); toast(`Moved to ${regName(f.registry)}`); },
+  fmClone: fmDo(f => { const c = { ...JSON.parse(JSON.stringify(f)), id: nid('f'), name: `Copy of ${f.name}`, ref: f.ref + '-C', docs: [], movements: [], stage: 'registry', withUser: null, markedTo: null, updated: new Date().toISOString(), starred: false, pinned: false };
+    S.files.unshift(c); save(); render(); toast(`Cloned as “${c.name}” – same cover and settings, no documents`); }),
+  fmShare: fmDo(f => shareModal(`${f.name} · ${f.ref}`, `${location.origin}${location.pathname}#/file/${f.id}`)),
+  fmNotify: fmDo(f => { f.muted = !f.muted; save(); toast(f.muted ? `Notifications off for ${f.name}` : `Notifications on for ${f.name}`); }),
+  fmPin: fmDo(f => { f.pinned = !f.pinned; save(); render(); toast(f.pinned ? `${f.name} pinned to the top` : 'Unpinned'); }),
+  fmStar: fmDo(f => { f.starred = !f.starred; save(); render(); }),
+  fmDelete: fmDo(f => modal(`${mHead('trash', 'Delete this file?', esc(f.name))}<div class="modal-b"><p style="margin-top:0">${liveDocs(f).length ? `It holds ${plural(liveDocs(f).length, 'document')}. Deleting removes the file and its folios from EDRMS.` : 'It holds no documents.'} This cannot be undone. To keep the record but stop using it, move it to semi-active instead.</p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="fmDeleteSave" data-id="${f.id}">${ic('trash')} Delete file</button></div>`)),
+  fmDeleteSave: el => { const f = getFile(el.dataset.id); S.files = S.files.filter(x => x.id !== f.id); save(); closeModal(); go('#/files'); toast(`${f.name} deleted`); },
+  shCopy: () => { const i = $('#sh-l'); i.select(); try { navigator.clipboard?.writeText(i.value); } catch (e) {} toast('Link copied'); },
+  shSend: () => { const to = $('#sh-p').value; if (!to) { $('#sh-p').focus(); return; } notify(to, `Shared with you: ${$('#overlay .modal-h p, #overlay .mh-sub')?.textContent || 'a document'}`, meId(), null); closeModal(); toast(`Shared with ${person(to).name}`); },
+  starFolio: (el, e) => { e.stopPropagation(); const d = getFile(el.dataset.f).docs.find(x => x.id === el.dataset.d); d.starred = !d.starred; save(); render(); },
+  starOnly: () => { ui.fStarOnly = !ui.fStarOnly; render(); },
+  bkClear: el => { ui.fsel[el.dataset.id] = []; render(); },
+  bkView: el => go(`#/file/${el.dataset.id}/letter/${fSel(el.dataset.id)[0]}`),
+  bkVersions: el => { ui.letterTab = 'versions'; go(`#/file/${el.dataset.id}/letter/${fSel(el.dataset.id)[0]}`); },
+  bkStar: el => { const ds = selDocs(el.dataset.id), on = !ds.every(d => d.starred); ds.forEach(d => { d.starred = on; }); save(); render(); toast(on ? `Starred ${plural(ds.length, 'folio')}` : 'Unstarred'); },
+  bkDownload: el => toast(`Downloading ${plural(selDocs(el.dataset.id).length, 'document')} as a zip`),
+  bkShare: el => { const ds = selDocs(el.dataset.id); shareModal(ds.length === 1 ? ds[0].title : plural(ds.length, 'document'), `${location.origin}${location.pathname}#/file/${el.dataset.id}/letter/${ds[0].id}`); },
+  bkMove: el => pickFileModal('Move', `${plural(fSel(el.dataset.id).length, 'folio')} go to another file and take its next folio numbers.`, 'bkMoveSave', el.dataset.id),
+  bkCopy: el => pickFileModal('Copy to File', `A copy goes into the other file; the original stays here.`, 'bkCopySave', el.dataset.id),
+  bkMoveSave: el => bkTransfer(el.dataset.id, $('#pf-f').value, true),
+  bkCopySave: el => bkTransfer(el.dataset.id, $('#pf-f').value, false),
+  bkRemove: el => { const n = fSel(el.dataset.id).length; modal(`${mHead('trash', 'Remove from file?', plural(n, 'folio'))}<div class="modal-b"><p style="margin-top:0">They are taken out of this file. Folio numbers already given are not reused.</p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="bkRemoveSave" data-id="${el.dataset.id}">${ic('trash')} Remove</button></div>`); },
+  bkRemoveSave: el => { const f = getFile(el.dataset.id), ids = fSel(f.id); f.docs = f.docs.filter(d => !ids.includes(d.id)); ui.fsel[f.id] = []; save(); closeModal(); render(); toast(`Removed ${plural(ids.length, 'folio')}`); },
   logout: (orig => (...a) => { closeManual(); return orig(...a); })(ACT.logout),
   fabGuide: () => { setFab(false); if ($('#man-panel')) closeManual(); else openManual(); },
   manClose: () => closeManual(),

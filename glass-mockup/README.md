@@ -45,6 +45,11 @@ Four choices in one connected strip at the top (two by two on phones): **Single 
 The document on the left in a viewer with a dark toolbar (annotate, download, print, full screen), **Sign or stamp** above it, and the AI summary below. The form follows the live order — Received From (pick a saved sender or type a new one, which is added to Mail Senders), Reference Number and Reference Date, Subject, **Where Filed** with Change, **Cross-references** (search by subject, sender, reference, file or folio), **Add a physical enclosure**, Confidentiality — then a Registry details box with Date Received, S/NO and the automatic Folio No. Every field uses the same white pill with one thin border; AI-filled fields only add a pale teal tint and an "AI · %" tag. Each label has an ⓘ hint. The finished step in the stepper shows a green tick. On phones the Back / Cancel / Save buttons line up full width.
 Upload › From Officers stays inside the page width at every size, with one padding scale (24px outside, 20px inside).
 
+### Files (matches the live system)
+- **File ⋮ menu** on every file card: Stage (Move to semi-active / active), View Details, Submit to Marking Officer (files in the Registry), Send outside, Add to bring-up diary, New Sub-File, Rename / Edit, Move File (to another registry), Clone (same cover, no documents), Share, Notifications on/off, Pin File (pinned files show a pin and sort first), Star File, Delete (with a warning). Officers see View Details, Share, Notifications, Pin and Star. Arrow keys move through it; Escape closes it.
+- **Inside a file:** Cover and Upload to this file buttons by Folios. The Folios table has a tick-box per row (and select all), a star per row and a Starred-only filter, and pages of 10 / 25 / 50 with "Showing 1–n of m". Ticking rows shows a bar with View and Version History (one row), Move and Copy to File (they take the next folio numbers in the other file), Share, Download, Star, and Remove from File (Registry).
+- The Overview header has its navigation back under the greeting.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`

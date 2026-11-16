@@ -85,6 +85,9 @@ const ICONS = {
   scan: '<rect x="2.5" y="2.5" width="19" height="19" rx="4.5"/><path d="M7 10V8a1 1 0 0 1 1-1h2M14 7h2a1 1 0 0 1 1 1v2M17 14v2a1 1 0 0 1-1 1h-2M10 17H8a1 1 0 0 1-1-1v-2"/>',
   chat: '<path d="M7 18.5 4.5 21v-3.2A3 3 0 0 1 3 15.2V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v9.2a3 3 0 0 1-3 3Z"/>',
   sparkles: '<path d="M14.5 3c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z"/><path d="M6 13.5c.35 2.1 1.4 3.15 3.5 3.5-2.1.35-3.15 1.4-3.5 3.5-.35-2.1-1.4-3.15-3.5-3.5 2.1-.35 3.15-1.4 3.5-3.5Z"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/>',
+  pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+  bellOff: '<path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/>',
   book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
@@ -466,6 +469,7 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
   /* Overview: a compact header — logo and greeting with the icons on the right, the navigation underneath */
   if (hero) return `<section class="phead glass is-hero hero-compact">
     <div class="hero-row">${hero}${icons}</div>
+    <div class="hero-nav">${topNav()}</div>
   </section>`;
   return `<section class="phead glass">
     <div class="phead-top">
@@ -681,7 +685,7 @@ function fileCard(f) {
     </div>
     <div class="body">
       <div class="when">${ago(f.updated)} · ${f.draft ? 'Draft – not opened yet' : STAGES[f.stage].short}</div>
-      <h3 title="${esc(f.name)}">${esc(f.name)}</h3>
+      <h3 title="${esc(f.name)}">${f.pinned ? `<span class="pin-ic" title="Pinned">${ic('pin')}</span>` : ''}${esc(f.name)}</h3>
       <div class="ref">${esc(f.ref || 'No reference yet')} · Vol. ${esc(f.vol)}</div>
       <div class="foot"><span class="muted">${regName(f.registry)}${f.visibility && f.visibility !== 'organization' ? ` · ${VIS_LABEL[f.visibility]}` : ''}</span>
         <span class="docs">${ic('file')} ${plural(liveDocs(f).length, 'folio')} · ${fmtSize(fileSizeKB(f))}</span></div>
@@ -728,6 +732,7 @@ function viewFiles(q) {
   if (F.show === 'ty') files = files.filter(f => f.type === 'ty');
   if (term) files = files.filter(f => [f.name, f.ref, f.description, regName(f.registry), f.cover.dept].join(' ').toLowerCase().includes(term));
   sortFiles(files);
+  files.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));   // pinned files first
   const letters = term ? S.files.flatMap(f => f.docs.filter(d => [d.title, d.from, d.folio, d.edms, d.subject || ''].join(' ').toLowerCase().includes(term)).map(d => ({ f, d }))) : [];
   const total = S.files.reduce((a, f) => a + liveDocs(f).length, 0);
   const nFiles = S.files.filter(f => !f.draft).length;
@@ -822,6 +827,7 @@ function viewFile(f, q, target) {
     <section class="panel glass folio-panel" aria-labelledby="ft-h">
       <div class="panel-h"><h2 id="ft-h">Folios</h2><span class="n">${docs.length}</span>
         <div class="seg icons" role="group" aria-label="How to view the folios">${[['table', 'list', 'Folio table'], ['pages', 'scrollDown', 'Scroll through the pages']].map(([k, i, l]) => `<button class="${ui.fileView === k ? 'on' : ''}" data-act="fileView" data-k="${k}" aria-pressed="${ui.fileView === k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
+        <div class="fp-acts"><button class="btn btn-light btn-sm" data-act="fileView" data-k="pages">${ic('book')} Cover</button>${role() === 'registry' || canAnnotate(f) ? `<a class="btn btn-primary btn-sm" href="#/upload?file=${f.id}">${ic('upload')} Upload to this file</a>` : ''}</div>
 </div>
       ${(() => { const n = sentToMe(f).size; return n ? `<p class="to-me-legend"><span class="sw"></span>${n === 1 ? 'The document sent to you is' : `The ${n} documents sent to you are`} highlighted — ${role() === 'marking' ? 'mark' : 'act on'} ${n === 1 ? 'it' : 'these'}.</p>` : ''; })()}
       ${pagesView ? '' : `<div id="folio-tbl">${folioTable(f, docs)}</div>`}
@@ -846,8 +852,16 @@ function folioTable(f, docs) {
   const conf = d => d.confidentiality || f.confidentiality || 'Internal';
   const list = docs, mine = sentToMe(f);
   if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('file')}<div>No folios yet.</div></div></div>`;
-  return tfWrap({ key: 'folios-' + f.id, search: 'Search folios – title, reference, folio, type or officer…', date: [8, 'Modified from', 'Modified to'], facets: [[3, 'Type'], [4, 'Created by'], [5, 'Status'], [6, 'Confidentiality']] }, `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
-    ${list.map(d => { const [sl, sc] = st(d), me2 = mine.has(d.id); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}"${me2 ? ' class="to-me"' : ''}><td><b>${esc(d.title)}</b>${me2 ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}</td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
+  const sel = (ui.fsel = ui.fsel || {})[f.id] = (ui.fsel[f.id] || []).filter(id => list.some(d => d.id === id));
+  const bulk = sel.length ? `<div class="bulk-bar" role="toolbar" aria-label="Selected folios"><b>${sel.length} selected</b>
+      ${[['eye', 'View', 'bkView'], ['swap', 'Move', 'bkMove'], ['layers', 'Copy to File', 'bkCopy'], ['share', 'Share', 'bkShare'], ['clock', 'Version History', 'bkVersions'], ['download', 'Download', 'bkDownload'], ['star', 'Star', 'bkStar']].filter(([, , a]) => !(a === 'bkView' || a === 'bkVersions') || sel.length === 1).map(([i, l, a]) => `<button class="btn btn-light btn-xs" data-act="${a}" data-id="${f.id}">${ic(i)} ${l}</button>`).join('')}
+      ${role() === 'registry' ? `<button class="btn btn-outline danger btn-xs" data-act="bkRemove" data-id="${f.id}">${ic('trash')} Remove from File</button>` : ''}
+      <button class="btn btn-light btn-icon btn-xs bulk-x" data-act="bkClear" data-id="${f.id}" aria-label="Clear selection">${ic('x')}</button></div>` : '';
+  const allOn = sel.length === list.length;
+  return bulk + tfWrap({ key: 'folios-' + f.id, paged: true, search: 'Search folios – title, reference, folio, type or officer…', date: [10, 'Modified from', 'Modified to'], facets: [[5, 'Type'], [6, 'Created by'], [7, 'Status'], [8, 'Confidentiality']],
+      extra: `<button type="button" class="btn btn-light btn-icon star-filter ${ui.fStarOnly ? 'on' : ''}" data-act="starOnly" aria-pressed="${!!ui.fStarOnly}" title="Starred only" aria-label="Show starred folios only">${ic('star')}</button>` },
+    `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th class="sel-col"><input type="checkbox" class="row-sel" data-selall="${f.id}" ${allOn ? 'checked' : ''} aria-label="Select all folios"></th><th class="sel-col"><span class="sr">Star</span></th><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
+    ${list.filter(d => !ui.fStarOnly || d.starred).map(d => { const [sl, sc] = st(d), me2 = mine.has(d.id), on = sel.includes(d.id); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}" class="${me2 ? 'to-me' : ''}${on ? ' is-sel' : ''}"><td class="sel-col" data-v=""><input type="checkbox" class="row-sel" data-sel="${f.id}:${d.id}" ${on ? 'checked' : ''} aria-label="Select ${esc(d.title)}"></td><td class="sel-col" data-v=""><button class="star-btn ${d.starred ? 'on' : ''}" data-act="starFolio" data-f="${f.id}" data-d="${d.id}" aria-pressed="${!!d.starred}" aria-label="Star ${esc(d.title)}">${ic('star')}</button></td><td><b>${esc(d.title)}</b>${me2 ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}</td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
 }
 /* Letter details: Overview · Metadata · Versions · Cross-references, with comments on the side */
 const LT_TABS = [['overview', 'Overview', 'grid'], ['metadata', 'Metadata', 'fileEdit'], ['versions', 'Versions', 'layers'], ['xrefs', 'Cross-References', 'swap']];
@@ -1166,8 +1180,8 @@ function tfBar(s) {
   const fac = (s.facets || []).map(([c, l]) => `<div class="tf-f"><label for="${id}-c${c}">${l}</label><select class="select" id="${id}-c${c}" data-tf-col="${c}"><option value="">All</option></select></div>`).join('');
   const nf = (s.facets || []).length + (s.date ? 1 : 0), act = Object.values(st.fac || {}).filter(Boolean).length + (st.from || st.to ? 1 : 0);
   const tog = nf ? `<button type="button" class="btn btn-light btn-sm tf-toggle" data-act="tfToggle" data-k="${s.key}" aria-expanded="${!!st.open}">${ic('filter')} Filters${act ? ` <span class="count">${act}</span>` : ''}</button>` : '';
-  return `<div class="tf${st.open ? ' is-open' : ''}" data-tf="${s.key}"${s.date ? ` data-tf-date="${s.date[0]}"` : ''}><div class="tf-row">${dates}${q}${tog}${fac}${s.extra || ''}</div>
-    <div class="tf-meta"><span class="tf-count" aria-live="polite"></span><button class="link-btn tf-clear" data-act="tfClear" data-k="${s.key}" hidden>${ic('x')} Clear filters</button></div></div>`;
+  return `<div class="tf${st.open ? ' is-open' : ''}" data-tf="${s.key}"${s.date ? ` data-tf-date="${s.date[0]}"` : ''}${s.paged ? ' data-tf-paged="1"' : ''}><div class="tf-row">${dates}${q}${tog}${fac}${s.extra || ''}</div>
+    <div class="tf-meta"><span class="tf-count" aria-live="polite"></span><button class="link-btn tf-clear" data-act="tfClear" data-k="${s.key}" hidden>${ic('x')} Clear filters</button>${s.paged ? `<span class="tf-pager"><label class="sr" for="${id}-ps">Rows per page</label><select class="select" id="${id}-ps" data-tf-ps>${[10, 25, 50].map(n => `<option value="${n}" ${(st.ps || 10) === n ? 'selected' : ''}>${n} / page</option>`).join('')}</select><button type="button" class="btn btn-light btn-icon btn-xs" data-act="tfPage" data-k="${s.key}" data-d="-1" aria-label="Previous page">${ic('chevL')}</button><span class="tf-pg"></span><button type="button" class="btn btn-light btn-icon btn-xs" data-act="tfPage" data-k="${s.key}" data-d="1" aria-label="Next page">${ic('chevR')}</button></span>` : ''}</div></div>`;
 }
 const tfWrap = (s, table) => `<div class="tf-block">${tfBar(s)}${table}</div>`;
 function tfCell(td) {
@@ -1198,6 +1212,14 @@ function tfApply(block) {
   if (body && !n && rows.length) { if (!none) { none = document.createElement('tr'); none.className = 'tf-none'; none.innerHTML = `<td colspan="${rows[0].children.length}"><div class="empty">${ic('search')}<div>Nothing matches these filters. Try fewer filters or another word.</div></div></td>`; body.appendChild(none); } }
   else if (none) none.remove();
   const word = x => `${x} ${x === 1 ? 'entry' : 'entries'}`;
+  if (bar.dataset.tfPaged) {
+    const ps = st.ps || 10, pages = Math.max(1, Math.ceil(n / ps)); st.pg = Math.min(Math.max(1, st.pg || 1), pages);
+    let k = 0; rows.forEach(r => { if (!r.hidden) { k++; if (k <= (st.pg - 1) * ps || k > st.pg * ps) r.hidden = true; } });
+    const a = n ? (st.pg - 1) * ps + 1 : 0, b = Math.min(n, st.pg * ps);
+    bar.querySelector('.tf-count').textContent = `Showing ${a}–${b} of ${word(n)}${active ? ` (filtered from ${rows.length})` : ''}`;
+    bar.querySelector('.tf-pg').textContent = `${st.pg} / ${pages}`;
+    bar.querySelectorAll('[data-act=tfPage]').forEach(btn => { btn.disabled = (+btn.dataset.d < 0 ? st.pg <= 1 : st.pg >= pages); });
+  } else
   bar.querySelector('.tf-count').textContent = active ? `${n} of ${word(rows.length)}` : word(rows.length);
   bar.querySelector('.tf-clear').hidden = !active;
 }
@@ -1245,7 +1267,9 @@ function tfInput(t) {
   else if (t.hasAttribute('data-tf-from')) st.from = t.value;
   else if (t.hasAttribute('data-tf-to')) st.to = t.value;
   else if (t.dataset.tfCol !== undefined) (st.fac || (st.fac = {}))[t.dataset.tfCol] = t.value;
+  else if (t.hasAttribute('data-tf-ps')) { st.ps = +t.value; st.pg = 1; }
   else return false;
+  if (!t.hasAttribute('data-tf-ps')) st.pg = 1;
   tfApply(bar.closest('.tf-block'));
   return true;
 }
@@ -2338,6 +2362,7 @@ const ACT = {
     saveFile(`File grid – ${f.ref.replace(/\//g, '-')}.csv`, rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv'); },
   setActivity: el => { const f = getFile(el.dataset.id); f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} marked ${f.activity}`); },
   tfClear: el => { const o = (ui.tf[el.dataset.k] || {}).open; ui.tf[el.dataset.k] = { fac: {}, open: o }; render(); },
+  tfPage: el => { const st = ui.tf[el.dataset.k] || (ui.tf[el.dataset.k] = { fac: {} }); st.pg = (st.pg || 1) + +el.dataset.d; tfApply(el.closest('.tf-block')); },
   tfToggle: el => { const st = ui.tf[el.dataset.k] || (ui.tf[el.dataset.k] = { fac: {} }); st.open = !st.open; const bar = el.closest('.tf'); bar.classList.toggle('is-open', st.open); el.setAttribute('aria-expanded', st.open); },
   guideMode: el => { ui.guideMode = el.dataset.k; render(); },
   tutorial: () => { ui.guideMode = 'tour'; go('#/guide'); render(); },
