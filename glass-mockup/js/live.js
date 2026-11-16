@@ -65,14 +65,14 @@ const chatName = c => c.group ? c.title : esc(person(c.members.find(m => m !== m
 
 /* ---------- header buttons: Pending approvals and Messages (as in the live top bar) ---------- */
 const headerExtras = () => {
-  const ap = myApprovals().length, mu = msgUnread();
-  return `<a class="ph-ic" href="#/approvals" aria-label="${plural(ap, 'pending approval')}" title="Pending approvals">${ic('listChecks')}${ap ? `<span class="badge">${ap}</span>` : ''}</a>
+  const ap = myApprovals().length + (role() === 'registry' ? S.requests.filter(x => x.status === 'open').length : 0), mu = msgUnread();
+  return `<a class="ph-ic" href="#/queue?tab=approvals" aria-label="${plural(ap, 'pending approval')}" title="Pending approvals">${ic('listChecks')}${ap ? `<span class="badge">${ap}</span>` : ''}</a>
     <a class="ph-ic" href="#/messages" aria-label="Messages${mu ? `, ${mu} unread` : ''}" title="Messages">${ic('mail')}${mu ? `<span class="badge">${mu}</span>` : ''}</a>`;
 };
 /* put them between Search and Notifications on every page header */
 function addHeaderExtras(root) {
   root.querySelectorAll('.ph-icons').forEach(box => {
-    if (box.querySelector('[href="#/approvals"]')) return;
+    if (box.querySelector('[href="#/queue?tab=approvals"]')) return;
     const bell = box.querySelector('[data-act=openNotifs]');
     if (bell) bell.insertAdjacentHTML('beforebegin', headerExtras());
   });
@@ -101,6 +101,16 @@ function viewApprovals() {
       ${simpleTable(head, rows(tab === 'done' ? done : mine), tab === 'done' ? 'You have not decided anything yet.' : 'Nothing is waiting for your approval.',
         { key: 'approvals-' + tab, search: 'Search approvals – title, type or officer', date: [4, 'Due from', 'Due to'], facets: [[1, 'Entity type'], [2, 'Status'], [6, 'Started by']] })}
     </section>`;
+}
+function approvalsTable() {
+  const mine = S.approvals.filter(a => a.approver === role() && a.status === 'open');
+  const due = a => new Date(a.due) < new Date();
+  const rows = mine.map(a => `<tr><td><b>${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td><td>${esc(a.type)}</td>
+    <td><div class="ap-prog"><span style="width:${Math.round(a.done / a.steps * 100)}%"></span></div><small class="sub">${a.steps - a.done} pending / ${a.steps}</small></td>
+    <td data-d="${a.due}">${fmtDay(a.due)}${due(a) ? ' <span class="chip t-red">Overdue</span>' : ''}</td><td data-d="${a.at}">${fmtDay(a.at)}</td><td>${esc(person(a.by).name)}</td>
+    <td><button class="btn btn-primary btn-xs" data-act="apReview" data-id="${a.id}">${ic('eye')} Review</button></td></tr>`);
+  return simpleTable(['Details', 'Type', 'Progress', 'Due date', 'Started', 'Started by', ''], rows, 'Nothing is waiting for your approval.', { key: 'q-approvals', search: 'Search approvals – title, type or officer', date: [3, 'Due from', 'Due to'], facets: [[1, 'Entity type'], [5, 'Started by']] })
+    + `<p style="margin:12px 0 0"><a class="link-btn" href="#/approvals?tab=done">${ic('checkCircle')} See what you have already decided</a></p>`;
 }
 function apModal(a) {
   const f = a.fileId && getFile(a.fileId);
@@ -291,8 +301,8 @@ function viewReports() {
   const disposal = S.recReqs.filter(q => q.type === 'DISPOSE' && q.status !== 'Rejected');
   const ocrReview = landingDocs();
   const cards = [
-    ['folders', files.length, 'Total Files', 'View files', '#/files', 'teal'],
-    ['file', docs.length, 'Total Documents', 'View documents', '#/files?show=letters', 'blue'],
+    ['folders', files.length, 'Total Files', 'View files', role() === 'registry' ? '#/files' : '#/queue', 'teal'],
+    ['file', docs.length, 'Total Documents', 'View documents', role() === 'registry' ? '#/files?show=letters' : '#/queue', 'blue'],
     ['listChecks', pending.length + myApprovals().length, 'Pending Tasks', 'View tasks', '#/queue', 'amber'],
     ['clock', sla.length, 'SLA Breaches', 'View SLA', '#/routing', 'red'],
     ['calendar', expiring.length, 'Expiring Soon', 'Within 30 days', '#/access', 'sky'],

@@ -23,6 +23,16 @@ When a Marking or Action Officer opens a file that is with them, the documents s
 ### Contrast
 Every page, pop-up and side panel was checked with axe-core's colour-contrast rule in light and dark mode for all three roles, and now passes WCAG AA (4.5:1 for normal text). Fixes included darker avatar colours, white text on the green Open buttons in tables, a darker "Email" label on notifications, a dark-on-gold "Sent to you" tag, readable chat times and bubbles in dark mode, and the Active / Semi-active tags and Reject button in dark mode.
 
+### Responsive layout
+- **Phones:** every table turns into stacked cards (column name on the left, value on the right) instead of scrolling sideways; filter bars show the search box and a **Filters** button that opens the date and dropdown filters (with a count of active ones); the My Queue tabs scroll sideways; pages leave room at the bottom so the Q-BITS AI button never hides the last item.
+- **All widths:** no page scrolls sideways (checked at 320, 375, 414, 768, 1024, 1280 and 1440px for all three roles); tile icon glows stay inside their tiles; date filters never spill out of their panel; the greeting line under "Hello" never ends a line on a dot.
+
+### My Queue (matches the live system)
+Five tabs across the top: **My Queue** (Files to Act On, Notes for Me) · **File Movement** · **Pending Approvals** (the approvals waiting for you — the same list the header button opens — plus file requests for the Registry) · **Landing Queue** (Registry) · **My Submissions**.
+
+### Registries & Files
+Registry only — Marking and Action Officers no longer see it in their navigation or search, and their file pages lead back to My Queue. The Files toolbar gains a **Stage** filter: All stages · Active · Semi-active.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`

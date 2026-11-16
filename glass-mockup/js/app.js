@@ -333,7 +333,7 @@ function render() {
   let view, nav = 'dashboard', after = null;
   curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
-    case 'files': view = viewFiles(q); nav = 'files'; break;
+    case 'files': if (role() !== 'registry') { history.replaceState(null, '', encodeRoute('#/queue')); view = viewQueue(q); nav = 'queue'; break; } view = viewFiles(q); nav = 'files'; break;
     case 'file': {
       const f = getFile(parts[1]); nav = 'files';
       if (!f) { view = notFound(); break; }
@@ -443,7 +443,8 @@ function notifCard(n) {
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
   const reg = role() === 'registry';
-  return [['dashboard', '#/', 'Overview', 0, 'grid'], ['files', '#/files', 'Registries & Files', 0, 'folders'],
+  /* Registries & Files is the Registry's page; Marking and Action Officers work from My Queue */
+  return [['dashboard', '#/', 'Overview', 0, 'grid'], ...(reg ? [['files', '#/files', 'Registries & Files', 0, 'folders']] : []),
     ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length, 'listChecks'],
     reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
     ['settings', '#/settings', 'Settings', 0, 'settings']];
@@ -479,7 +480,8 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
     </div>`}
   </section>`;
 }
-const notFound = () => pageHead({ title: 'Not found' }) + `<div class="panel glass empty">${ic('folder')}<p>That file could not be found.</p><a class="btn btn-primary btn-sm" href="#/files">Back to Registries &amp; Files</a></div>`;
+const FILES_CRUMB = () => role() === 'registry' ? ['Registries & Files', '#/files'] : ['My Queue', '#/queue'];
+const notFound = () => pageHead({ title: 'Not found' }) + `<div class="panel glass empty">${ic('folder')}<p>That file could not be found.</p><a class="btn btn-primary btn-sm" href="${FILES_CRUMB()[1]}">Back to ${FILES_CRUMB()[0].replace('&', '&amp;')}</a></div>`;
 
 /* ==========================================================================
    File cover — the paper cover from the live New File form
@@ -618,7 +620,7 @@ function roleFilesPanel() {
 function viewDashboard() {
   const r = role(), p = me();
   const dept = (p.dept || regName(p.registry)).replace(/^Ministry of Health\s*[-–]\s*/i, '');
-  const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(t => `<span class="hello-part">${esc(t)}</span>`).join('<span class="sep" aria-hidden="true"></span>');
+  const line = [p.title, dept, 'Ministry of Health'].filter(Boolean).map(t => `<span class="hello-part">${esc(t)}</span>`).join('');
   const hero = `<div class="dash-hero">
       <div class="disc-big">${MOH_LOCKUP}</div>
       <div class="dash-hello"><h1>Hello, ${esc(p.name)}</h1><p class="hello-line">${line}</p></div>
@@ -720,7 +722,7 @@ function viewFiles(q) {
   const F = ui.files;
   if (q.r) { F.reg = q.r; history.replaceState(null, '', encodeRoute('#/files')); }
   const term = F.q.trim().toLowerCase();
-  let files = S.files.filter(f => canSee(f) && (F.reg === 'all' || f.registry === F.reg) && (F.show === 'drafts' ? f.draft : !f.draft));
+  let files = S.files.filter(f => canSee(f) && (F.reg === 'all' || f.registry === F.reg) && (F.show === 'drafts' ? f.draft : !f.draft) && (!F.life || F.life === 'all' || f.draft || activity(f) === F.life));
   if (F.show === 'starred') files = files.filter(f => f.starred);
   if (F.show === 'ty') files = files.filter(f => f.type === 'ty');
   if (term) files = files.filter(f => [f.name, f.ref, f.description, regName(f.registry), f.cover.dept].join(' ').toLowerCase().includes(term));
@@ -746,6 +748,7 @@ function viewFiles(q) {
       <label class="input-icon">${ic('search')}<input class="input" id="files-q" value="${esc(F.q)}" placeholder="Search any letter or file in all registries - subject, reference, folio, sender…" data-input="filesQuery"><span class="sr">Search files</span></label>
       <label class="lbl-select">${ic('sortUD')} Sort<select data-change="filesSort" aria-label="Sort files">${[['recent', 'Most recent'], ['oldest', 'Oldest'], ['size_desc', 'Size – largest'], ['size_asc', 'Size – smallest'], ['name', 'Name A–Z']].map(([k, l]) => `<option value="${k}" ${F.sort === k ? 'selected' : ''}>${l}</option>`).join('')}${F.sort.startsWith('col:') ? `<option selected value="${F.sort}">Column: ${COLS.find(c => c[0] === F.sort.split(':')[1])[1]}</option>` : ''}</select></label>
       <label class="lbl-select">${ic('filter')} Show<select data-change="filesShow" aria-label="Show">${[['all', 'Files & registries'], ['files', 'Files only'], ['registries', 'Registries only'], ['starred', 'Starred files'], ['ty', 'Temporary (TY) files'], ['drafts', `Draft files (${S.files.filter(f => f.draft).length})`]].map(([k, l]) => `<option value="${k}" ${F.show === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="lbl-select">${ic('clock')} Stage<select data-change="filesLife" aria-label="Lifecycle stage">${[['all', 'All stages'], ['Active', 'Active'], ['Semi-active', 'Semi-active']].map(([k, l]) => `<option value="${k}" ${(F.life || 'all') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="lbl-select">${ic('building')}<select data-change="filesReg" aria-label="Registry"><option value="all">All registries</option>${REGISTRIES.map(r => `<option value="${r.id}" ${F.reg === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}</select></label>
       <div class="seg icons" role="group" aria-label="View">${[['grid', 'gridView', 'Grid view'], ['list', 'list', 'List view']].map(([k, i, l]) => `<button class="${F.view === k ? 'on' : ''}" data-act="filesView" data-k="${k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
     </div>
@@ -810,7 +813,7 @@ function viewFile(f, q, target) {
   const meta = `${stageChip(f.stage)}${actChip(f, role() === 'registry')}<span class="chip ghost">${ic('building')} ${regName(f.registry)}</span><span class="chip ghost">${ic('lock')} ${esc(f.confidentiality)}</span>${f.type === 'ty' ? '<span class="chip t-amber">Temporary (TY)</span>' : ''}${f.priority ? `<span class="chip t-red">${ic('flag')} Priority</span>` : ''}`;
   const who = f.withUser === 'registry' ? '<span class="muted">In the Registry</span>' : `${avatar(f.withUser)}<span>With <b>${esc(person(f.withUser).name)}</b></span>`;
   const acts = actionButtons(f);
-  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name]], back: ['Back to Registries & Files', '#/files'], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
+  return pageHead({ crumbs: [FILES_CRUMB(), [f.name]], back: [`Back to ${FILES_CRUMB()[0]}`, FILES_CRUMB()[1]], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
     <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who">${pagesView ? `<button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>` : ''}${who}</div></div>
     ${f.draft ? `<div class="instruction">${ic('fileEdit')}<div><b>This file is a draft.</b> Finish the cover and details, then press <b>Open file</b> to start using it. Draft files are only listed under <b>Show → Draft files</b>.</div></div>` : ''}
     ${f.instruction && ['returned_marking', 'action'].includes(f.stage) ? `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}</div></div>` : ''}
@@ -895,7 +898,7 @@ function viewLetter(f, d) {
     <div class="field" style="margin-top:12px"><label for="lt-cm">Add a comment</label><textarea class="textarea" id="lt-cm" rows="3" placeholder="Write a comment…"></textarea></div>
     <button class="btn btn-primary btn-sm" data-act="postLetterComment" style="margin-top:10px">${ic('send')} Post comment</button>
     ${canAnnotate(f) && d.status !== 'landing' ? `<p class="hint">To write an official minute on the page, use <a href="#/file/${f.id}/doc/${d.id}">Read in the file</a>.</p>` : ''}`;
-  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name, `#/file/${f.id}`], [`Folio ${d.folio}`]], back: [`Back to ${f.name}`, `#/file/${f.id}`], title: `${esc(d.title)} <button class="star ${d.starred ? 'on' : ''}" data-act="starDoc" aria-label="Star letter" aria-pressed="${!!d.starred}">${ic('star')}</button>`, sub: `${KIND[d.kind][0]} · Folio ${esc(d.folio)} in ${esc(f.name)}`, meta }) + `
+  return pageHead({ crumbs: [FILES_CRUMB(), [f.name, `#/file/${f.id}`], [`Folio ${d.folio}`]], back: [`Back to ${f.name}`, `#/file/${f.id}`], title: `${esc(d.title)} <button class="star ${d.starred ? 'on' : ''}" data-act="starDoc" aria-label="Star letter" aria-pressed="${!!d.starred}">${ic('star')}</button>`, sub: `${KIND[d.kind][0]} · Folio ${esc(d.folio)} in ${esc(f.name)}`, meta }) + `
     <div class="queue-switch seg solid lt-tabs" role="tablist" aria-label="Letter details">${LT_TABS.map(([k, l, i]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}" data-act="letterTab" data-k="${k}">${ic(i)} ${l}</button>`).join('')}</div>
     <div class="lt-grid"><section class="panel glass lt-main">${body}</section><aside class="panel glass lt-side" aria-label="Comments">${side}</aside></div>`;
 }
@@ -1096,8 +1099,12 @@ function fileTable(files, cols, emptyText, key) {
 }
 /* My Queue is one page with two tabs: My Queue and File Movement */
 function queueHead(which, sub) {
-  return pageHead({ crumbs: [['My Queue', which === 'routing' ? '#/queue' : ''], ...(which === 'routing' ? [['File Movement']] : [])], title: 'My Queue', sub, right: `<a class="btn btn-white" href="#/files">${ic('folders')} Files</a>` }) +
-    `<div class="queue-switch seg solid" role="tablist" aria-label="My Queue">${[['queue', '#/queue', 'My Queue', 'listChecks', myQueue().length + notesForMe().length], ['routing', '#/routing', 'File Movement', 'route', 0]].map(([k, h, l, i, n]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}${n ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
+  const QN = { routing: 'File Movement', approvals: 'Pending Approvals', landing: 'Landing Queue', subs: 'My Submissions' };
+  return pageHead({ crumbs: [['My Queue', QN[which] ? '#/queue' : ''], ...(QN[which] ? [[QN[which]]] : [])], title: 'My Queue', sub, right: role() === 'registry' ? `<a class="btn btn-white" href="#/files">${ic('folders')} Files</a>` : '' }) +
+    `<div class="queue-switch seg solid" role="tablist" aria-label="My Queue">${[['queue', '#/queue', 'My Queue', 'listChecks', myQueue().length + notesForMe().length], ['routing', '#/routing', 'File Movement', 'route', 0],
+      ['approvals', '#/queue?tab=approvals', 'Pending Approvals', 'checkCircle', (typeof myApprovals === 'function' ? myApprovals().length : 0) + (role() === 'registry' ? S.requests.filter(x => x.status === 'open').length : 0)],
+      ...(role() === 'registry' ? [['landing', '#/queue?tab=landing', 'Landing Queue', 'inboxIn', landingDocs().length]] : []),
+      ['subs', '#/queue?tab=subs', 'My Submissions', 'upload', 0]].map(([k, h, l, i, n]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}${n ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
 }
 function viewRouting(q) {
   const stage = q.stage || 'active';
@@ -1116,7 +1123,7 @@ function viewRouting(q) {
     </section>`;
 }
 function viewQueue(q) {
-  const tab = q.tab || 'act';
+  const tab = q.tab === 'landing' && role() !== 'registry' ? 'act' : (q.tab || 'act');
   const r = role();
   const reqs = r === 'registry' ? S.requests.filter(x => x.status === 'open') : S.requests.filter(x => x.by === meId());
   const subs = r === 'registry' ? S.files.flatMap(f => f.docs.filter(d => d.uploadedBy === meId() || (f.createdBy === meId() && d.kind !== 'response')).map(d => ({ f, d })))
@@ -1126,12 +1133,13 @@ function viewQueue(q) {
   let body = '';
   if (tab === 'act') body = `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.', 'queue-act');
   if (tab === 'notes') body = notes.length ? `<div class="results">${notes.map(({ f, d, s }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}" style="border-left:8px solid ${stickyCol(s.color)}"><span class="pg">${ic('sticky')}</span><div><b>${esc(s.text)}</b><small>From ${esc(person(s.by).name)} · Folio ${esc(d.folio)} in ${esc(f.name)} · ${ago(s.at)}</small></div></a>`).join('')}</div>` : '<div class="card empty">No sticky notes addressed to you.</div>';
-  if (tab === 'approvals') body = reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>${f ? `For ${esc(f.name)} · ` : ''}${esc(x.reason)} · ${ago(x.at)}</small></div>
-      <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : `<div class="card empty">No requests.${r === 'action' ? ' Use <b>Request files</b> inside a file that is with you.' : ''}</div>`;
+  if (tab === 'approvals') body = (typeof approvalsTable === 'function' ? approvalsTable() : '') + (reqs.length ? `<h3 class="sub-h">File requests</h3>` : '') + (reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>${f ? `For ${esc(f.name)} · ` : ''}${esc(x.reason)} · ${ago(x.at)}</small></div>
+      <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : (typeof approvalsTable === 'function' ? '' : `<div class="card empty">No requests.</div>`));
   if (tab === 'landing') body = `<p class="muted" style="margin:0 0 14px">Documents recently uploaded, still awaiting OCR/classification or validation.</p>` + (landingDocs().length ? `<div class="results">${landingDocs().map(({ f, d }) => `<div class="result card"><span class="pg">${ic('file')}</span><div data-href="#/file/${f.id}/doc/${d.id}" style="cursor:pointer"><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} · ${esc(d.from)} · into ${esc(f.name)} · ${ago(d.date)}</small></div><span style="margin-left:auto">${r === 'registry' ? `<button class="btn btn-primary btn-sm" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate &amp; add to file</button>` : '<span class="chip t-violet">Processing</span>'}</span></div>`).join('')}</div>` : '<div class="card empty">The landing queue is empty.</div>');
   if (tab === 'subs') body = subs.length ? `<div class="results">${subs.map(({ f, d }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(d.title)}</b><small>Folio ${esc(d.folio)} in ${esc(f.name)} · ${fmtDT(d.date)}</small></div><span style="margin-left:auto" class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></a>`).join('')}</div>` : '<div class="card empty">You have not submitted anything yet.</div>';
+  if (['approvals', 'landing', 'subs'].includes(tab)) return queueHead(tab, { approvals: 'Requests waiting for your approval.', landing: 'Documents recently uploaded, waiting for OCR, classification or validation.', subs: 'What you have uploaded or written, and where it is now.' }[tab]) + `<section class="panel glass">${body}</section>`;
   return queueHead('queue', 'Everything assigned to you.') + `
-    <section class="panel glass"><div class="tabs">${tabs.map(([k, l, n]) => `<button class="${tab === k ? 'on' : ''}" data-href="#/queue?tab=${k}">${l} <span class="n">${n}</span></button>`).join('')}</div>${body}</section>`;
+    <section class="panel glass"><div class="tabs">${tabs.filter(([k]) => k === 'act' || k === 'notes').map(([k, l, n]) => `<button class="${tab === k ? 'on' : ''}" data-href="#/queue?tab=${k}">${l} <span class="n">${n}</span></button>`).join('')}</div>${body}</section>`;
 }
 
 /* ==========================================================================
@@ -1154,7 +1162,9 @@ function tfBar(s) {
   const dates = s.date ? [['from', s.date[1] || 'From'], ['to', s.date[2] || 'To']].map(([k, l]) => `<div class="tf-f tf-d"><label for="${id}-${k}">${l}</label><input class="input" type="date" id="${id}-${k}" data-tf-${k} value="${esc(st[k] || '')}"></div>`).join('') : '';
   const q = s.search === false ? '' : `<div class="tf-f tf-q"><label for="${id}-q">Search</label><span class="input-icon">${ic('search')}<input class="input" id="${id}-q" data-tf-q value="${esc(st.q || '')}" placeholder="${esc(s.search || 'Search this table')}" autocomplete="off"></span></div>`;
   const fac = (s.facets || []).map(([c, l]) => `<div class="tf-f"><label for="${id}-c${c}">${l}</label><select class="select" id="${id}-c${c}" data-tf-col="${c}"><option value="">All</option></select></div>`).join('');
-  return `<div class="tf" data-tf="${s.key}"${s.date ? ` data-tf-date="${s.date[0]}"` : ''}><div class="tf-row">${dates}${q}${fac}${s.extra || ''}</div>
+  const nf = (s.facets || []).length + (s.date ? 1 : 0), act = Object.values(st.fac || {}).filter(Boolean).length + (st.from || st.to ? 1 : 0);
+  const tog = nf ? `<button type="button" class="btn btn-light btn-sm tf-toggle" data-act="tfToggle" data-k="${s.key}" aria-expanded="${!!st.open}">${ic('filter')} Filters${act ? ` <span class="count">${act}</span>` : ''}</button>` : '';
+  return `<div class="tf${st.open ? ' is-open' : ''}" data-tf="${s.key}"${s.date ? ` data-tf-date="${s.date[0]}"` : ''}><div class="tf-row">${dates}${q}${tog}${fac}${s.extra || ''}</div>
     <div class="tf-meta"><span class="tf-count" aria-live="polite"></span><button class="link-btn tf-clear" data-act="tfClear" data-k="${s.key}" hidden>${ic('x')} Clear filters</button></div></div>`;
 }
 const tfWrap = (s, table) => `<div class="tf-block">${tfBar(s)}${table}</div>`;
@@ -1190,8 +1200,18 @@ function tfApply(block) {
   bar.querySelector('.tf-clear').hidden = !active;
 }
 let tfObs = null;
+/* Phone layout: every table becomes stacked cards; each cell carries its column name */
+function labelTables() {
+  document.querySelectorAll('#app table.tbl').forEach(t => {
+    const hs = [...t.querySelectorAll(':scope > thead > tr > th')].map(th => th.textContent.trim());
+    if (!hs.length) return;
+    t.classList.add('rc');
+    t.querySelectorAll(':scope > tbody > tr').forEach(tr => [...tr.children].forEach((td, i) => { if (td.dataset.label === undefined) td.dataset.label = hs[i] || ''; }));
+  });
+}
 function tfInit() {
   if (tfObs) tfObs.disconnect();
+  labelTables();
   document.querySelectorAll('.tf-block').forEach(block => {
     const bar = block.querySelector('.tf'); if (!bar) return;
     const st = ui.tf[bar.dataset.tf] || (ui.tf[bar.dataset.tf] = { fac: {} }), rows = tfRows(block);
@@ -1286,7 +1306,7 @@ function gridRows(f) {
 function viewGrid(q) {
   const f = getFile(q.file || q.id) || S.files.find(x => !x.draft && x.movements.length);
   const rows = gridRows(f);
-  return pageHead({ crumbs: [['Registries & Files', '#/files'], [f.name, `#/file/${f.id}`], ['File grid']], title: 'File grid', sub: `${esc(f.name)} · ${esc(f.ref)}`, back: [`Back to ${f.name}`, `#/file/${f.id}`], right: `<button class="btn btn-white" data-act="gridExcel" data-id="${f.id}">${ic('download')} Download Excel</button>` }) + `
+  return pageHead({ crumbs: [FILES_CRUMB(), [f.name, `#/file/${f.id}`], ['File grid']], title: 'File grid', sub: `${esc(f.name)} · ${esc(f.ref)}`, back: [`Back to ${f.name}`, `#/file/${f.id}`], right: `<button class="btn btn-white" data-act="gridExcel" data-id="${f.id}">${ic('download')} Download Excel</button>` }) + `
     <section class="panel glass dense">${simpleTable(['Date', 'Folio', 'Document', 'Step', 'Officer to see', 'Initials', 'Acknowledged'], rows.map(r => `<tr><td data-d="${r.date}">${fmtDT(r.date)}</td><td class="mono">${esc(r.folio)}</td><td>${esc(r.doc)}</td><td>${r.step}</td><td>${esc(r.to)}</td><td class="mono">${esc(r.initials)}</td><td>${r.ack === 'Yes' ? `<span class="chip t-green">${ic('check')} Yes</span>` : '—'}</td></tr>`), 'Nothing has been marked on this file yet.', { key: 'grid-' + f.id, search: 'Search – folio, document or officer', date: [0, 'Marked from', 'Marked to'], facets: [[1, 'Folio'], [4, 'Officer to see'], [6, 'Acknowledged']] })}</section>`;
 }
 
@@ -2003,7 +2023,7 @@ function notifDrawer() {
   document.body.appendChild(d);
 }
 function paletteModal() {
-  const navs = [['Overview', '#/', 'grid'], ['Registries & Files', '#/files', 'folders'], ['My Queue', '#/queue', 'listChecks'], ['File Movement', '#/routing', 'route'], ['User Guide', '#/guide', 'book'], ['Upload', '#/upload', 'upload'], ['Bring Up Diary', '#/bringup', 'calendar'], ['Settings', '#/settings', 'settings'], ...(role() === 'registry' ? [['Physical Files', '#/physical', 'archive'], ['Files & Records', '#/records', 'layers'], ['File Census', '#/census', 'checkCircle'], ['Inward Register', '#/inward', 'inboxIn'], ['Outward Register', '#/outward', 'send']] : [])];
+  const navs = [['Overview', '#/', 'grid'], ...(role() === 'registry' ? [['Registries & Files', '#/files', 'folders']] : []), ['My Queue', '#/queue', 'listChecks'], ['File Movement', '#/routing', 'route'], ['User Guide', '#/guide', 'book'], ['Upload', '#/upload', 'upload'], ['Bring Up Diary', '#/bringup', 'calendar'], ['Settings', '#/settings', 'settings'], ...(role() === 'registry' ? [['Physical Files', '#/physical', 'archive'], ['Files & Records', '#/records', 'layers'], ['File Census', '#/census', 'checkCircle'], ['Inward Register', '#/inward', 'inboxIn'], ['Outward Register', '#/outward', 'send']] : [])];
   const items = [...navs.map(([l, h, i]) => ({ l, h, i, s: 'Go to' })), ...S.files.map(f => ({ l: f.name, h: `#/file/${f.id}`, i: 'folder', s: f.ref })), ...S.files.flatMap(f => f.docs.map(d => ({ l: d.title, h: `#/file/${f.id}/doc/${d.id}`, i: 'file', s: `Folio ${d.folio} · ${f.name}` })))];
   modal(`<div class="modal-b" style="padding:18px"><label class="input-icon">${ic('search')}<input class="input" id="pal-q" placeholder="Search files, letters and pages…" data-input="palette"></label><div class="list" id="pal-list"></div></div>`, 'palette');
   ui.paletteDraw = term => { const t = term.toLowerCase(); $('#pal-list').innerHTML = items.filter(x => (x.l + ' ' + x.s).toLowerCase().includes(t)).slice(0, 12).map((x, i) => `<a href="${x.h}" class="${i === 0 ? 'on' : ''}" data-act="close">${ic(x.i)}<span><b>${esc(x.l)}</b><br><small class="muted">${esc(x.s)}</small></span></a>`).join('') || '<p class="muted">No matches.</p>'; };
@@ -2292,7 +2312,8 @@ const ACT = {
     const rows = [['Date', 'Folio', 'Document', 'Step', 'Officer to see', 'Initials', 'Acknowledged'], ...gridRows(f).map(r => [fmtDT(r.date), r.folio, r.doc, r.step, r.to, r.initials, r.ack])];
     saveFile(`File grid – ${f.ref.replace(/\//g, '-')}.csv`, rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv'); },
   setActivity: el => { const f = getFile(el.dataset.id); f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} marked ${f.activity}`); },
-  tfClear: el => { ui.tf[el.dataset.k] = { fac: {} }; render(); },
+  tfClear: el => { const o = (ui.tf[el.dataset.k] || {}).open; ui.tf[el.dataset.k] = { fac: {}, open: o }; render(); },
+  tfToggle: el => { const st = ui.tf[el.dataset.k] || (ui.tf[el.dataset.k] = { fac: {} }); st.open = !st.open; const bar = el.closest('.tf'); bar.classList.toggle('is-open', st.open); el.setAttribute('aria-expanded', st.open); },
   guideMode: el => { ui.guideMode = el.dataset.k; render(); },
   tutorial: () => { ui.guideMode = 'tour'; go('#/guide'); render(); },
   tutPage: el => go(`#/tutorial/${el.dataset.id}`),
@@ -2630,6 +2651,7 @@ document.addEventListener('change', e => {
   if (k === 'filesSort') { ui.files.sort = t.value; render(); }
   if (k === 'filesShow') { ui.files.show = t.value; render(); }
   if (k === 'filesReg') { ui.files.reg = t.value; render(); }
+  if (k === 'filesLife') { ui.files.life = t.value; render(); }
   if (k === 'dashStage') { ui.dash.stage = t.value; $('#route-panel').innerHTML = routePanel(); }
   if (k === 'mvFile') { ui.mvFile = t.value; render(); }
   if (k === 'coverPriority') { const f = currentFile(); f.priority = t.checked; save(); render(); }

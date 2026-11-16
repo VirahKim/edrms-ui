@@ -1848,3 +1848,64 @@ html:not([data-theme="dark"]) .tbl a.btn-primary, html[data-theme="dark"] .tbl a
 [data-theme="dark"] .chat-pane { background: rgba(8,30,29,.3); }
 [data-theme="dark"] .qlink, [data-theme="dark"] .man-toc button, [data-theme="dark"] .cn-p { background: var(--surface-2, #163230); color: var(--ink); }
 [data-theme="dark"] .btn-outline.danger { color: #fca5a5; border-color: rgba(252,165,165,.5); }
+
+/* ==========================================================================
+   Responsiveness pass
+   ========================================================================== */
+/* tile icon glow stays inside its tile (it spilled past the screen edge on the right-hand column) */
+.tile { overflow: clip; }
+/* filter fields never grow past their column (date inputs have a wide built-in minimum) */
+.tf .input, .tf .select { width: 100%; min-width: 0; }
+.tf-f { min-width: 0; }
+.tf-toggle { display: none; }
+
+@media (max-width: 640px) {
+  /* Filters fold away behind one button; search stays visible */
+  .tf-row { align-items: flex-end; }
+  .tf-f.tf-q { flex: 1 1 0; min-width: 0; }
+  .tf-toggle { display: inline-flex; flex: none; height: 42px; gap: 6px; }
+  .tf-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--primary, #007F7B); color: #fff; font-size: 11.5px; display: grid; place-items: center; }
+  .tf:not(.is-open) .tf-f:not(.tf-q), .tf:not(.is-open) .tf-check { display: none; }
+  .tf.is-open .tf-toggle { background: var(--primary, #007F7B); color: #fff; }
+  .tf:not(:has(.tf-q)) .tf-toggle { margin-left: auto; }
+
+  /* Tables become stacked cards: no sideways scrolling on phones */
+  .tbl-wrap:has(> table.rc) { overflow: visible; background: transparent; box-shadow: none; border-radius: 0; }
+  table.tbl.rc, table.tbl.rc > tbody, table.tbl.rc > tbody > tr, table.tbl.rc > tbody > tr > td { display: block; width: 100%; }
+  table.tbl.rc { min-width: 0 !important; }
+  table.tbl.rc > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  table.tbl.rc > tbody > tr { background: rgba(255,255,255,.95); border-radius: 18px; padding: 12px 14px; margin: 0 0 10px; box-shadow: var(--shadow-sm); border: 0; }
+  table.tbl.rc > tbody > tr > td { display: grid; grid-template-columns: minmax(84px, 36%) minmax(0, 1fr); gap: 4px 12px; align-items: start; padding: 6px 0; border: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; background: none !important; box-shadow: none !important; }
+  table.tbl.rc > tbody > tr > td::before { content: attr(data-label); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); padding-top: 2px; }
+  table.tbl.rc > tbody > tr > td:first-child { grid-template-columns: minmax(0, 1fr); font-size: 15.5px; padding-top: 2px; }
+  table.tbl.rc > tbody > tr > td:first-child::before, table.tbl.rc > tbody > tr > td[data-label=""]::before { display: none; }
+  table.tbl.rc > tbody > tr > td[data-label=""] { grid-template-columns: minmax(0, 1fr); }
+  table.tbl.rc > tbody > tr > td:empty { display: none; }
+  table.tbl.rc > tbody > tr > td .row-acts, table.tbl.rc > tbody > tr > td > .btn { justify-content: flex-start; }
+  table.tbl.rc > tbody > tr.tf-none { padding: 0; }
+  table.tbl.rc > tbody > tr.tf-none > td { display: block; }
+  table.tbl.rc > tbody > tr.to-me { background: #fff4d6; box-shadow: inset 5px 0 0 #d99a00, var(--shadow-sm); }
+  table.tbl.rc > tbody > tr:hover > td { background: none; }
+  [data-theme="dark"] table.tbl.rc > tbody > tr { background: var(--surface-2, #163230); }
+  [data-theme="dark"] table.tbl.rc > tbody > tr.to-me { background: rgba(224,161,0,.2); }
+}
+@media (max-width: 640px) {
+  table.tbl.rc > tbody > tr > td { display: block; position: relative; padding: 6px 0 6px min(120px, 38%); min-height: 28px; }
+  table.tbl.rc > tbody > tr > td::before { position: absolute; left: 0; top: 7px; width: calc(min(120px, 38%) - 10px); font-size: 11px; letter-spacing: .02em; line-height: 1.25; overflow-wrap: anywhere; padding: 0; }
+  table.tbl.rc > tbody > tr > td:first-child, table.tbl.rc > tbody > tr > td[data-label=""] { padding-left: 0; }
+  table.tbl.rc > tbody > tr > td .chip { max-width: 100%; }
+  table.tbl.rc > tbody > tr > td .fname { min-width: 0; }
+  table.tbl.rc > tbody > tr > td .sub { display: block; }
+}
+@media (max-width: 640px) {
+  table.tbl.rc > tbody > tr > td::before { font-size: 10.5px; letter-spacing: 0; overflow-wrap: normal; }
+  /* leave room so the last card can scroll clear of the Q-BITS AI button */
+  .main, .app.no-side .main { padding-bottom: 120px; }
+}
+/* greeting line: the dot travels with the next part, so a wrapped line never ends on a dot */
+.dash-hello .hello-line { display: flex; flex-wrap: wrap; column-gap: 0; row-gap: 4px; align-items: center; }
+.dash-hello .hello-part { white-space: nowrap; }
+.dash-hello .hello-part + .hello-part::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .85; margin: 0 10px 2px; vertical-align: middle; }
+@media (max-width: 900px) { .dash-hello .hello-part + .hello-part::before { display: none; } .dash-hello .hello-part { white-space: normal; } }
+.sub-h { font-size: 16px; margin: 22px 0 10px; }
+@media (max-width: 760px) { .queue-switch { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; } .queue-switch button { flex: none; white-space: nowrap; } }
