@@ -1509,18 +1509,22 @@ function viewUpload(q) {
   let step, foot;
   if (u.step === 1) {
     step = `<div class="up-body">
-      <div class="field"><label class="label" for="up-file">1. Select a File <span class="req">*</span></label><span class="hint" style="color:var(--ink-2)">Every document must be in a file</span>
+      <div class="field"><label class="label" for="up-file">1. Select a File <span class="req">*</span> <span class="info-tip" tabindex="0" title="Every document must be in a file. Choose an existing file or create a new one.">${ic('info')}</span></label><span class="hint" style="color:var(--ink-2)">Every document must be in a file</span>
         <div style="display:flex;gap:10px;flex-wrap:wrap"><select class="select" id="up-file" style="flex:1;min-width:220px" data-change="uploadFile">${fileOpts}</select><button class="btn btn-glass btn-sm" style="height:46px" data-act="newFile">${ic('folderPlus')} New File</button></div></div>
-      ${u.tab === 'email' ? `<div class="field"><span class="label">2. Pick emails to import</span><span class="hint" style="color:var(--ink-2)">Attachments become documents in the file</span>
-        <div class="results">${MAILBOX.map(m => `<label class="result card" style="cursor:pointer"><input type="checkbox" data-change="mailPick" value="${m.id}" ${u.files.some(x => x.id === m.id) ? 'checked' : ''}><span class="pg">${ic('mail')}</span><div><b>${esc(m.subject)}</b><small>${esc(m.from)} · ${esc(m.att)}</small></div></label>`).join('')}</div></div>`
+      ${u.tab === 'email' ? `<div class="field"><span class="label">2. Find Emails</span><span class="hint" style="color:var(--ink-2)">Connect a mailbox to search it for attachments. Only what you search for is read — nothing else in your inbox is touched, and nothing is ever sent or modified.</span>
+        <div class="mbx">${[['gmail', 'Gmail'], ['outlook', 'Outlook']].map(([k, l]) => { const on = (u.mbx || {})[k]; return `<div class="mbx-card card"><span class="mbx-ic">${ic('mail')}</span><div><b>${l}</b><small>${on ? `Connected · ${esc(me().name.toLowerCase().replace(/\s+/g, '.'))}@health.go.ke` : 'Not connected'}</small></div><button class="btn ${on ? 'btn-light' : 'btn-outline'} btn-sm" data-act="mbxToggle" data-k="${k}">${on ? 'Disconnect' : 'Connect'}</button></div>`; }).join('')}</div>
+        ${!f ? `<div class="locked-zone">${ic('lock')}<p>Select a file first</p></div>` : !Object.values(u.mbx || {}).some(Boolean) ? `<p class="muted" style="margin:4px 0 0">Connect Gmail or Outlook to see emails with attachments.</p>`
+        : `<label class="input-icon" style="margin-top:4px">${ic('search')}<input class="input" id="mbx-q" value="${esc(u.mq || '')}" placeholder="Search emails – sender, subject or attachment" data-input="mbxQuery" autocomplete="off"><span class="sr">Search emails</span></label>
+        <div class="results" id="mbx-list">${MAILBOX.filter(m => !u.mq || (m.subject + ' ' + m.from + ' ' + m.att).toLowerCase().includes(u.mq.toLowerCase())).map(m => `<label class="result card" style="cursor:pointer"><input type="checkbox" data-change="mailPick" value="${m.id}" ${u.files.some(x => x.id === m.id) ? 'checked' : ''}><span class="pg">${ic('mail')}</span><div><b>${esc(m.subject)}</b><small>${esc(m.from)} · ${esc(m.att)}</small></div></label>`).join('') || '<p class="muted">No emails match.</p>'}</div>`}
+        <button class="btn btn-light btn-sm" style="justify-self:start" data-act="mbxRefresh">${ic('refresh')} Refresh</button></div>`
       : `<div class="field"><span class="label">2. Add Document${u.tab === 'bulk' ? 's' : ''}</span><span class="hint" style="color:var(--ink-2)">${u.tab === 'bulk' ? 'Drop several files at once – each becomes its own folio' : 'OCR and AI start as soon as the import finishes.'}</span>
-        <label class="dropzone" id="dropzone"><input type="file" class="sr" data-change="pickUpload" ${u.tab === 'bulk' ? 'multiple' : ''} accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt">
+        ${!f ? `<div class="locked-zone">${ic('lock')}<p>Select a file first</p>${u.tab === 'bulk' ? '<small class="muted">No files added yet.</small>' : ''}</div>` : `<label class="dropzone" id="dropzone"><input type="file" class="sr" data-change="pickUpload" ${u.tab === 'bulk' ? 'multiple' : ''} accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt">
           ${u.files.length ? `<div style="display:grid;gap:8px">${u.files.map(x => `<div class="file-chosen">${ic('file')}<div><b>${esc(x.name)}</b><br><small class="muted">${esc(x.size)}</small></div></div>`).join('')}<span class="hint">Click to choose different file${u.tab === 'bulk' ? 's' : ''}</span></div>`
-          : `<div><div class="cloud"><span>${ic('arrowUp')}</span></div><p>Drop file here or click to browse</p><p class="muted">PDF, DOCX, XLSX, PNG, JPG up to 100 MB</p></div>`}
-        </label></div>`}
+          : `<div><div class="cloud"><span>${ic('arrowUp')}</span></div><p>Drop file${u.tab === 'bulk' ? 's' : ''} here or click to browse</p><p class="muted">PDF, DOCX, XLSX, PNG, JPG up to 100 MB</p></div>`}
+        </label>`}</div>`}
       ${u.err ? `<p class="form-err" role="alert">${esc(u.err)}</p>` : ''}
     </div>`;
-    foot = `<button class="btn btn-light" data-act="upCancel">Cancel</button><button class="btn btn-primary" data-act="upNext">Save &amp; Proceed ${ic('arrowR')}</button>`;
+    foot = `<button class="btn btn-light" data-act="upCancel">Cancel</button><button class="btn btn-primary" data-act="upNext" ${f && u.files.length ? '' : 'aria-disabled="true"'}>Next: Details${u.tab === 'email' ? ` (${u.files.length})` : ''} ${ic('arrowR')}</button>`;
   } else if (u.step === 'ai') {
     const ph = AI_PHASES(u.files.length === 1 ? u.files[0].name : plural(u.files.length, 'document'));
     step = `<div class="ai-run" aria-live="polite"><div class="ai-orb">${ic('sparkles')}</div><h3>Reading your document${u.files.length > 1 ? 's' : ''}</h3><p class="muted" style="margin:0">OCR and AI start as soon as the import finishes. You can check everything on the next step.</p>
@@ -1565,12 +1569,12 @@ function viewUpload(q) {
   const s2 = u.step !== 1;
   return head(`${plural(S.files.length, 'File')} · ${plural(total, 'Document')}${S.drafts.length ? ` · <a style="color:#fff;text-decoration:underline" href="#" data-act="openDrafts">${plural(S.drafts.length, 'draft')}</a>` : ''}`) + `
     <div class="upload-wrap">
-      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Upload From Email']].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
-      <section class="up-card glass">
-        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on"><i>1</i>File &amp; Document</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
+      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
+      ${u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
+        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on"><i>1</i>${{ bulk: 'Files', email: 'Find Emails' }[u.tab] || 'File &amp; Document'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
         ${step}
         <div class="up-foot">${foot}</div>
-      </section>
+      </section>`}
     </div>`;
 }
 function runAI() {
@@ -2522,6 +2526,8 @@ const ACT = {
   accessDecide: el => { const a = S.access.find(x => x.id === el.dataset.id); a.status = el.dataset.v; if (a.status === 'approved') a.expires = new Date(Date.now() + a.days * 864e5).toISOString(); notify(a.by, `Access ${a.status}.`, meId(), a.fileId); save(); render(); toast(`Request ${a.status}`); },
 
   /* upload */
+  mbxToggle: el => { const u = ui.upload; u.mbx = u.mbx || {}; u.mbx[el.dataset.k] = !u.mbx[el.dataset.k]; if (!Object.values(u.mbx).some(Boolean)) u.files = []; render(); toast(u.mbx[el.dataset.k] ? `${el.dataset.k === 'gmail' ? 'Gmail' : 'Outlook'} connected (mockup)` : 'Mailbox disconnected'); },
+  mbxRefresh: () => { render(); toast('Mailbox refreshed'); },
   upTab: el => { ui.upload.tab = el.dataset.k; ui.upload.files = []; ui.upload.step = 1; ui.upload.err = ''; render(); },
   upNext: () => {
     const u = ui.upload;
@@ -2623,6 +2629,7 @@ document.addEventListener('input', e => {
   if (k === 'dashQ') { ui.dash.q = t.value; const p = t.selectionStart; $('#route-panel').innerHTML = routePanel(); refocus('dash-q', p); }
   if (k === 'guideQ') { ui.guideQ = t.value; const p = t.selectionStart; render(); refocus('guide-q', p); }
   if (k === 'palette') ui.paletteDraw?.(t.value);
+  if (k === 'mbxQuery') { ui.upload.mq = t.value; const pos = t.selectionStart; render(); const n = $('#mbx-q'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
   if (t.dataset.nf) {
     const nf = ui.newFile; nf[t.dataset.nf] = t.value; paintNf();
     if (t.dataset.nf === 'ref') { const w = $('#nf-series-wrap'); if (w) { const hide = !!t.value.trim() || nf.type === 'ty' || nf.visibility === 'personal'; w.hidden = hide; if (hide) nf.series = ''; } }

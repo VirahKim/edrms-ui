@@ -33,6 +33,9 @@ Five tabs across the top: **My Queue** (Files to Act On, Notes for Me) · **File
 ### Registries & Files
 Registry only — Marking and Action Officers no longer see it in their navigation or search, and their file pages lead back to My Queue. The Files toolbar gains a **Stage** filter: All stages · Active · Semi-active.
 
+### Upload Document (matches the live system)
+Four tabs: **Single Document · Bulk Upload · Import from Email · From Officers** (the last for the Registry). Step 2 stays locked ("Select a file first") until a file is chosen. Import from Email first asks you to connect **Gmail** or **Outlook** — only what you search for is read, nothing is sent or changed — then lets you search and tick emails whose attachments become documents; the button shows how many (Next: Details (n)). **From Officers** shows the Correspondence from officers lists (Waiting to be recorded, Recorded – to send on) with Read, Return, Record and file and Send on. The step-1 label follows the tab (File & Document · Files · Find Emails), and there is an ⓘ next to Select a File.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`

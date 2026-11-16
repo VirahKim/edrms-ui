@@ -1909,3 +1909,29 @@ html:not([data-theme="dark"]) .tbl a.btn-primary, html[data-theme="dark"] .tbl a
 @media (max-width: 900px) { .dash-hello .hello-part + .hello-part::before { display: none; } .dash-hello .hello-part { white-space: normal; } }
 .sub-h { font-size: 16px; margin: 22px 0 10px; }
 @media (max-width: 760px) { .queue-switch { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; } .queue-switch button { flex: none; white-space: nowrap; } }
+
+/* Upload page: as in the live system */
+.info-tip { display: inline-grid; place-items: center; vertical-align: middle; color: var(--ink-2); cursor: help; }
+.info-tip svg { width: 15px; height: 15px; }
+.locked-zone { display: grid; place-items: center; gap: 6px; padding: 42px 16px; border-radius: 22px; background: rgba(255,255,255,.45); border: 1px dashed rgba(0,0,0,.12); color: var(--ink-2); text-align: center; }
+.locked-zone svg { width: 34px; height: 34px; opacity: .7; }
+.locked-zone p { margin: 0; font-weight: 600; }
+.mbx { display: grid; gap: 10px; }
+.mbx-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; }
+.mbx-card > div { flex: 1; display: grid; min-width: 0; }
+.mbx-card small { color: var(--ink-2); overflow-wrap: anywhere; }
+.mbx-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(0,127,123,.12); color: var(--primary, #007F7B); flex: none; }
+.btn[aria-disabled="true"] { opacity: .55; }
+.up-officers { padding: 22px; display: grid; gap: 16px; }
+.up-officers .uo-h h2 { margin: 0 0 4px; font-size: 20px; }
+.up-officers .uo-h p { margin: 0; }
+.up-officers > .panel { margin: 0; }
+.up-tabs { flex-wrap: wrap; }
+[data-theme="dark"] .locked-zone { background: rgba(8,30,29,.45); border-color: rgba(255,255,255,.15); }
+@media (max-width: 640px) {
+  .upload-wrap .up-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .upload-wrap .up-tabs button { justify-content: flex-start; gap: 8px; padding: 10px 14px; min-height: 48px; font-size: 14px; border-radius: 16px; }
+  .upload-wrap .up-tabs button span { display: inline !important; }
+  .up-officers { padding: 16px 12px; }
+  .up-officers > .panel { padding: 16px 12px; }
+}

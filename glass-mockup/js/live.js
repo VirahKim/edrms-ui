@@ -180,8 +180,17 @@ function viewCorrespondence() {
   const read = c => `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`;
   const head = ['Subject', 'From', 'Kind', 'Goes to', 'Sent', ''];
   const spec = k => ({ key: 'corr-' + k, search: 'Search – subject, officer or recipient', date: [4, 'Sent from', 'Sent to'], facets: [[1, 'From'], [2, 'Kind'], [3, 'Goes to']] });
-  return pageHead({ crumbs: [['Correspondence from officers']], title: 'Correspondence from officers', sub: 'Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.' }) +
-    `<section class="panel glass"><div class="panel-h"><h2>Waiting to be recorded <span class="n-pill">${w.length}</span></h2></div>
+  return pageHead({ crumbs: [['Correspondence from officers']], title: 'Correspondence from officers', sub: 'Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.' }) + corrLists();
+}
+/* The two (or three) lists — also shown on Upload → From Officers, as in the live system */
+function corrLists() {
+  const w = corrWaiting(), rec = S.corr.filter(c => c.status === 'recorded'), past = S.corr.filter(c => ['sent', 'returned'].includes(c.status));
+  const row = (c, acts) => `<tr><td><b>${esc(c.subject)}</b><small class="sub">To: ${esc(c.to)}</small></td><td>${esc(person(c.from).name)}</td><td>${CORR_KIND[c.kind]}</td>
+      <td data-v="${c.goes}"><span class="chip ${c.goes === 'External' ? 't-violet' : 't-teal'}">${c.goes}</span></td><td data-d="${c.at}">${fmtDT(c.at)}</td><td><div class="row-acts">${acts}</div></td></tr>`;
+  const read = c => `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`;
+  const head = ['Subject', 'From', 'Kind', 'Goes to', 'Sent', ''];
+  const spec = k => ({ key: 'corr-' + k, search: 'Search – subject, officer or recipient', date: [4, 'Sent from', 'Sent to'], facets: [[1, 'From'], [2, 'Kind'], [3, 'Goes to']] });
+  return `<section class="panel glass"><div class="panel-h"><h2>Waiting to be recorded <span class="n-pill">${w.length}</span></h2></div>
       ${simpleTable(head, w.map(c => row(c, `${read(c)}<button class="btn btn-light btn-xs" data-act="corrReturn" data-id="${c.id}">${ic('undo')} Return</button><button class="btn btn-primary btn-xs" data-act="corrRecord" data-id="${c.id}">${ic('archive')} Record and file</button>`)), 'Nothing is waiting to be recorded.', spec('w'))}</section>
     <section class="panel glass"><div class="panel-h"><h2>Recorded – to send on <span class="n-pill">${rec.length}</span></h2></div>
       ${simpleTable([...head.slice(0, 5), 'Filed in', ''], rec.map(c => { const f = getFile(c.fileId); return row(c, `${read(c)}<button class="btn btn-primary btn-xs" data-act="corrSend" data-id="${c.id}">${ic('send')} Send on</button>`).replace('<td><div class="row-acts">', `<td>${f ? fileLink(f) : '—'}</td><td><div class="row-acts">`); }), 'Nothing is waiting to be sent on.', { ...spec('r'), date: [4, 'Sent from', 'Sent to'] })}</section>
@@ -228,7 +237,7 @@ function viewMyCorrespondence(q) {
       <td><div class="row-acts">${['draft', 'returned'].includes(c.status) ? `<button class="btn btn-primary btn-xs" data-act="corrEdit" data-id="${c.id}">${ic('pen')} ${c.status === 'draft' ? 'Continue writing' : 'Fix and resend'}</button>` : `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`}</div></td></tr>`; });
   return pageHead({ crumbs: [['My correspondence']], title: 'My correspondence', sub: 'Letters, memos, circulars and notices you start yourself. You write them, the Registry Officer records them in the Inward Register and files them, then they are sent, printed or posted.', right: `<button class="btn btn-white" data-act="corrStart">${ic('fileEdit')} Start new correspondence</button>` }) +
     `<section class="panel glass">${list.length ? simpleTable(['Subject', 'Kind', 'Goes to', 'Started', 'Status', 'Filed in', ''], rows, '', { key: 'mycorr', search: 'Search – subject or recipient', date: [3, 'Started from', 'Started to'], facets: [[1, 'Kind'], [2, 'Goes to'], [4, 'Status']] })
-      : `<div class="empty">${ic('fileEdit')}<div>You have not started any letters yet.</div><button class="btn btn-primary btn-sm" data-act="corrStart">${ic('fileEdit')} Start new correspondence</button></div>`}</section>`;
+      : `<div class="empty">${ic('fileEdit')}<div>You have not started any letters yet.</div><button class="btn btn-primary btn-sm" data-act="corrStart">Start new correspondence</button></div>`}</section>`;
 }
 function corrStartModal() {
   ui.cw = { kind: 'letter', subject: '' };
