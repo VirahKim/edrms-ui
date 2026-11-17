@@ -2293,3 +2293,6 @@ html { zoom: var(--ui-zoom, 1); }
 [data-theme="dark"] .pref-opt.on { border-color: #2DB8B0; box-shadow: 0 0 0 3px rgba(45,184,176,.3); }
 [data-theme="dark"] .po-aa { color: #7fe0d8; }
 [data-theme="dark"] .tpl-kinds button.on { background: #2DB8B0; color: #062120; }
+/* Settings uses the standard page header; the Dark mode switch sits on its right */
+.phead .set-dark { color: #fff; font-size: 16px; }
+@media (max-width: 640px) { .phead .set-dark { font-size: 14.5px; } }

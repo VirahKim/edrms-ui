@@ -1753,9 +1753,9 @@ function viewSettings(q = {}) {
   } else {
     body = head('refresh', 'Demo data') + `<p class="set-note">Everything you do in this mockup is kept in this browser only. Reset to start the journeys again.</p><button class="btn btn-light" data-act="reset">${ic('refresh')} Reset demo data</button>`;
   }
-  const icons = pageHead({ title: '' }).match(/<div class="ph-icons">[\s\S]*?<\/div>/)?.[0] || '';
-  return `<section class="set-head glass"><div class="set-top"><button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button><button class="btn btn-light btn-sm set-back" data-act="goBack" data-fallback="#/">${ic('chevL')} Back</button>${icons}</div>
-      <div class="set-row"><h1>Settings</h1><div class="set-dark"><span id="dm-l">Dark mode</span>${themeToggle()}</div></div></section>
+  const curT = tabs.find(t => t[0] === tab);
+  return pageHead({ crumbs: [['Settings', '#/settings'], [curT[2]]], title: 'Settings', sub: curT[2], back: ['Back to Overview', '#/'],
+      right: `<div class="set-dark"><span>Dark mode</span>${themeToggle()}</div>` }) + `
     <nav class="set-tabs" aria-label="Settings sections">${tabs.map(([k, i, l]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/settings?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
     <section class="set-panel glass">${body}</section>`;
 }
