@@ -2450,12 +2450,12 @@ html { zoom: var(--ui-zoom, 1); }
   .ph-icons > .ph-more { display: grid !important; }
 }
 
-/* Overview: Recent Notifications come straight after the tiles; AI Suggestions on the left */
+/* Overview: Recent Notifications under AI Suggestions on desktop; straight after the tiles on smaller screens */
 .dash-notif .np-list { display: grid; gap: 10px; }
-@media (min-width: 900px) { .dash-notif .np-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dash-notif .np-list .notif-card { margin: 0; } }
-@media (min-width: 1200px) {
-  .dash2.dash-stack { grid-template-areas: "side tiles" "side notif" "side main"; }
-  .dash-stack > .dash-notif { grid-area: notif; margin: 0; }
+.dash-notif .np-list .notif-card { margin: 0; }
+@media (max-width: 1199px) {
+  .dash-stack > .dash-left { display: flex !important; flex-direction: column; gap: 18px; }
+  .dash-stack > .dash-left > .dash-notif { order: -1; }
 }
-@media (max-width: 1199px) { .dash-stack > .dash-notif { order: 0; } }
+@media (min-width: 900px) and (max-width: 1199px) { .dash-notif .np-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tbl.folio-tbl td.sel-col:first-child { min-width: 0 !important; }

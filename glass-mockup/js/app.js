@@ -642,9 +642,9 @@ function viewDashboard() {
   const notes = myNotifs().slice(0, 3);
   return pageHead({ hero }) + `<div class="dash2 dash-stack">
     <section class="tiles" aria-label="Quick actions">${tiles().join('')}</section>
-    <section class="notif-panel card dash-notif" aria-label="Recent notifications"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
-      <div class="np-list">${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</div></section>
-    <div class="dash-left" role="region" aria-label="AI suggestions">${aiCard()}</div>
+    <div class="dash-left" role="region" aria-label="AI suggestions and notifications">${aiCard()}
+      <section class="notif-panel card dash-notif" aria-label="Recent notifications"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
+        <div class="np-list">${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</div></section></div>
     <div class="dash-main">${r === 'registry' ? movementsPanel() : roleFilesPanel()}</div>
   </div>`;
 }
