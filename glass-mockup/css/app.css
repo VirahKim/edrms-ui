@@ -1523,7 +1523,7 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
 @media (max-width: 640px) { .folio-panel .folio-search { flex: 1 1 100%; margin-left: 0; } }
 .tbl.folio-tbl > thead > tr > th, .tbl.folio-tbl > tbody > tr > td { padding-left: 11px; padding-right: 11px; }
 .folio-tbl td.mono { font-size: 12.5px; }
-.folio-tbl td:first-child { min-width: 150px; }
+.folio-tbl td:first-child:not(.sel-col) { min-width: 150px; }
 .folio-tbl td:nth-child(5) { white-space: normal; min-width: 120px; }
 .folio-panel .seg.icons { margin-left: 4px; }
 .folio-panel.is-pages { padding-bottom: 16px; }
@@ -2428,3 +2428,34 @@ html { zoom: var(--ui-zoom, 1); }
 }
 @media (max-width: 480px) { .topbar .ph-ic[data-act=palette] { display: none; } .topbar .crumbs { font-size: 14.5px; } }
 @media print { .topbar { display: none !important; } }
+
+/* Folio table: the checkbox and star sit close together (columns shrink to their content) */
+.tbl.folio-tbl th.sel-col, .tbl.folio-tbl td.sel-col { width: 1px !important; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; }
+.tbl.folio-tbl th.sel-col:first-child, .tbl.folio-tbl td.sel-col:first-child { padding-left: 16px !important; }
+.tbl.folio-tbl th.sel-col + th, .tbl.folio-tbl td.sel-col + td:not(.sel-col) { padding-left: 8px !important; }
+
+/* Header icons: on phones, Search, My tasks, Messages and Notifications fold into the three-dots menu */
+.ph-more { display: none !important; }
+#icon-menu { position: fixed; z-index: 900; min-width: 230px; padding: 8px; border-radius: 18px; background: #fff; box-shadow: 0 18px 44px rgba(6,40,40,.22); border: 1px solid rgba(15,29,43,.08); display: grid; gap: 2px; }
+#icon-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; color: var(--ink); font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+#icon-menu button:hover, #icon-menu button:focus-visible { background: rgba(0,127,123,.08); outline: none; }
+#icon-menu button:focus-visible { box-shadow: inset 0 0 0 2px var(--primary, #007F7B); }
+#icon-menu .i { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,127,123,.1); color: #00625f; }
+#icon-menu .i svg { width: 18px; height: 18px; }
+#icon-menu .count { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #c62828; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+[data-theme="dark"] #icon-menu { background: var(--surface-2, #12292b); border-color: rgba(255,255,255,.1); }
+[data-theme="dark"] #icon-menu .i { color: #8fe3da; background: rgba(143,227,218,.12); }
+@media (max-width: 640px) {
+  .ph-icons > .ph-ic:not(.me):not(.ph-more) { display: none !important; }
+  .ph-icons > .ph-more { display: grid !important; }
+}
+
+/* Overview: Recent Notifications come straight after the tiles; AI Suggestions on the left */
+.dash-notif .np-list { display: grid; gap: 10px; }
+@media (min-width: 900px) { .dash-notif .np-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dash-notif .np-list .notif-card { margin: 0; } }
+@media (min-width: 1200px) {
+  .dash2.dash-stack { grid-template-areas: "side tiles" "side notif" "side main"; }
+  .dash-stack > .dash-notif { grid-area: notif; margin: 0; }
+}
+@media (max-width: 1199px) { .dash-stack > .dash-notif { order: 0; } }
+.tbl.folio-tbl td.sel-col:first-child { min-width: 0 !important; }

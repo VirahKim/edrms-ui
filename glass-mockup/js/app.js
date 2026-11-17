@@ -473,7 +473,8 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
   const icons = `<div class="ph-icons">
         <button class="ph-ic" data-act="palette" aria-label="Search">${ic('search')}</button>
         <button class="ph-ic" data-act="openNotifs" aria-label="Notifications">${ic('bell')}${unread() ? `<span class="badge">${unread()}</span>` : ''}</button>
-        <button class="ph-ic me" data-act="acctMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)}">${avatar(meId())}</button>
+        <button class="ph-ic ph-more" data-act="iconMenu" aria-haspopup="menu" aria-expanded="false" aria-label="More: search, tasks, messages and notifications">${ic('more')}</button>
+      <button class="ph-ic me" data-act="acctMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)}">${avatar(meId())}</button>
       </div>`;
   const trail = hero ? [['Overview']] : [['Overview', '#/'], ...crumbs.filter(([t]) => t !== 'Overview')];
   const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = back ? back[1] : (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
@@ -484,7 +485,10 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
       <nav class="crumbs" aria-label="Breadcrumb">${trail.map(([t, h], k) => `${k ? ic('chevR') : ''}${h && k < trail.length - 1 ? `<a href="${h}">${esc(t)}</a>` : `<span aria-current="page">${esc(t)}</span>`}`).join('')}</nav>
       ${icons}
     </header>`;
-  if (hero) return bar + `<section class="ptitle is-hero">${hero}</section>`;
+  /* Overview keeps the version 1 header: the logo and greeting with the icons, in the teal card */
+  if (hero) return `<section class="phead glass is-hero hero-compact">
+    <div class="hero-row">${hero}${icons}</div>
+  </section>`;
   return bar + `<section class="ptitle">${lead}
       <div class="ptitle-text"><h1>${title}</h1>${sub ? `<p class="ptitle-sub">${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
       ${right ? `<div class="ptitle-acts">${right}</div>` : ''}
@@ -638,11 +642,9 @@ function viewDashboard() {
   const notes = myNotifs().slice(0, 3);
   return pageHead({ hero }) + `<div class="dash2 dash-stack">
     <section class="tiles" aria-label="Quick actions">${tiles().join('')}</section>
-    <div class="dash-left" role="region" aria-label="Notifications and AI suggestions">
-      <section class="notif-panel card"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
-        ${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</section>
-      ${aiCard()}
-    </div>
+    <section class="notif-panel card dash-notif" aria-label="Recent notifications"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
+      <div class="np-list">${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</div></section>
+    <div class="dash-left" role="region" aria-label="AI suggestions">${aiCard()}</div>
     <div class="dash-main">${r === 'registry' ? movementsPanel() : roleFilesPanel()}</div>
   </div>`;
 }
@@ -2359,6 +2361,16 @@ const ACT = {
   },
   palette: () => paletteModal(),
   openNotifs: () => notifDrawer(),
+  iconMenu: el => { const m = $('#icon-menu'); if (m) { m.remove(); el.setAttribute('aria-expanded', 'false'); return; }
+    const box = el.closest('.ph-icons'), r = el.getBoundingClientRect();
+    const items = [...box.querySelectorAll('.ph-ic:not(.ph-more):not(.me)')].map(b => { const lbl = /approvals/.test(b.getAttribute('href') || '') ? 'My tasks' : (b.getAttribute('aria-label') || b.title || '').replace(/,.*$/, ''), badge = b.querySelector('.badge')?.textContent || '';
+      return `<button role="menuitem" class="t-teal" data-proxy="${[...box.children].indexOf(b)}"><span class="i">${b.querySelector('svg')?.outerHTML || ''}</span><span>${esc(lbl === 'Search' ? 'Search' : lbl)}</span>${badge ? `<span class="count">${badge}</span>` : ''}</button>`; }).join('');
+    document.body.insertAdjacentHTML('beforeend', `<div id="icon-menu" class="more-menu icon-menu" role="menu" style="top:${r.bottom + 8}px;right:${Math.max(8, innerWidth - r.right)}px">${items}</div>`);
+    el.setAttribute('aria-expanded', 'true');
+    const menu = $('#icon-menu');
+    menu.addEventListener('click', e => { const it = e.target.closest('[data-proxy]'); if (!it) return; const target = box.children[+it.dataset.proxy]; menu.remove(); el.setAttribute('aria-expanded', 'false'); target?.click(); });
+    setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('#icon-menu') && !e.target.closest('.ph-more')) { $('#icon-menu')?.remove(); el.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', off); } }), 0);
+    menu.querySelector('button')?.focus(); },
   openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } },
   seeMinute: el => { ui.hlMin = `${el.dataset.doc}:${el.dataset.n}`; go(`#/file/${el.dataset.file}/letter/${el.dataset.doc}`);
     setTimeout(() => { const m = document.querySelector('.note-item.hl'); if (m) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 80); },

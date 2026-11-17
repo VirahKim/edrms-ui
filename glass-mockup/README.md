@@ -276,7 +276,8 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 Version 1 is kept on the `glass-ui-v1` branch. Version 2 follows the live system:
 - **One top bar on every page** – Back, the breadcrumb (Overview › … › this page) and the icons (search, approvals, messages, notifications, account). On phones the menu button, Back and the current page stay; the breadcrumb shortens.
 - **Title, details and buttons on the page** – under the bar, in dark text: the page title, a short line about it, any status chips, and the page's buttons on the right. Secondary buttons are white pills with a teal outline; the main action stays solid teal.
-- The Overview uses the same bar, with the greeting as its title.
+- The Overview keeps the version 1 header (logo, greeting and icons in the teal card). Recent Notifications sit straight after the tiles.
+- On phones, Search, My tasks, Messages and Notifications fold into a three-dots menu at the top right, next to your account.
 
 ## Journeys (unchanged from the live system)
 
