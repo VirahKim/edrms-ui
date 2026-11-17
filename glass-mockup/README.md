@@ -256,6 +256,15 @@ Each journey has two ways in:
 ### Header logo
 The circle in the side navigation and on the Overview carries the Republic of Kenya / Ministry of Health lockup. It's built from the high-resolution coat of arms (`assets/coat-of-arms.png`) and live text, so it stays sharp at any size; the supplied 180px image would blur when scaled.
 
+### Demo files, documents and notifications in every state
+Sign in as each role to see every state the system can show:
+- **Action Officer (Virah):** EDRMS Documents was *sent back* (red strip says why), IT Documents is for action, Q2 Invoices is *delegated* to Mercy Achieng, Measles-Rubella Campaign was *returned from action* with a signed reply. Notifications cover For action, Sent back, request Approved / Declined, Returned correspondence and Bring up.
+- **Marking Officer (Vera):** Senate of Kenya is waiting for marking; Q4 Documents was *sent back for re-marking*. Notifications cover For marking, Sent back, Done (the officer finished) and Approval needed.
+- **Registry (John):** ACME Company Ltd was *returned from marking* (marked to Virah, ready to send on); CodexAI and Measles-Rubella were *returned from action*. Notifications cover Returned, Marked, Requested (file and access), Delegated and new Correspondence.
+- **Document states:** Landing, Draft, Pending approval, Approved, Rejected, Returned for rework, Signed, Sent, Locked, Archived and Filed — each with its own chip.
+- Every notification shows its kind and opens the right place (the file, Request files, Approvals, Correspondence). The *Marking instruction* strip has a **See minute** link that opens the letter and highlights the minute the instruction came from.
+- More actions has **Add document**; File grid and the Cover button next to Upload were removed.
+
 ## Journeys (unchanged from the live system)
 
 ```

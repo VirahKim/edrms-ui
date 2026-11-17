@@ -2296,3 +2296,17 @@ html { zoom: var(--ui-zoom, 1); }
 /* Settings uses the standard page header; the Dark mode switch sits on its right */
 .phead .set-dark { color: #fff; font-size: 16px; }
 @media (max-width: 640px) { .phead .set-dark { font-size: 14.5px; } }
+
+/* ---- Notification kinds, instruction link, highlighted minute, sent-back strip ---- */
+.chip.t-sky { background: #dff1fb; color: #035f8a; }
+[data-theme="dark"] .chip.t-sky { background: #0d3550; color: #9fd8f7; }
+[data-theme="dark"] .chip.t-grey { background: rgba(255,255,255,.1); color: #cfd8dc; }
+.notif-card .top .nk { height: 22px; font-size: 11.5px; margin-right: 8px; vertical-align: middle; }
+.instruction .ins-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 700; color: var(--teal-700, #00706c); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.instruction .ins-link svg { width: 14px; height: 14px; }
+[data-theme="dark"] .instruction .ins-link { color: #8fe3da; }
+.instruction.sent-back { background: #fdecec; border-color: #f5c2c2; color: #7a1d1d; }
+[data-theme="dark"] .instruction.sent-back { background: #3a1515; border-color: #6b2a2a; color: #ffd0d0; }
+.note-item.hl { outline: 2px solid var(--primary, #007F7B); outline-offset: 2px; background: rgba(0,127,123,.08); animation: hl-pulse 1.6s ease-out 1; }
+@keyframes hl-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,127,123,.45); } 100% { box-shadow: 0 0 0 12px rgba(0,127,123,0); } }
+@media (prefers-reduced-motion: reduce) { .note-item.hl { animation: none; } }

@@ -122,7 +122,7 @@ const avatar = (pid, cls = '') => { const p = person(pid); return `<span class="
 const KEY = 'qbits-edrms-glass-mock';
 let S;
 try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
-if (!S || S.v !== 6) S = seedState();
+if (!S || S.v !== 7) S = seedState();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or blocked: keep in memory */ } };
 const nid = p => p + (++S.seq);
 const ensureIds = () => { S.files.forEach(f => f.docs.forEach(d => { d.stickies = d.stickies || []; d.minutes.forEach(m => { if (!m.id) m.id = nid('m'); });
@@ -436,10 +436,12 @@ function sidebar(active) {
     </div>
   </aside>`;
 }
+const NOTIF_TONE = { 'Sent back': 't-red', Declined: 't-red', Approved: 't-green', Done: 't-green', Returned: 't-amber', 'Bring up': 't-amber', Approval: 't-amber',
+  Requested: 't-violet', 'For marking': 't-blue', 'For action': 't-blue', Marked: 't-teal', Delegated: 't-sky', Correspondence: 't-sky' };
 function notifCard(n) {
   const f = getFile(n.fileId) || {}; const p = person(n.from);
   return `<div class="notif-card ${n.read ? '' : 'unread'}" data-act="openNotif" data-id="${n.id}">
-    <div class="top"><span>${esc(f.name || 'File')}</span><a>View</a></div>
+    <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc(f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><a>View</a></div>
     <p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
     <div class="nfoot"><span class="ago">${ago(n.at)}</span></div></div>`;
@@ -823,11 +825,12 @@ function viewFile(f, q, target) {
   return pageHead({ crumbs: [FILES_CRUMB(), [f.name]], back: [`Back to ${FILES_CRUMB()[0]}`, FILES_CRUMB()[1]], title: esc(f.name), sub: `<span class="mono">${esc(f.ref)} · Vol. ${esc(f.vol)}</span>`, meta }) + `
     <div class="action-bar glass">${acts || `<span style="padding-left:8px;color:var(--ink-2)">You can read this file. ${f.stage === 'filed' ? 'It has been filed away.' : 'Actions appear when the file is with you.'}</span>`}<div class="who">${pagesView ? `<button class="btn btn-light btn-sm" data-act="toggleNotes" aria-pressed="${ui.hideNotes}">${ic('eye')} ${ui.hideNotes ? 'Show notes' : 'Hide notes'}</button>` : ''}${who}</div></div>
     ${f.draft ? `<div class="instruction">${ic('fileEdit')}<div><b>This file is a draft.</b> Finish the cover and details, then press <b>Open file</b> to start using it. Draft files are only listed under <b>Show → Draft files</b>.</div></div>` : ''}
-    ${f.instruction && ['returned_marking', 'action'].includes(f.stage) ? `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}</div></div>` : ''}
+    ${f.sentBack && f.withUser === meId() ? `<div class="instruction sent-back">${ic('undo')}<div><b>Sent back to you</b> – ${esc(f.sentBack)}</div></div>` : ''}
+    ${f.instruction && ['returned_marking', 'action', 'returned_action'].includes(f.stage) ? (() => { const im = instructionMinute(f); return `<div class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(f.instruction)}${f.markedTo ? ` <span class="muted">(marked to ${esc(person(f.markedTo).name)})</span>` : ''}${im ? ` <a href="#" class="ins-link" data-act="seeMinute" data-file="${f.id}" data-doc="${im.d.id}" data-n="${im.m.n}">See minute ${esc(im.m.n)} on folio ${esc(im.d.folio)} ${ic('arrowR')}</a>` : ''}</div></div>`; })() : ''}
     <section class="panel glass folio-panel" aria-labelledby="ft-h">
       <div class="panel-h"><h2 id="ft-h">Folios</h2><span class="n">${docs.length}</span>
         <div class="seg icons" role="group" aria-label="How to view the folios">${[['table', 'list', 'Folio table'], ['pages', 'scrollDown', 'Scroll through the pages']].map(([k, i, l]) => `<button class="${ui.fileView === k ? 'on' : ''}" data-act="fileView" data-k="${k}" aria-pressed="${ui.fileView === k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
-        <div class="fp-acts"><button class="btn btn-light btn-sm" data-act="fileView" data-k="pages">${ic('book')} Cover</button>${role() === 'registry' || canAnnotate(f) ? `<a class="btn btn-primary btn-sm" href="#/upload?file=${f.id}">${ic('upload')} Upload to this file</a>` : ''}</div>
+        <div class="fp-acts">${role() === 'registry' || canAnnotate(f) ? `<a class="btn btn-primary btn-sm" href="#/upload?file=${f.id}">${ic('upload')} Upload to this file</a>` : ''}</div>
 </div>
       ${(() => { const n = sentToMe(f).size; return n ? `<p class="to-me-legend"><span class="sw"></span>${n === 1 ? 'The document sent to you is' : `The ${n} documents sent to you are`} highlighted — ${role() === 'marking' ? 'mark' : 'act on'} ${n === 1 ? 'it' : 'these'}.</p>` : ''; })()}
       ${pagesView ? '' : `<div id="folio-tbl">${folioTable(f, docs)}</div>`}
@@ -848,7 +851,7 @@ function viewFile(f, q, target) {
 const curLetter = () => { const { parts } = parseHash(); const f = getFile(parts[1]); return { f, d: getDoc(f, parts[3]) }; };
 function folioTable(f, docs) {
   const by = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
-  const st = d => d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : d.kind === 'response' && S.dispatch[d.id] ? ['Sent', 't-blue'] : ['Filed', 't-green'];
+  const st = docStatus;
   const conf = d => d.confidentiality || f.confidentiality || 'Internal';
   const list = docs, mine = sentToMe(f);
   if (!list.length) return `<div class="tbl-wrap"><div class="empty">${ic('file')}<div>No folios yet.</div></div></div>`;
@@ -865,7 +868,25 @@ function folioTable(f, docs) {
 }
 /* Letter details: Overview · Metadata · Versions · Cross-references, with comments on the side */
 const LT_TABS = [['overview', 'Overview', 'grid'], ['metadata', 'Metadata', 'fileEdit'], ['versions', 'Versions', 'layers'], ['xrefs', 'Cross-References', 'swap']];
-const docStatus = d => d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : d.kind === 'response' && S.dispatch[d.id] ? ['Sent', 't-blue'] : ['Filed', 't-green'];
+/* Every state a document can be in, with its label and colour */
+const DOC_STATUS = {
+  landing: ['Landing', 't-violet'], draft: ['Draft', 't-grey'], pending: ['Pending approval', 't-amber'], approved: ['Approved', 't-green'],
+  rejected: ['Rejected', 't-red'], rework: ['Returned for rework', 't-amber'], signed: ['Signed', 't-teal'], sent: ['Sent', 't-blue'],
+  locked: ['Locked', 't-red'], archived: ['Archived', 't-grey'], filed: ['Filed', 't-green'],
+};
+/* The minute the instruction came from: the one that repeats it, else the latest marking minute */
+function instructionMinute(f) {
+  const key = (f.instruction || '').toLowerCase().replace(/[.\s]+$/, '');
+  const all = f.docs.flatMap(d => d.minutes.filter(m => m.n).map(m => ({ m, d })));
+  return all.find(x => key && x.m.text.toLowerCase().includes(key)) || all.filter(x => x.m.by === 'vera').sort((a, b) => new Date(b.m.at) - new Date(a.m.at))[0] || null;
+}
+function docStatus(d) {
+  if (d.locked) return DOC_STATUS.locked;
+  if (d.status && d.status !== 'filed' && DOC_STATUS[d.status]) return DOC_STATUS[d.status];
+  if (d.signed) return DOC_STATUS.signed;
+  if (d.kind === 'response' && S.dispatch[d.id]) return DOC_STATUS.sent;
+  return DOC_STATUS.filed;
+}
 const docBy = d => d.uploadedBy ? person(d.uploadedBy).name : d.from;
 const docVersions = d => d.versions || (d.versions = [{ v: 1, name: d.title.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() + '.pdf', sizeKB: d.sizeKB, by: docBy(d), at: d.date, tier: 'Hot — Immediate', scan: 'Clean' }]);
 function viewLetter(f, d) {
@@ -907,7 +928,7 @@ function viewLetter(f, d) {
     ${reg ? `<div class="lt-add"><input class="input" id="lx-bt" placeholder="Subject / title" aria-label="Book subject or title"><input class="input" id="lx-ba" placeholder="Author" aria-label="Author"><input class="input" id="lx-bu" placeholder="Link (https://…) – optional" aria-label="Link"><button class="btn btn-primary" data-act="addBookDoc">${ic('plus')} Add</button></div>` : ''}`; }
   const minutes = d.minutes.filter(m => m.n), sticks = d.stickies.filter(seesSticky), comments = d.comments || [];
   const side = `<div class="np-h"><h2>${ic('chat')} Comments</h2><span class="n">${minutes.length + sticks.length + comments.length}</span></div>
-    ${minutes.map(m => `<div class="note-item" style="cursor:default"><span class="n">${m.n}.</span>${esc(m.text)}<div class="by">${avatar(m.by)} ${esc(person(m.by).name)} · ${fmtDT(m.at)} · minute</div></div>`).join('')}
+    ${minutes.map(m => `<div class="note-item${ui.hlMin === `${d.id}:${m.n}` ? ' hl' : ''}" id="min-${d.id}-${m.n}" style="cursor:default"><span class="n">${m.n}.</span>${esc(m.text)}<div class="by">${avatar(m.by)} ${esc(person(m.by).name)} · ${fmtDT(m.at)} · minute</div></div>`).join('')}
     ${sticks.map(s => `<div class="note-item sticky" style="--sn:${stickyCol(s.color)};cursor:default">${ic('sticky')} ${esc(s.text)}<div class="by">${avatar(s.by)} ${esc(person(s.by).name)} → ${esc(person(s.to).name)}</div></div>`).join('')}
     ${comments.map(c => `<div class="note-item" style="cursor:default">${esc(c.text)}<div class="by">${avatar(c.by)} ${esc(person(c.by).name)} · ${ago(c.at)}</div></div>`).join('')}
     ${minutes.length + sticks.length + comments.length ? '' : '<p class="muted" style="margin:0 0 12px">No comments yet.</p>'}
@@ -2300,7 +2321,9 @@ const ACT = {
   },
   palette: () => paletteModal(),
   openNotifs: () => notifDrawer(),
-  openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); closeModal(); go(`#/file/${n.fileId}`); } },
+  openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } },
+  seeMinute: el => { ui.hlMin = `${el.dataset.doc}:${el.dataset.n}`; go(`#/file/${el.dataset.file}/letter/${el.dataset.doc}`);
+    setTimeout(() => { const m = document.querySelector('.note-item.hl'); if (m) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 80); },
   readAll: () => { myNotifs().forEach(n => n.read = true); save(); closeModal(); render(); },
   reset: () => { const keep = S.session; S = seedState(); S.session = keep; ensureIds(); save(); render(); toast('Demo data reset'); },
 

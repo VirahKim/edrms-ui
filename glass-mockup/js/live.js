@@ -432,9 +432,8 @@ function openMoreMenu(btn, f) {
   const reg = role() === 'registry';
   const it = (i, l, a, tone, href) => href ? `<a role="menuitem" class="t-${tone}" href="${href}" data-act="fmLink"><span class="i">${ic(i)}</span><span>${l}</span></a>`
     : `<button role="menuitem" class="t-${tone}" data-act="${a}" data-id="${f.id}"><span class="i">${ic(i)}</span><span>${l}</span></button>`;
-  const canAdd = reg || f.stage !== 'filed';
   const groups = [
-    [...(canAdd ? [it('upload', 'Add document', '', 'teal', `#/upload?file=${f.id}`)] : []), ...(f.movements.length ? [it('list', 'File grid', '', 'teal', `#/grid/${f.id}`)] : [])],
+    [it('upload', 'Add document', '', 'teal', `#/upload?file=${f.id}`)],
     ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub', 'green'), it('pen', 'Rename / Edit', 'fmRename', 'teal'), it('swap', 'Move File', 'fmMove', 'teal'), it('layers', 'Clone', 'fmClone', 'teal')]] : []),
     [it('share', 'Share', 'fmShare', 'sky'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Notifications: off' : 'Notifications', 'fmNotify', 'amber'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin', 'amber')],
   ].filter(g => g.length);

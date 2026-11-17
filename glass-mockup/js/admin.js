@@ -58,7 +58,7 @@ function adminTab(tab, head) {
   const A = S.admin, reg = role() === 'registry';
   if (tab === 'alldocs') {
     const rows = S.files.filter(f => !f.draft).flatMap(f => f.docs.map(d => ({ f, d }))).sort((a, b) => (b.d.date || '').localeCompare(a.d.date || ''));
-    const st = d => d.locked ? ['Locked', 't-red'] : d.status === 'landing' ? ['Landing', 't-violet'] : d.signed ? ['Signed', 't-teal'] : ['Filed', 't-green'];
+    const st = docStatus;
     return head('file', 'All Documents', `<a class="btn btn-primary btn-sm" href="#/upload">${ic('upload')} Upload</a>`) + `<p class="set-note">Every document in every file, with governance actions: approvals, locking, retention, access grants, OCR and AI assist.</p>`
       + simpleTable(['Title', 'File', 'Folio', 'Type', 'Status', 'Confidentiality', 'Retention', 'OCR', 'Received', ''], rows.map(({ f, d }) => { const [sl, sc] = st(d);
         return `<tr><td><b>${esc(d.title)}</b><small class="sub mono">${esc(d.edms)}</small></td><td>${esc(f.name)}</td><td class="mono">${esc(d.folio)}</td><td>${KIND[d.kind]?.[0] || 'Letter'}</td><td data-v="${sl}"><span class="chip ${sc}">${sl}</span></td>

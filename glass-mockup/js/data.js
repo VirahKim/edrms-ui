@@ -252,6 +252,45 @@ function seedFiles() {
   d('f1', 'd8').stickies.push(sticky('Check', 'henry', 13, 10, 0, { to: 'virah' }));
   d('f4', 'd15').stickies.push(sticky('Due Friday', 'vera', 7, 13, 58, { color: 'orange', to: 'virah' }));
   d('f6', 'd21').stickies.push(sticky('Hearing is on 6 Nov – please mark quickly', 'john', 0, 9, 11, { color: 'blue', to: 'vera' }));
+
+  /* ---- Every state a file and a document can be in, for each role ---- */
+  // Returned from marking: Vera marked it to Virah; waiting for the Registry to send it on
+  Object.assign(f('f7'), { stage: 'returned_marking', withUser: 'registry', markedTo: 'virah', sentBy: 'vera', updated: daysAgo(0, 11, 40),
+    instruction: 'Confirm the supplier is tax compliant before payment is processed.',
+    movements: [{ date: daysAgo(1, 9), from: 'john', to: 'vera' }, { date: daysAgo(0, 11, 40), from: 'vera', to: 'registry' }] });
+  d('f7', 'd23').minutes.push(...placeMinutes([minute('I', 'PS to see', 'john', 1, 9, 0), minute('II', 'Head NVS – confirm the supplier is tax compliant before payment is processed.', 'vera', 0, 11, 38)]));
+  d('f7', 'd23').status = 'approved';
+  // Sent back to the Marking Officer: the Registry returned it for re-marking
+  Object.assign(f('f9'), { stage: 'marking', withUser: 'vera', sentBy: 'john', updated: daysAgo(0, 8, 30), sentBack: 'Please mark to one officer only – two names were given.',
+    movements: [{ date: daysAgo(3, 9), from: 'john', to: 'vera' }, { date: daysAgo(2, 15), from: 'vera', to: 'registry' }, { date: daysAgo(0, 8, 30), from: 'john', to: 'vera' }] });
+  d('f9', 'd26').minutes.push(...placeMinutes([minute('I', 'PS to see', 'john', 3, 9, 0), minute('II', 'Head NVS / Head ICT to action', 'vera', 2, 14, 50), minute('III', 'Sent back – please mark to one officer only.', 'john', 0, 8, 28)]));
+  d('f9', 'd26').status = 'rejected';
+  // Delegated: Virah handed it to Mercy Achieng to act on
+  Object.assign(f('f11'), { stage: 'action', withUser: 'achieng', markedTo: 'virah', delegatedBy: 'virah', sentBy: 'rachael', updated: daysAgo(1, 10),
+    instruction: 'Reconcile the Q2 invoices with the delivery notes and advise.',
+    movements: [{ date: daysAgo(4, 9), from: 'rachael', to: 'vera' }, { date: daysAgo(3, 16), from: 'vera', to: 'registry' }, { date: daysAgo(2, 9), from: 'rachael', to: 'virah' }, { date: daysAgo(1, 10), from: 'virah', to: 'achieng' }] });
+  d('f11', 'd28').minutes.push(...placeMinutes([minute('I', 'PS to see', 'rachael', 4, 9, 0), minute('II', 'Head NVS – reconcile the Q2 invoices with the delivery notes and advise.', 'vera', 3, 15, 55), minute('III', 'Mercy – kindly handle and send back to the Registry.', 'virah', 1, 10, 0)]));
+  // Sent back to the Action Officer: the Registry returned the response for a signature
+  Object.assign(f('f4'), { sentBack: 'Your response is not signed. Please sign it and send it back.' });
+  // Document states
+  d('f1', 'd5') && (d('f1', 'd5').status = 'draft');           // a reply still being written
+  f('f2').docs[3] && (f('f2').docs[3].status = 'pending');      // sent for approval
+  d('f5', 'd20').status = 'rework';                             // returned for rework
+  d('f8', 'd24').status = 'locked';                             // locked against changes
+  d('f10', 'd27').status = 'archived';                          // archived
+  // Returned from action: Virah finished and sent it back with a signed response
+  files.push({
+    id: 'f14', name: 'Measles-Rubella Campaign', ref: 'MOH/NVIP/2026/7', vol: '1', registry: 'main', type: 'ordinary',
+    cover: { color: 'green', dept: 'National Vaccines and Immunization Programme' }, createdBy: 'john', created: daysAgo(9),
+    visibility: 'organization', confidentiality: 'Internal', description: 'Planning letters for the national measles-rubella campaign.',
+    stage: 'returned_action', withUser: 'registry', markedTo: 'virah', sentBy: 'virah', updated: daysAgo(0, 10, 15),
+    instruction: 'Prepare the county allocation and reply to KEMSA.',
+    movements: [{ date: daysAgo(8, 9), from: 'john', to: 'vera' }, { date: daysAgo(7, 12), from: 'vera', to: 'registry' }, { date: daysAgo(7, 14), from: 'john', to: 'virah' }, { date: daysAgo(0, 10, 15), from: 'virah', to: 'registry' }],
+    docs: [
+      doc('d40', '1', 'Campaign Vaccine Request', 'letter', 'KEMSA', 9, { minutes: [minute('I', 'PS to see', 'john', 8, 9, 0), minute('II', 'Head NVS – prepare the county allocation and reply to KEMSA.', 'vera', 7, 11, 50)] }),
+      doc('d41', '1a', 'Reply – County Allocation', 'response', 'Virah Creates', 0, { signed: true, uploadedBy: 'virah', status: 'signed' }),
+    ],
+  });
   return files;
 }
 
@@ -314,13 +353,20 @@ const GUIDE = [
 /* ---- Everything else ---------------------------------------------------- */
 function seedState() {
   return {
-    v: 6,
+    v: 7,
     session: null,
     files: seedFiles(),
-    requests: [{ id: 'r1', by: 'virah', fileId: 'f4', want: 'MOH/ADM/1/1/200/1', reason: 'Need the vendor proposal to respond on the training schedule.', at: daysAgo(1, 15), status: 'open' }],
+    requests: [
+      { id: 'r1', by: 'virah', fileId: 'f4', want: 'MOH/ADM/1/1/200/1', reason: 'Need the vendor proposal to respond on the training schedule.', at: daysAgo(1, 15), status: 'open' },
+      { id: 'r2', by: 'virah', fileId: 'f1', want: 'IT/2026/2023', reason: 'Last year’s user list, to compare.', at: daysAgo(5, 11), status: 'approved' },
+      { id: 'r3', by: 'erickson', fileId: 'f2', want: 'MOH/ICT/2025/9', reason: 'Old network contract.', at: daysAgo(3, 10), status: 'declined' },
+    ],
     access: [
       { id: 'a1', by: 'otieno', fileId: 'f6', reason: 'Prepare talking points for the Senate hearing.', days: 7, at: daysAgo(0, 8), status: 'open' },
       { id: 'a2', by: 'erickson', fileId: 'f10', reason: 'Reference for the ICT handover report.', days: 14, at: daysAgo(6, 11), status: 'approved', expires: daysAhead(8) },
+      { id: 'a3', by: 'virah', fileId: 'f6', reason: 'Vaccine supply figures for the Senate statement.', days: 7, at: daysAgo(1, 9), status: 'approved', expires: daysAhead(6) },
+      { id: 'a4', by: 'virah', fileId: 'f8', reason: 'Check the nurses’ contract terms.', days: 3, at: daysAgo(3, 12), status: 'declined', note: 'Confidential HR file.' },
+      { id: 'a5', by: 'vera', fileId: 'f5', reason: 'Background before marking the vaccine request.', days: 3, at: daysAgo(0, 7, 45), status: 'open' },
     ],
     bringups: [
       { id: 'b1', fileId: 'f6', date: daysAgo(0, 9), note: 'Confirm attendance before the Senate hearing on 6 Nov.', by: 'john', for: 'vera', done: false },
@@ -331,11 +377,29 @@ function seedState() {
     issues: [],
     drafts: [],
     notifications: [
-      { id: 'n1', to: 'virah', text: 'File forwarded to you.', from: 'henry', fileId: 'f4', at: daysAgo(6, 2, 21), read: false },
-      { id: 'n2', to: 'virah', text: 'File forwarded to you.', from: 'henry', fileId: 'f1', at: daysAgo(13, 10, 32), read: false },
-      { id: 'n3', to: 'vera', text: 'File sent to you for marking.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 12), read: false },
-      { id: 'n4', to: 'registry', text: 'File returned from action.', from: 'otieno', fileId: 'f3', at: daysAgo(4, 5, 56), read: false },
-      { id: 'n5', to: 'registry', text: 'Requested a file.', from: 'virah', fileId: 'f4', at: daysAgo(1, 15), read: false },
+      // Action Officer (Virah)
+      { id: 'n1', to: 'virah', kind: 'For action', text: 'File forwarded to you.', from: 'henry', fileId: 'f4', at: daysAgo(6, 2, 21), read: false },
+      { id: 'n2', to: 'virah', kind: 'For action', text: 'File forwarded to you.', from: 'henry', fileId: 'f1', at: daysAgo(13, 10, 32), read: false },
+      { id: 'n6', to: 'virah', kind: 'Sent back', text: 'EDRMS Documents was sent back to you: your response is not signed. Please sign it and send it back.', from: 'john', fileId: 'f4', at: daysAgo(0, 12, 5), read: false },
+      { id: 'n7', to: 'virah', kind: 'Approved', text: 'Your request for “Senate of Kenya” was approved for 7 days.', from: 'john', fileId: 'f6', href: '#/requestfiles', at: daysAgo(0, 10, 2), read: false },
+      { id: 'n8', to: 'virah', kind: 'Declined', text: 'Your request for “2026 Contracts” was declined: confidential HR file.', from: 'rachael', fileId: 'f8', href: '#/requestfiles', at: daysAgo(2, 9, 40), read: false },
+      { id: 'n9', to: 'virah', kind: 'Returned', text: 'Mercy Achieng sent Q2 Invoices back to the Registry after your delegation.', from: 'achieng', fileId: 'f11', at: daysAgo(0, 9, 30), read: true },
+      { id: 'n10', to: 'virah', kind: 'Returned', text: '“Correspondence” was returned to you: add the reference number before it is recorded.', from: 'john', fileId: null, href: '#/mycorrespondence', at: daysAgo(1, 14, 20), read: false },
+      { id: 'n11', to: 'virah', kind: 'Bring up', text: 'Bring-up due: vendor reply on the training schedule.', from: 'john', fileId: 'f4', at: daysAgo(0, 8, 0), read: true },
+      // Marking Officer (Vera)
+      { id: 'n3', to: 'vera', kind: 'For marking', text: 'File sent to you for marking.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 12), read: false },
+      { id: 'n12', to: 'vera', kind: 'Sent back', text: 'Q4 Documents was sent back to you for re-marking: please mark to one officer only.', from: 'john', fileId: 'f9', at: daysAgo(0, 8, 30), read: false },
+      { id: 'n13', to: 'vera', kind: 'Done', text: 'Virah Creates finished the file you marked and returned it with a signed reply.', from: 'virah', fileId: 'f14', at: daysAgo(0, 10, 15), read: false },
+      { id: 'n14', to: 'vera', kind: 'Approval', text: 'Approval needed: ICT Handover Report – file closing request.', from: 'john', fileId: 'f10', href: '#/queue?tab=approvals', at: daysAgo(1, 14), read: false },
+      { id: 'n15', to: 'vera', kind: 'Bring up', text: 'Bring-up due today: confirm attendance before the Senate hearing.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 0), read: true },
+      // Registry (John)
+      { id: 'n4', to: 'registry', kind: 'Returned', text: 'File returned from action.', from: 'otieno', fileId: 'f3', at: daysAgo(4, 5, 56), read: false },
+      { id: 'n16', to: 'registry', kind: 'Returned', text: 'File returned from action with a signed reply – ready to dispatch or file away.', from: 'virah', fileId: 'f14', at: daysAgo(0, 10, 15), read: false },
+      { id: 'n17', to: 'registry', kind: 'Marked', text: 'ACME Company Ltd was marked to Virah Creates – send it on.', from: 'vera', fileId: 'f7', at: daysAgo(0, 11, 40), read: false },
+      { id: 'n5', to: 'registry', kind: 'Requested', text: 'Virah Creates requested a file: MOH/ADM/1/1/200/1.', from: 'virah', fileId: 'f4', href: '#/queue?tab=approvals', at: daysAgo(1, 15), read: false },
+      { id: 'n18', to: 'registry', kind: 'Requested', text: 'Brian Otieno asked for access to Senate of Kenya.', from: 'otieno', fileId: 'f6', href: '#/access', at: daysAgo(0, 8), read: false },
+      { id: 'n19', to: 'registry', kind: 'Delegated', text: 'Virah Creates delegated Q2 Invoices to Mercy Achieng.', from: 'virah', fileId: 'f11', at: daysAgo(1, 10), read: true },
+      { id: 'n20', to: 'registry', kind: 'Correspondence', text: 'New letter from Erickson Maluki waiting to be recorded.', from: 'erickson', fileId: null, href: '#/correspondence', at: daysAgo(0, 6, 50), read: false },
     ],
     seq: 100,
   };
@@ -370,7 +434,6 @@ const TUTORIAL = [
   { id: 'mark', icon: 'pen', title: 'Mark a file', who: 'Marking Officer', role: 'marking', summary: 'Files to mark, record the instruction', steps: [
     { id: 'k-list', title: 'Files to mark', text: 'Your Overview lists the files the Registry has sent you, with who sent each one and when.', path: '/', target: '.dash-main .panel' },
     { id: 'k-mark', title: 'Record what should be done and to whom', text: 'Open the file and press Mark file. Choose the Action Officer and write the instruction. The file goes back to the Registry.', path: '/file/{mk}', button: 'Mark file', open: 'click' },
-    { id: 'k-grid', title: 'The file grid', text: 'File grid shows every step on the file: who it went to, their initials and whether they acknowledged it.', path: '/file/{mk}', button: 'File grid' },
   ] },
   { id: 'act', icon: 'reply', title: 'Act on a file', who: 'Action Officer', role: 'action', summary: 'Respond, comment, ask for files, delegate, done', steps: [
     { id: 'a-list', title: 'Files to act on', text: 'Your Overview lists the files routed to you and the ones you have finished.', path: '/', target: '.dash-main .panel' },
