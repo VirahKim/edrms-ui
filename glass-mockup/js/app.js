@@ -501,8 +501,8 @@ function coverHTML(f, rows = 14) {
     <div class="cv-bind"></div>${f.type === 'ty' ? '<div class="cv-ty">TY</div>' : ''}
     <div class="cv-fileno"><span class="hand">${esc(f.ref || '')}</span>${f.vol ? `<span class="cv-vol">VOL. ${esc(f.vol)}</span>` : ''}</div>
     <div class="cv-line"></div><div class="cv-lbl">File No.</div>
-    <div class="cv-rep">${esc(c.h1 || 'Republic of Kenya')}</div>
-    <div class="cv-min">${esc(c.h2 || 'Ministry of Health')}</div>
+    <div class="cv-rep">${esc(c.h1 || S.admin?.cover?.h1 || 'Republic of Kenya')}</div>
+    <div class="cv-min">${esc(c.h2 || S.admin?.cover?.h2 || 'Ministry of Health')}</div>
     <div class="cv-dept">${esc(c.dept || '')}</div><div class="cv-line"></div><div class="cv-lbl r">Department</div>
     <div class="cv-lbl c">SUBJECT</div><div class="cv-subj">${esc(f.name || '')}</div>
     <table class="cv-mv"><thead><tr><th>Date</th><th>From</th><th>Officer to see</th><th>Officer's initials</th></tr></thead><tbody>${body}</tbody></table>
@@ -1708,22 +1708,25 @@ function startTour(id, step = 0) {
 /* Settings — header card with Dark mode, a row of tab pills, then one panel per tab */
 const emailOf = p => p.email || `${p.name.toLowerCase().replace(/[^a-z ]/g, '').trim().replace(/\s+/g, '.')}@health.go.ke`;
 const SET_TABS = () => [
+  ...(role() === 'registry' ? ADMIN_TABS : []),
   ['users', 'users', 'User Management'],
+  ['prefs', 'settings', 'Preferences'],
   ['registries', 'building', 'Registries'],
   ['accounts', 'mail', 'External Accounts'],
   ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'Files & Records']] : []),
   ['profile', 'user', 'My Profile'],
-  ['tools', 'grid', 'Pages and tools'],
   ['issues', 'scan', 'Reported Issues'],
   ['demo', 'refresh', 'Demo data'],
 ];
 function viewSettings(q = {}) {
   const p = me(), reg = role() === 'registry';
-  const tabs = SET_TABS(), tab = tabs.some(t => t[0] === q.tab) ? q.tab : (tabs.some(t => t[0] === ui.setTab) ? ui.setTab : 'users');
+  const tabs = SET_TABS(), tab = tabs.some(t => t[0] === q.tab) ? q.tab : (tabs.some(t => t[0] === ui.setTab) ? ui.setTab : tabs[0][0]);
   ui.setTab = tab;
   const head = (i, t, right = '') => `<div class="set-ph"><h2>${ic(i)} ${t}</h2>${right}</div>`;
   let body = '';
-  if (tab === 'users') {
+  if (ADMIN_TABS.some(t => t[0] === tab)) body = adminTab(tab, head);
+  else if (tab === 'prefs') body = prefsTab(head);
+  else if (tab === 'users') {
     const ppl = Object.values(PEOPLE);
     body = head('users', 'User Management', `<a class="btn btn-dark set-ext" href="#/settings?tab=users" data-act="qbitsUsers">${ic('settings')} Manage in Q-BITS</a>`)
       + `<p class="set-note">Users, roles and departments come from the Q-BITS ERP. Change them there; EDRMS picks them up when the person next signs in.</p>
@@ -1745,9 +1748,6 @@ function viewSettings(q = {}) {
   } else if (tab === 'profile') {
     body = head('user', 'My Profile', `<button class="btn btn-light btn-sm" data-act="changePw">${ic('lock')} Change password</button>`) + `<div class="prof">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span><small>${esc(emailOf(p))}</small></div></div>
       <dl class="kv"><dt>Department</dt><dd>${esc(p.dept)}</dd><dt>Registry</dt><dd>${regName(p.registry)}</dd><dt>Role (from ERP)</dt><dd>${ROLE_LABEL[role()]}</dd><dt>Data scope</dt><dd>${role() === 'registry' ? 'All registries' : 'Files sent to you and the ones you have worked on'}</dd></dl>`;
-  } else if (tab === 'tools') {
-    const more = [['listChecks', 'My Queue', 'Files and notes waiting for you', '#/queue', myQueue().length + notesForMe().length], ['upload', 'Upload Document', 'Add a file, letter or document', '#/upload'], ['calendar', 'Bring Up Diary', 'Files needed again on a date', '#/bringup', bringupsDue().length], ['bell', 'Notifications', 'Everything sent to you', 'openNotifs', unread()], ['book', 'User Guide', 'How the system works', '#/guide'], ['swap', 'Movement Sheets', 'Where every file has been', '#/movements']];
-    body = head('grid', 'Pages and tools') + `<div class="user-grid">${more.map(([i, l, sub, h, c]) => `${h.startsWith('#') ? `<a class="user-card" href="${h}">` : `<button class="user-card" data-act="${h}">`}<span class="rc-ic">${ic(i)}</span><div><b>${l}</b><small>${sub}</small></div>${c ? `<span class="count">${c}</span>` : ''}${h.startsWith('#') ? '</a>' : '</button>'}`).join('')}</div>`;
   } else if (tab === 'issues') {
     body = head('scan', 'Reported Issues', `<button class="btn btn-light btn-sm" data-act="fabCapture">${ic('scan')} Capture screen</button>`) + (S.issues.length ? S.issues.map(x => `<div class="card issue-row">${x.img ? `<img src="${x.img}" alt="Screenshot of the reported issue">` : ''}<div><span class="chip ${x.type === 'Error' ? 't-red' : x.type === 'Question' ? 't-blue' : 't-green'}">${esc(x.type)}</span><p>${esc(x.text || '')}</p><small class="muted">${ago(x.at)}</small></div></div>`).join('') : `<p class="set-note">Nothing reported yet. Use Q-BITS AI › Capture Screen to report a problem with a picture of the page.</p>`);
   } else {
@@ -2433,7 +2433,8 @@ const ACT = {
   },
   toggleTheme: () => {
     theme = theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('edrms-theme', theme); } catch (e) { /* storage blocked */ }
+    try { localStorage.setItem('edrms-theme', theme); localStorage.setItem('edrms-theme-pref', theme); } catch (e) { /* storage blocked */ }
+    if (typeof themePref !== 'undefined') themePref = theme;
     const root = document.documentElement; root.classList.add('qb-theme-transition'); root.dataset.theme = theme;
     setTimeout(() => root.classList.remove('qb-theme-transition'), 500);
     $$('.qb-theme-toggle').forEach(b => { b.classList.toggle('is-dark', theme === 'dark'); b.setAttribute('aria-checked', theme === 'dark'); });
