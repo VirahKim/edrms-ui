@@ -357,7 +357,10 @@ function viewReports() {
       <section class="panel glass rep-card2"><div class="panel-h"><h2>Documents received</h2><span class="muted">Per week · last 8 weeks</span></div>${monthChart}</section>
       <section class="panel glass rep-card2"><div class="panel-h"><h2>Needs attention</h2><span class="muted">${att.filter(a => a[2]).length ? plural(att.filter(a => a[2]).length, 'item') + ' to look at' : 'All clear'}</span></div>${attList}</section>
       <section class="panel glass rep-card2"><div class="panel-h"><h2>OCR and AI reading</h2><span class="muted">Uploads</span></div>${ocr}</section>
-    </div>`;
+    </div>
+    <section class="rep-lc lc" aria-labelledby="rep-lc-h"><div class="rep-lc-h"><div><h2 id="rep-lc-h">Mail and file lifecycle</h2><p class="muted">Inward and outward mail, and files opened, closed and disposed of in the year.</p></div>
+      <select class="select lc-year" data-change="recYear" aria-label="Year">${lcYears().map(y => `<option ${+(ui.rec.year || new Date().getFullYear()) === y ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+      ${lcStats()}</section>`;
 }
 
 /* ---------- Overview extras: Open Q-BITS AI, notification channel ---------- */

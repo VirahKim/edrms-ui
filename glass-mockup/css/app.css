@@ -2459,3 +2459,10 @@ html { zoom: var(--ui-zoom, 1); }
 }
 @media (min-width: 900px) and (max-width: 1199px) { .dash-notif .np-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tbl.folio-tbl td.sel-col:first-child { min-width: 0 !important; }
+/* Reports Dashboard: mail and file-lifecycle figures (moved from File Lifecycle › Statistics) */
+.rep-lc { margin-top: 22px; }
+.rep-lc-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 4px; }
+.rep-lc-h h2 { margin: 0; font-size: 22px; color: var(--ink); }
+.rep-lc-h p { margin: 4px 0 0; }
+.rep-lc-h .select { width: auto; min-width: 130px; }
+@media (min-width: 1200px) { .rep-lc .lc-stats { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); } }

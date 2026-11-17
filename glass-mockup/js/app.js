@@ -339,7 +339,7 @@ function render() {
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
   if (parts[0] !== 'file') ui.curFile = null; // entering a file again starts on the folio table
   let view, nav = 'dashboard', after = null;
-  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical', records: 'records' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
+  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'upload', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical', records: 'records' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
     case 'files': if (role() !== 'registry') { history.replaceState(null, '', encodeRoute('#/queue')); view = viewQueue(q); nav = 'queue'; break; } view = viewFiles(q); nav = 'files'; break;
     case 'file': {
@@ -454,7 +454,7 @@ function notifCard(n) {
 function navItems() {
   const reg = role() === 'registry';
   /* Registries & Files is the Registry's page; Marking and Action Officers work from My Queue */
-  return [['dashboard', '#/', 'Overview', 0, 'grid'], ...(reg ? [['files', '#/files', 'Registries & Files', 0, 'folders']] : []),
+  return [['dashboard', '#/', 'Overview', 0, 'grid'], ['upload', '#/upload', 'Upload Document', 0, 'upload'], ...(reg ? [['files', '#/files', 'Registries & Files', 0, 'folders']] : []),
     ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length, 'listChecks'],
     reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
     ['settings', '#/settings', 'Settings', 0, 'settings']];
@@ -1421,7 +1421,7 @@ function rackModal(h) {
 const REC_TYPES = { OPEN: ['Open a new temporary file', 'File opening'], CLOSE: ['Close a file', 'File closing'], DISPOSE: ['Dispose of a closed file', 'File disposal'] };
 const REC_REASONS = { OPEN: ['New subject with no existing file', 'Correspondence waiting for a permanent file', 'Existing file is full – new volume needed'], CLOSE: ['Matter concluded', 'File is full', 'Subject merged into another file', 'No action for over two years'], DISPOSE: ['Retention period has ended', 'Duplicate of another file', 'Transferred to the National Archives'] };
 const REC_STATUS = { 'Awaiting approval': 't-amber', Approved: 't-green', Rejected: 't-red', Cancelled: 't-neutral', 'Could not be applied': 't-red' };
-const LC_TABS = [['requests', 'Requests', 'send'], ['files', 'Files', 'folders'], ['registers', 'Registers', 'book'], ['stats', 'Statistics', 'grid']];
+const LC_TABS = [['requests', 'Requests', 'send'], ['files', 'Files', 'folders'], ['registers', 'Registers', 'book']];
 /* The registers on the File Lifecycle page: each one a list of rows for the chosen year */
 const LC_REGS = { open: 'File opening register', close: 'File closing register', dispose: 'File disposal register', inward: 'Inward mail register', outward: 'Outward mail register' };
 function lcRegister(kind, year) {
@@ -1437,6 +1437,23 @@ function lcRegister(kind, year) {
     rows: list.map(({ f, d }, i) => [`${kind === 'inward' ? 'IN' : 'OUT'}/${year}/${String(i + 1).padStart(3, '0')}`, fmtDay(d.date), (kind === 'inward' ? d.from : d.to) || '—', d.title, f.ref, d.folio]) };
 }
 const lcYears = () => [...new Set([new Date().getFullYear(), ...S.files.flatMap(f => [f.created, ...f.docs.map(d => d.date)]).filter(Boolean).map(d => new Date(d).getFullYear())])].sort((a, b) => b - a);
+/* Mail and file-lifecycle figures for a year — shown on the Reports Dashboard */
+function lcStats() {
+  const R = ui.rec; R.year = R.year || new Date().getFullYear();
+    const inYear = d => d && new Date(d).getFullYear() === +R.year;
+    const docs = S.files.flatMap(f => f.docs).filter(d => inYear(d.date));
+    const inward = docs.filter(d => d.kind !== 'response'), outward = docs.filter(d => d.kind === 'response');
+    const internal = inward.filter(d => INTERNAL.test(d.from)).length;
+    const end = new Date(); end.setHours(0, 0, 0, 0);
+    const done = t => S.recReqs.filter(x => x.type === t && x.status === 'Approved' && inYear(x.decision)).length;
+    const stat = (l, v, i, tone) => `<div class="lc-stat card"><span class="lc-ic ${tone}">${ic(i)}</span><span class="l">${l}</span><b>${v}</b></div>`;
+    const months = [...Array(12)].map((_, m) => [new Date(R.year, m, 1).toLocaleDateString('en-GB', { month: 'long' }), m]);
+    const byMonth = list => months.map(([l, m]) => [l, list.filter(d => new Date(d.date).getMonth() === m).length]).filter(([, v]) => v);
+    const bars = (t, data) => { const max = Math.max(1, ...data.map(x => x[1])); return `<section class="set-panel glass lc-card lc-month"><h3>${t}</h3>${data.length ? data.map(([l, v]) => `<div class="lc-bar"><span>${l}</span><i style="--w:${(v / max) * 100}%"></i><b>${v}</b></div>`).join('') : '<p class="muted">No entries.</p>'}</section>`; };
+    return `      <h3 class="lc-h">Mail</h3><div class="lc-stats">${stat('Inward mail', inward.length, 'inboxIn', 't-teal')}${stat('Internal', internal, 'building', 't-teal')}${stat('External', inward.length - internal, 'mail', 't-teal')}${stat('Inward uploaded to EDMS', inward.length, 'upload', 't-teal')}${stat('Outward mail', outward.length, 'send', 't-sky')}${stat('Outward uploaded to EDMS', outward.length, 'upload', 't-sky')}</div>
+      <h3 class="lc-h">Files</h3><div class="lc-stats">${stat('Files opened', done('OPEN'), 'folderPlus', 't-green')}${stat('Files closed', done('CLOSE'), 'lock', 't-amber')}${stat('Files disposed', done('DISPOSE'), 'trash', 't-red')}${stat('Open files now', S.files.filter(f => !f.draft && f.state === 'Open').length, 'folder', 't-green')}${stat('Closed files now', S.files.filter(f => !f.draft && f.state === 'Closed').length, 'archive', 't-amber')}${stat('Awaiting approval', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'clock', 't-amber')}${stat('Bring-ups overdue', S.bringups.filter(b => !b.done && new Date(b.date) < end).length, 'calendar', 't-red')}</div>
+      <div class="lc-two">${bars('Inward mail by month', byMonth(inward))}${bars('Outward mail by month', byMonth(outward))}</div>`;
+}
 function viewRecords(q) {
   const tab = LC_TABS.some(([k]) => k === q.tab) ? q.tab : 'requests', R = ui.rec;
   R.year = R.year || new Date().getFullYear(); R.reg = R.reg || 'open';
@@ -1478,24 +1495,8 @@ function viewRecords(q) {
         <select class="select lc-reg" id="lc-reg" data-change="recReg" aria-label="Register">${Object.entries(LC_REGS).map(([k, l]) => `<option value="${k}" ${R.reg === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${yearSel('lc-ry')}
         <button class="btn btn-light lc-dl" data-act="recRegExcel">${ic('download')} Download Excel</button></div>
       ${simpleTable(head, rows.map(r => `<tr>${r.map((c, i) => `<td${i === 0 || head[i] === 'Reference' || head[i] === 'File' ? ' class="mono"' : ''}>${esc(c)}</td>`).join('')}</tr>`), `No entries in the ${LC_REGS[R.reg].toLowerCase()} for ${R.year}.`, { key: 'lcreg-' + R.reg, search: 'Search this register', paged: true })}</section>`;
-  } else {
-    const inYear = d => d && new Date(d).getFullYear() === +R.year;
-    const docs = S.files.flatMap(f => f.docs).filter(d => inYear(d.date));
-    const inward = docs.filter(d => d.kind !== 'response'), outward = docs.filter(d => d.kind === 'response');
-    const internal = inward.filter(d => INTERNAL.test(d.from)).length;
-    const end = new Date(); end.setHours(0, 0, 0, 0);
-    const done = t => S.recReqs.filter(x => x.type === t && x.status === 'Approved' && inYear(x.decision)).length;
-    const stat = (l, v, i, tone) => `<div class="lc-stat card"><span class="lc-ic ${tone}">${ic(i)}</span><span class="l">${l}</span><b>${v}</b></div>`;
-    const months = [...Array(12)].map((_, m) => [new Date(R.year, m, 1).toLocaleDateString('en-GB', { month: 'long' }), m]);
-    const byMonth = list => months.map(([l, m]) => [l, list.filter(d => new Date(d.date).getMonth() === m).length]).filter(([, v]) => v);
-    const bars = (t, data) => { const max = Math.max(1, ...data.map(x => x[1])); return `<section class="set-panel glass lc-card lc-month"><h3>${t}</h3>${data.length ? data.map(([l, v]) => `<div class="lc-bar"><span>${l}</span><i style="--w:${(v / max) * 100}%"></i><b>${v}</b></div>`).join('') : '<p class="muted">No entries.</p>'}</section>`; };
-    body = `<div class="lc-tools lc-right">${yearSel('lc-sy')}</div>
-      <h3 class="lc-h">Mail</h3><div class="lc-stats">${stat('Inward mail', inward.length, 'inboxIn', 't-teal')}${stat('Internal', internal, 'building', 't-teal')}${stat('External', inward.length - internal, 'mail', 't-teal')}${stat('Inward uploaded to EDMS', inward.length, 'upload', 't-teal')}${stat('Outward mail', outward.length, 'send', 't-sky')}${stat('Outward uploaded to EDMS', outward.length, 'upload', 't-sky')}</div>
-      <h3 class="lc-h">Files</h3><div class="lc-stats">${stat('Files opened', done('OPEN'), 'folderPlus', 't-green')}${stat('Files closed', done('CLOSE'), 'lock', 't-amber')}${stat('Files disposed', done('DISPOSE'), 'trash', 't-red')}${stat('Open files now', S.files.filter(f => !f.draft && f.state === 'Open').length, 'folder', 't-green')}${stat('Closed files now', S.files.filter(f => !f.draft && f.state === 'Closed').length, 'archive', 't-amber')}${stat('Awaiting approval', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'clock', 't-amber')}${stat('Bring-ups overdue', S.bringups.filter(b => !b.done && new Date(b.date) < end).length, 'calendar', 't-red')}</div>
-      <div class="lc-two">${bars('Inward mail by month', byMonth(inward))}${bars('Outward mail by month', byMonth(outward))}</div>`;
   }
-  return pageHead({ crumbs: [['Overview', '#/'], ['File Lifecycle']], title: 'File Lifecycle', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', back: ['Back to Overview', '#/'],
-      right: `<a class="btn btn-glass" style="color:#fff" href="#/census">${ic('checkCircle')} File census</a><a class="btn btn-white" href="#/bringup">${ic('calendar')} Bring-up diary</a>` }) + `
+  return pageHead({ crumbs: [['Overview', '#/'], ['File Lifecycle']], title: 'File Lifecycle', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', back: ['Back to Overview', '#/'] }) + `
     <nav class="set-tabs" aria-label="File Lifecycle sections">${LC_TABS.map(([k, l, i]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/records?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
     <div class="lc">${body}</div>`;
 }

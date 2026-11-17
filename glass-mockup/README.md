@@ -266,11 +266,13 @@ Sign in as each role to see every state the system can show:
 - More actions has **Add document**; File grid and the Cover button next to Upload were removed.
 
 ### File Lifecycle (Registry)
-The live *Files & Records* page, renamed **File Lifecycle** and added to the Registry side menu (the count shows requests awaiting approval). File census and Bring-up diary are linked from the header.
-- **Requests** – open a new temporary file, close a file or dispose of a closed file. Each one goes for approval; the list below can be searched and filtered by request type, status and date.
+The live *Files & Records* page, renamed **File Lifecycle** and added to the Registry side menu (the count shows requests awaiting approval). - **Requests** – open a new temporary file, close a file or dispose of a closed file. Each one goes for approval; the list below can be searched and filtered by request type, status and date.
 - **Files** – every file with its state (Open, Closed, Disposed) and stage (Active, Semi-active), location, documents and last folio. Filter by state and stage; move a file to semi-active or back, or start a closing or disposal request from the row.
 - **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
-- **Statistics** – mail and file counts for the chosen year, and inward and outward mail by month.
+- The statistics (mail and file counts for a year, mail by month) moved to the **Reports Dashboard** under *Mail and file lifecycle*.
+
+### Navigation
+Upload Document is in the side navigation for every role, straight after Overview.
 
 ### Version 2 header
 Version 1 is kept on the `glass-ui-v1` branch. Version 2 follows the live system:
