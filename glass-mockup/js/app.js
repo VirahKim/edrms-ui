@@ -141,7 +141,10 @@ function ensureRecords() {
     { id: 'q1', type: 'OPEN', series: 'MOH/ADM/1/1', subject: 'Cold Chain Equipment Maintenance', fileId: null, reason: 'New subject with no existing file', status: 'Approved', at: daysAgo(3, 11), decision: daysAgo(2, 9), decidedBy: 'vera', by: 'john' },
     { id: 'q2', type: 'CLOSE', fileId: 'f10', reason: 'Matter concluded', status: 'Awaiting approval', at: daysAgo(1, 14), by: 'john' },
     { id: 'q3', type: 'DISPOSE', fileId: 'f11', reason: 'Retention period has ended', status: 'Rejected', at: daysAgo(9, 10), decision: daysAgo(7, 12), decidedBy: 'vera', note: 'Audit query still open', by: 'john' },
+    { id: 'q4', type: 'CLOSE', fileId: 'f8', reason: 'File is full', status: 'Approved', at: daysAgo(6, 10), decision: daysAgo(5, 9), decidedBy: 'vera', by: 'john' },
+    { id: 'q5', type: 'DISPOSE', fileId: null, series: 'MOH/ADM/2/4', subject: 'Staff Circulars 2014', reason: 'Retention period has ended', status: 'Approved', at: daysAgo(15, 11), decision: daysAgo(14, 10), decidedBy: 'vera', by: 'john' },
   ];
+  if (S.recReqs.some(x => x.id === 'q4' && x.status === 'Approved')) { const c = S.files.find(f => f.id === 'f8'); if (c && c.state === 'Open' && !S.recClosedSeeded) { c.state = 'Closed'; S.recClosedSeeded = true; } }
   S.censuses = S.censuses || [];
   if (!S.senders) {
     const names = new Map();
@@ -290,7 +293,7 @@ const myBringups = () => S.bringups.filter(b => role() === 'registry' ? true : b
 /* Links are written as '#/path?key=value' in the code and turned into plain
    names in the address bar ('#file-f1-doc-d8', '#routing-returnedaction'),
    which is what the claude.ai preview allows. */
-const ROUTE_PARAM = { routing: 'stage', queue: 'tab', guide: 's', upload: 'file', files: 'r' };
+const ROUTE_PARAM = { routing: 'stage', queue: 'tab', guide: 's', upload: 'file', files: 'r', records: 'tab' };
 const ROUTE_ALIAS = { settings: 'profile' };
 function encodeRoute(h) {
   const [path, qs] = String(h).replace(/^#\/?/, '').split('?');
@@ -301,7 +304,7 @@ function encodeRoute(h) {
   return '#' + seg.join('-');
 }
 /* Names used by Back links: "Back to Registries & Files" */
-const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'File Lifecycle', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
@@ -335,7 +338,7 @@ function render() {
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
   if (parts[0] !== 'file') ui.curFile = null; // entering a file again starts on the folio table
   let view, nav = 'dashboard', after = null;
-  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
+  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'files', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical', records: 'records' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
     case 'files': if (role() !== 'registry') { history.replaceState(null, '', encodeRoute('#/queue')); view = viewQueue(q); nav = 'queue'; break; } view = viewFiles(q); nav = 'files'; break;
     case 'file': {
@@ -357,7 +360,7 @@ function render() {
     case 'bringup': view = viewBringup(); nav = 'bringup'; break;
     case 'access': view = viewAccess(); nav = 'access'; break;
     case 'physical': view = viewPhysical(q); nav = 'physical'; break;
-    case 'records': view = viewRecords(q); nav = 'more'; break;
+    case 'records': if (role() !== 'registry') { view = viewDashboard(); break; } view = viewRecords(q); nav = 'records'; break;
     case 'census': view = viewCensus(q); nav = 'physical'; break;
     case 'senders': view = viewSenders(); nav = 'more'; break;
     case 'grid': view = viewGrid({ id: parts[1] }); nav = 'files'; break;
@@ -457,7 +460,8 @@ function navItems() {
 }
 /* Registry pages in the side navigation (moved out of Settings) */
 const REG_PAGES = () => [['inward', '#/inward', 'Inward Register', landingDocs().length, 'inboxIn'], ['outward', '#/outward', 'Outward Register', 0, 'send'],
-  ['access', '#/access', 'Access Requests', S.access.filter(a => a.status === 'open').length, 'lock'], ['physical', '#/physical', 'Physical Files', 0, 'archive']];
+  ['access', '#/access', 'Access Requests', S.access.filter(a => a.status === 'open').length, 'lock'], ['physical', '#/physical', 'Physical Files', 0, 'archive'],
+  ['records', '#/records', 'File Lifecycle', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'layers']];
 function topNav() {
   const items = navItems();
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
@@ -1410,54 +1414,88 @@ function rackModal(h) {
 }
 
 /* ==========================================================================
-   Files and records: open (TY), close, dispose — each approved first
+   File Lifecycle: open (TY), close, dispose — each approved first
    ========================================================================== */
 const REC_TYPES = { OPEN: ['Open a new temporary file', 'File opening'], CLOSE: ['Close a file', 'File closing'], DISPOSE: ['Dispose of a closed file', 'File disposal'] };
 const REC_REASONS = { OPEN: ['New subject with no existing file', 'Correspondence waiting for a permanent file', 'Existing file is full – new volume needed'], CLOSE: ['Matter concluded', 'File is full', 'Subject merged into another file', 'No action for over two years'], DISPOSE: ['Retention period has ended', 'Duplicate of another file', 'Transferred to the National Archives'] };
 const REC_STATUS = { 'Awaiting approval': 't-amber', Approved: 't-green', Rejected: 't-red', Cancelled: 't-neutral', 'Could not be applied': 't-red' };
+const LC_TABS = [['requests', 'Requests', 'send'], ['files', 'Files', 'folders'], ['registers', 'Registers', 'book'], ['stats', 'Statistics', 'grid']];
+/* The registers on the File Lifecycle page: each one a list of rows for the chosen year */
+const LC_REGS = { open: 'File opening register', close: 'File closing register', dispose: 'File disposal register', inward: 'Inward mail register', outward: 'Outward mail register' };
+function lcRegister(kind, year) {
+  const inYear = d => d && new Date(d).getFullYear() === +year;
+  const approved = t => S.recReqs.filter(x => x.type === t && x.status === 'Approved' && inYear(x.decision));
+  const docs = S.files.flatMap(f => f.docs.map(d => ({ f, d }))).filter(({ d }) => d.status !== 'landing' && inYear(d.date)).sort((a, b) => a.d.date.localeCompare(b.d.date));
+  if (kind === 'open') return { head: ['No.', 'Date opened', 'Reference', 'Subject', 'Registry', 'Opened by'],
+    rows: S.files.filter(f => !f.draft && inYear(f.created)).sort((a, b) => a.created.localeCompare(b.created)).map((f, i) => [i + 1, fmtDay(f.created), f.ref, f.name, regName(f.registry), person(f.createdBy).name]) };
+  if (kind === 'close' || kind === 'dispose') return { head: ['No.', kind === 'close' ? 'Date closed' : 'Date disposed', 'Reference', 'Subject', 'Reason', 'Approved by'],
+    rows: approved(kind === 'close' ? 'CLOSE' : 'DISPOSE').map((x, i) => { const f = getFile(x.fileId) || {}; return [i + 1, fmtDay(x.decision), f.ref || (x.series ? x.series + '/…' : '—'), f.name || x.subject || '—', x.reason, person(x.decidedBy).name]; }) };
+  const list = docs.filter(({ d }) => kind === 'inward' ? d.kind !== 'response' : d.kind === 'response');
+  return { head: ['No.', 'Date', kind === 'inward' ? 'From' : 'To', 'Subject', 'File', 'Folio'],
+    rows: list.map(({ f, d }, i) => [`${kind === 'inward' ? 'IN' : 'OUT'}/${year}/${String(i + 1).padStart(3, '0')}`, fmtDay(d.date), (kind === 'inward' ? d.from : d.to) || '—', d.title, f.ref, d.folio]) };
+}
+const lcYears = () => [...new Set([new Date().getFullYear(), ...S.files.flatMap(f => [f.created, ...f.docs.map(d => d.date)]).filter(Boolean).map(d => new Date(d).getFullYear())])].sort((a, b) => b - a);
 function viewRecords(q) {
-  const tab = q.tab || 'requests', R = ui.rec;
-  const tabs = [['requests', 'Requests'], ['files', 'Files'], ['registers', 'Registers'], ['stats', 'Statistics']];
+  const tab = LC_TABS.some(([k]) => k === q.tab) ? q.tab : 'requests', R = ui.rec;
+  R.year = R.year || new Date().getFullYear(); R.reg = R.reg || 'open';
+  const yearSel = id => `<select class="select lc-year" id="${id}" data-change="recYear" aria-label="Year">${lcYears().map(y => `<option ${+R.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
   let body = '';
   if (tab === 'requests') {
     const pool = R.type === 'CLOSE' ? S.files.filter(f => !f.draft && f.state === 'Open') : S.files.filter(f => !f.draft && f.state === 'Closed');
-    body = `<div class="rec-form card">
-        <div class="field"><label for="rq-type">What do you want to do?</label><select class="select" id="rq-type" data-change="recType">${Object.entries(REC_TYPES).map(([k, [l]]) => `<option value="${k}" ${R.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        ${R.type === 'OPEN' ? `<div class="two"><div class="field"><label for="rq-series">Reference series <span class="req">*</span></label><input class="input mono" id="rq-series" placeholder="e.g. MOH/ADM/1/1" value="${esc(R.series)}" data-rec="series"><span class="hint">The next number in this series is given on approval.</span></div>
-          <div class="field"><label for="rq-subj">Subject of the file <span class="req">*</span></label><input class="input" id="rq-subj" value="${esc(R.subject)}" data-rec="subject"></div></div>`
-        : `<div class="field"><label for="rq-file">File <span class="req">*</span></label><select class="select" id="rq-file" data-change="recFile"><option value="">Select a file…</option>${pool.map(f => `<option value="${f.id}" ${R.fileId === f.id ? 'selected' : ''}>${esc(f.ref)} — ${esc(f.name)}</option>`).join('')}</select>${!pool.length ? `<span class="hint">${R.type === 'DISPOSE' ? 'Only closed files can be disposed of.' : 'No open files.'}</span>` : ''}</div>`}
-        <div class="field"><label for="rq-reason">Reason <span class="req">*</span></label><select class="select" id="rq-reason" data-change="recReason"><option value="">Select a reason…</option>${REC_REASONS[R.type].map(x => `<option ${R.reason === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+    body = `<section class="set-panel glass lc-card">
+        <div class="lc-grid">
+          <div class="field"><label for="rq-type">What do you want to do?</label><select class="select" id="rq-type" data-change="recType">${Object.entries(REC_TYPES).map(([k, [l]]) => `<option value="${k}" ${R.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+          ${R.type === 'OPEN' ? `<div class="field"><label for="rq-series">Reference series <span class="req">*</span></label><input class="input mono" id="rq-series" placeholder="e.g. MOH/ADM/1/1" value="${esc(R.series)}" data-rec="series"><span class="hint">The next number in this series is given on approval.</span></div>
+          <div class="field"><label for="rq-subj">Subject of the file <span class="req">*</span></label><input class="input" id="rq-subj" value="${esc(R.subject)}" data-rec="subject"></div>`
+          : `<div class="field lc-span2"><label for="rq-file">File <span class="req">*</span></label><select class="select" id="rq-file" data-change="recFile"><option value="">Select a file…</option>${pool.map(f => `<option value="${f.id}" ${R.fileId === f.id ? 'selected' : ''}>${esc(f.ref)} — ${esc(f.name)}</option>`).join('')}</select>${!pool.length ? `<span class="hint">${R.type === 'DISPOSE' ? 'Only closed files can be disposed of. Close the file first.' : 'There are no open files.'}</span>` : ''}</div>`}
+          <div class="field lc-span3"><label for="rq-reason">Reason <span class="req">*</span></label><select class="select" id="rq-reason" data-change="recReason"><option value="">Select a reason…</option>${REC_REASONS[R.type].map(x => `<option ${R.reason === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+        </div>
         ${R.err ? `<p class="form-err" role="alert">${esc(R.err)}</p>` : ''}
-        <button class="btn btn-primary" style="justify-self:start" data-act="recSend">${ic('send')} Send for approval</button>
-      </div>
+        <div class="lc-foot"><button class="btn btn-primary" data-act="recSend">${ic('send')} Send for approval</button></div>
+      </section>
+      <section class="set-panel glass lc-card"><div class="set-ph"><h2>${ic('listChecks')} Requests</h2><span class="muted">${plural(S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'request')} awaiting approval</span></div>
       ${simpleTable(['Request', 'File', 'Status', 'Submitted', 'Decision', ''], [...S.recReqs].sort((a, b) => b.at.localeCompare(a.at)).map(x => { const f = x.fileId && getFile(x.fileId);
-        return `<tr><td><b>${REC_TYPES[x.type][1]}</b><small class="sub">${esc(x.reason)}</small></td><td>${f ? fileLink(f) : `<b>${esc(x.subject)}</b><small class="sub mono">${esc(x.series)}/…</small>`}</td>
-          <td><span class="chip ${REC_STATUS[x.status]}">${x.status}</span>${x.type === 'OPEN' && x.status === 'Approved' ? `<small class="sub">${x.fileId ? 'File created' : 'Ready - create the file with New File'}</small>` : ''}</td><td data-d="${x.at}">${fmtDT(x.at)}</td>
+        return `<tr><td data-v="${REC_TYPES[x.type][1]}"><b>${REC_TYPES[x.type][1]}</b><small class="sub">${esc(x.reason)}</small></td><td>${f ? fileLink(f) : `<b>${esc(x.subject)}</b><small class="sub mono">${esc(x.series)}/…</small>`}</td>
+          <td data-v="${x.status}"><span class="chip ${REC_STATUS[x.status]}">${x.status}</span>${x.type === 'OPEN' && x.status === 'Approved' ? `<small class="sub">${x.fileId ? 'File created' : 'Ready – create the file'}</small>` : ''}</td><td data-d="${x.at}">${fmtDT(x.at)}</td>
           <td>${x.decision ? `${fmtDay(x.decision)}<small class="sub">${esc(person(x.decidedBy).name)}${x.note ? ' · ' + esc(x.note) : ''}</small>` : '—'}</td>
-          <td>${x.status === 'Awaiting approval' ? `<button class="btn btn-light btn-xs" data-act="recCancel" data-id="${x.id}">${ic('x')} Cancel</button>` : x.type === 'OPEN' && x.status === 'Approved' ? (x.fileId ? `<a class="btn btn-light btn-xs" href="#/file/${x.fileId}">${ic('folder')} Open file</a>` : `<button class="btn btn-primary btn-xs" data-act="newFileTy" data-id="${x.id}">${ic('folderPlus')} New File</button>`) : ''}</td></tr>`; }), 'No requests yet.', { key: 'recreqs', search: 'Search requests – subject, file or reason', date: [3, 'Submitted from', 'Submitted to'], facets: [[0, 'Request'], [2, 'Status']] })}`;
+          <td>${x.status === 'Awaiting approval' ? `<button class="btn btn-light btn-xs" data-act="recCancel" data-id="${x.id}">${ic('x')} Cancel</button>` : x.type === 'OPEN' && x.status === 'Approved' ? (x.fileId ? `<a class="btn btn-light btn-xs" href="#/file/${x.fileId}">${ic('folder')} Open file</a>` : `<button class="btn btn-primary btn-xs" data-act="newFileTy" data-id="${x.id}">${ic('folderPlus')} Create file</button>`) : ''}</td></tr>`; }),
+        'No requests yet.', { key: 'recreqs', search: 'Search requests – subject, file or reason', date: [3, 'Submitted from', 'Submitted to'], facets: [[0, 'Request'], [2, 'Status']] })}</section>`;
   } else if (tab === 'files') {
-    const fl = R.fstate || 'all';
-    const list = S.files.filter(f => !f.draft && (fl === 'all' || f.state === fl));
-    body = `<div class="tabs sub-tabs">${[['all', 'All files'], ['Open', 'Open'], ['Closed', 'Closed'], ['Disposed', 'Disposed']].map(([k, l]) => `<button class="${fl === k ? 'on' : ''}" data-act="recFState" data-k="${k}">${l} <span class="n">${S.files.filter(f => !f.draft && (k === 'all' || f.state === k)).length}</span></button>`).join('')}</div>
-      ${simpleTable(['Reference', 'Subject', 'State', 'Location', 'Documents', 'Last folio', ''], list.map(f => `<tr><td class="mono">${esc(f.ref)}</td><td><a href="#/file/${f.id}"><b>${esc(f.name)}</b></a></td><td><span class="chip ${f.state === 'Open' ? 't-green' : f.state === 'Closed' ? 't-amber' : 't-neutral'}">${f.state}</span></td><td>${esc(f.location)}</td><td>${f.docs.length}</td><td class="mono">${f.docs.length ? esc(nextFolio(f) - 1) : '—'}</td><td><a class="btn btn-light btn-xs" href="#/file/${f.id}">${ic('folder')} Cover</a></td></tr>`), 'No files.', { key: 'recfiles', search: 'Search files – reference or subject', facets: [[2, 'State'], [3, 'Location']] })}`;
+    const list = S.files.filter(f => !f.draft);
+    body = `<section class="set-panel glass lc-card lc-files">${simpleTable(['Reference', 'Subject', 'State', 'Stage', 'Location', 'Documents', 'Last folio', ''], list.map(f => {
+      const a = activity(f);
+      const acts = [f.state !== 'Disposed' ? `<button class="btn btn-xs ${a === 'Active' ? 'btn-semi' : 'btn-light'}" data-act="setActivity" data-id="${f.id}">${ic(a === 'Active' ? 'archive' : 'refresh')} ${a === 'Active' ? 'Move to semi-active' : 'Make active'}</button>` : '',
+        f.state === 'Open' ? `<button class="btn btn-light btn-xs" data-act="recAsk" data-k="CLOSE" data-id="${f.id}">${ic('lock')} Close</button>` : '',
+        f.state === 'Closed' ? `<button class="btn btn-light btn-xs" data-act="recAsk" data-k="DISPOSE" data-id="${f.id}">${ic('trash')} Dispose</button>` : ''].join('');
+      return `<tr><td class="mono"><b>${esc(f.ref)}</b></td><td><a href="#/file/${f.id}"><b>${esc(f.name)}</b></a></td><td data-v="${f.state}"><span class="chip ${f.state === 'Open' ? 't-green' : f.state === 'Closed' ? 't-amber' : 't-neutral'}">${f.state}</span></td>
+        <td data-v="${a}">${actChip(f)}</td><td>${esc(f.location)}</td><td>${f.docs.length}</td><td class="mono">${f.docs.length ? esc(nextFolio(f) - 1) : '—'}</td><td><div class="row-btns">${acts}</div></td></tr>`; }),
+      'No files.', { key: 'recfiles', search: 'Search files – reference, subject or location', facets: [[2, 'All files'], [3, 'All stages']], paged: true })}</section>`;
   } else if (tab === 'registers') {
-    body = `<div class="more-grid">${[['inboxIn', 'Inward Mail Register', 'Every document filed through Upload — Single, Bulk and Email.', '#/inward'], ['send', 'Outward Mail Register', 'Every file or letter sent outside the organisation.', '#/outward'], ['archive', 'File Movement Register', 'Physical files and where they are.', '#/physical'], ['swap', 'Movement Sheets', 'Every move on the movement sheets.', '#/movements']].map(([i, l, sub, h]) => `<a class="more-it" href="${h}"><span class="mi">${ic(i)}</span><span><b>${l}</b><small>${sub}</small></span></a>`).join('')}</div>`;
+    const { head, rows } = lcRegister(R.reg, R.year);
+    body = `<section class="set-panel glass lc-card"><div class="lc-tools">
+        <select class="select lc-reg" id="lc-reg" data-change="recReg" aria-label="Register">${Object.entries(LC_REGS).map(([k, l]) => `<option value="${k}" ${R.reg === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${yearSel('lc-ry')}
+        <button class="btn btn-light lc-dl" data-act="recRegExcel">${ic('download')} Download Excel</button></div>
+      ${simpleTable(head, rows.map(r => `<tr>${r.map((c, i) => `<td${i === 0 || head[i] === 'Reference' || head[i] === 'File' ? ' class="mono"' : ''}>${esc(c)}</td>`).join('')}</tr>`), `No entries in the ${LC_REGS[R.reg].toLowerCase()} for ${R.year}.`, { key: 'lcreg-' + R.reg, search: 'Search this register', paged: true })}</section>`;
   } else {
-    const docs = S.files.flatMap(f => f.docs);
+    const inYear = d => d && new Date(d).getFullYear() === +R.year;
+    const docs = S.files.flatMap(f => f.docs).filter(d => inYear(d.date));
     const inward = docs.filter(d => d.kind !== 'response'), outward = docs.filter(d => d.kind === 'response');
     const internal = inward.filter(d => INTERNAL.test(d.from)).length;
-    const now = new Date(); const end = new Date(); end.setHours(0, 0, 0, 0);
-    const done = t => S.recReqs.filter(x => x.type === t && x.status === 'Approved').length;
-    const stat = (l, v, sub) => `<div class="stat card"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-    const months = [...Array(6)].map((_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1); return [d.toLocaleDateString('en-GB', { month: 'short' }), d.getMonth(), d.getFullYear()]; });
-    const byMonth = list => months.map(([l, m, y]) => [l, list.filter(d => { const x = new Date(d.date); return x.getMonth() === m && x.getFullYear() === y; }).length]);
-    const bars = (t, data) => { const max = Math.max(1, ...data.map(x => x[1])); return `<div class="card bars"><h3>${t}</h3>${data.map(([l, v]) => `<div class="bar-row"><span>${l}</span><i style="width:${(v / max) * 100}%"></i><b>${v}</b></div>`).join('')}</div>`; };
-    body = `<div class="stats">${stat('Inward mail', inward.length, `${internal} internal · ${inward.length - internal} external`)}${stat('Inward uploaded to EDMS', inward.length)}${stat('Outward mail', outward.length)}${stat('Outward uploaded to EDMS', outward.length)}
-      ${stat('Files opened', done('OPEN'))}${stat('Files closed', done('CLOSE'))}${stat('Files disposed', done('DISPOSE'))}${stat('Open files now', S.files.filter(f => !f.draft && f.state === 'Open').length)}${stat('Closed files now', S.files.filter(f => !f.draft && f.state === 'Closed').length)}${stat('Bring-ups overdue', S.bringups.filter(b => !b.done && new Date(b.date) < end).length)}</div>
-      <div class="two" style="margin-top:16px">${bars('Inward mail by month', byMonth(inward))}${bars('Outward mail by month', byMonth(outward))}</div>`;
+    const end = new Date(); end.setHours(0, 0, 0, 0);
+    const done = t => S.recReqs.filter(x => x.type === t && x.status === 'Approved' && inYear(x.decision)).length;
+    const stat = (l, v, i, tone) => `<div class="lc-stat card"><span class="lc-ic ${tone}">${ic(i)}</span><span class="l">${l}</span><b>${v}</b></div>`;
+    const months = [...Array(12)].map((_, m) => [new Date(R.year, m, 1).toLocaleDateString('en-GB', { month: 'long' }), m]);
+    const byMonth = list => months.map(([l, m]) => [l, list.filter(d => new Date(d.date).getMonth() === m).length]).filter(([, v]) => v);
+    const bars = (t, data) => { const max = Math.max(1, ...data.map(x => x[1])); return `<section class="set-panel glass lc-card lc-month"><h3>${t}</h3>${data.length ? data.map(([l, v]) => `<div class="lc-bar"><span>${l}</span><i style="--w:${(v / max) * 100}%"></i><b>${v}</b></div>`).join('') : '<p class="muted">No entries.</p>'}</section>`; };
+    body = `<div class="lc-tools lc-right">${yearSel('lc-sy')}</div>
+      <h3 class="lc-h">Mail</h3><div class="lc-stats">${stat('Inward mail', inward.length, 'inboxIn', 't-teal')}${stat('Internal', internal, 'building', 't-teal')}${stat('External', inward.length - internal, 'mail', 't-teal')}${stat('Inward uploaded to EDMS', inward.length, 'upload', 't-teal')}${stat('Outward mail', outward.length, 'send', 't-sky')}${stat('Outward uploaded to EDMS', outward.length, 'upload', 't-sky')}</div>
+      <h3 class="lc-h">Files</h3><div class="lc-stats">${stat('Files opened', done('OPEN'), 'folderPlus', 't-green')}${stat('Files closed', done('CLOSE'), 'lock', 't-amber')}${stat('Files disposed', done('DISPOSE'), 'trash', 't-red')}${stat('Open files now', S.files.filter(f => !f.draft && f.state === 'Open').length, 'folder', 't-green')}${stat('Closed files now', S.files.filter(f => !f.draft && f.state === 'Closed').length, 'archive', 't-amber')}${stat('Awaiting approval', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'clock', 't-amber')}${stat('Bring-ups overdue', S.bringups.filter(b => !b.done && new Date(b.date) < end).length, 'calendar', 't-red')}</div>
+      <div class="lc-two">${bars('Inward mail by month', byMonth(inward))}${bars('Outward mail by month', byMonth(outward))}</div>`;
   }
-  return pageHead({ crumbs: [['Files & Records']], title: 'Files and records', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', right: `<a class="btn btn-glass" style="color:#fff" href="#/census">${ic('checkCircle')} File census</a><a class="btn btn-white" href="#/bringup">${ic('calendar')} Bring-up diary</a>` }) + `
-    <section class="panel glass"><div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-href="#/records?tab=${k}">${l}</button>`).join('')}</div>${body}</section>`;
+  return pageHead({ crumbs: [['Overview', '#/'], ['File Lifecycle']], title: 'File Lifecycle', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', back: ['Back to Overview', '#/'],
+      right: `<a class="btn btn-glass" style="color:#fff" href="#/census">${ic('checkCircle')} File census</a><a class="btn btn-white" href="#/bringup">${ic('calendar')} Bring-up diary</a>` }) + `
+    <nav class="set-tabs" aria-label="File Lifecycle sections">${LC_TABS.map(([k, l, i]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/records?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
+    <div class="lc">${body}</div>`;
 }
 
 /* ==========================================================================
@@ -1734,7 +1772,7 @@ const SET_TABS = () => [
   ['prefs', 'settings', 'Preferences'],
   ['registries', 'building', 'Registries'],
   ['accounts', 'mail', 'External Accounts'],
-  ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'Files & Records']] : []),
+  ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'File Lifecycle']] : []),
   ['profile', 'user', 'My Profile'],
   ['issues', 'scan', 'Reported Issues'],
   ['demo', 'refresh', 'Demo data'],
@@ -1764,7 +1802,7 @@ function viewSettings(q = {}) {
     body = head('send', 'Mail Senders', `<a class="btn btn-primary btn-sm" href="#/senders">${ic('users')} Manage senders</a>`) + `<p class="set-note">The names used in the Inward and Outward Registers. ${S.senders.filter(x => x.on).length} in use, ${S.senders.filter(x => !x.on).length} switched off.</p>
       <div class="user-grid">${S.senders.filter(x => x.on).slice(0, 8).map(x => `<div class="user-card"><span class="rc-ic">${ic('building')}</span><div><b>${esc(x.name)}</b><small>${esc(x.kind || x.type || 'Sender')}</small></div></div>`).join('')}</div>`;
   } else if (tab === 'records') {
-    body = head('layers', 'Files & Records', `<a class="btn btn-primary btn-sm" href="#/records">${ic('layers')} Open Files & Records</a>`) + `<p class="set-note">Opening, closing and disposing of files, and their retention.</p>
+    body = head('layers', 'File Lifecycle', `<a class="btn btn-primary btn-sm" href="#/records">${ic('layers')} Open File Lifecycle</a>`) + `<p class="set-note">Opening, closing and disposing of files, and their retention.</p>
       <div class="user-grid">${[['folderPlus', 'Open a file', `${S.recReqs.filter(x => x.type === 'OPEN').length} requests`], ['lock', 'Close a file', `${S.recReqs.filter(x => x.type === 'CLOSE').length} requests`], ['trash', 'Dispose of a file', `${S.recReqs.filter(x => x.type === 'DISPOSE').length} requests`], ['scan', 'File census', `${(S.censuses || []).length} censuses`]].map(([i, l, n]) => `<a class="user-card" href="#/records"><span class="rc-ic">${ic(i)}</span><div><b>${l}</b><small>${n}</small></div></a>`).join('')}</div>`;
   } else if (tab === 'profile') {
     body = head('user', 'My Profile', `<button class="btn btn-light btn-sm" data-act="changePw">${ic('lock')} Change password</button>`) + `<div class="prof">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span><small>${esc(emailOf(p))}</small></div></div>
@@ -2432,7 +2470,9 @@ const ACT = {
     Object.assign(R, { series: '', subject: '', fileId: '', reason: '', err: '' }); save(); render(); toast('Sent for approval.');
   },
   recCancel: el => { const x = S.recReqs.find(r => r.id === el.dataset.id); x.status = 'Cancelled'; save(); render(); toast('Request cancelled.'); },
-  recFState: el => { ui.rec.fstate = el.dataset.k; render(); },
+  recAsk: el => { Object.assign(ui.rec, { type: el.dataset.k, fileId: el.dataset.id, reason: '', err: '' }); go('#/records?tab=requests'); toast(`Choose a reason, then send the ${el.dataset.k === 'CLOSE' ? 'closing' : 'disposal'} request for approval.`); },
+  recRegExcel: () => { const R = ui.rec, { head, rows } = lcRegister(R.reg, R.year), q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    saveFile(`${LC_REGS[R.reg]} ${R.year}.csv`, [head, ...rows].map(r => r.map(q).join(',')).join('\n'), 'text/csv'); },
   censusStart: () => {
     const C = ui.census;
     const title = C.title.trim() || `${C.covers === 'hr' ? 'Personnel files' : 'Registry'} census, ${new Date(C.date || Date.now()).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`;
@@ -2769,6 +2809,8 @@ document.addEventListener('change', e => {
   if (k === 'recType') { Object.assign(ui.rec, { type: t.value, fileId: '', reason: '', err: '' }); render(); }
   if (k === 'recFile') ui.rec.fileId = t.value;
   if (k === 'recReason') ui.rec.reason = t.value;
+  if (k === 'recYear') { ui.rec.year = +t.value; render(); }
+  if (k === 'recReg') { ui.rec.reg = t.value; render(); }
   if (k === 'cnCovers') ui.census.covers = t.value;
   if (k === 'pickUpload') { ui.upload.files = [...t.files].map(asUpload); ui.upload.err = ''; render(); }
   if (k === 'umConf') { const m = ui.upload.metas[ui.upload.idx]; m.confidentiality_level = t.value; m._touched.confidentiality_level = true; render(); }

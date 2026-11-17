@@ -2310,3 +2310,48 @@ html { zoom: var(--ui-zoom, 1); }
 .note-item.hl { outline: 2px solid var(--primary, #007F7B); outline-offset: 2px; background: rgba(0,127,123,.08); animation: hl-pulse 1.6s ease-out 1; }
 @keyframes hl-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,127,123,.45); } 100% { box-shadow: 0 0 0 12px rgba(0,127,123,0); } }
 @media (prefers-reduced-motion: reduce) { .note-item.hl { animation: none; } }
+
+/* ---- File Lifecycle (Registry): requests, files, registers, statistics ---- */
+.lc { display: grid; gap: 18px; }
+.lc-card { padding: 24px 28px; }
+.lc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 18px; }
+.lc-span2 { grid-column: span 2; } .lc-span3 { grid-column: 1 / -1; }
+.lc-foot { display: flex; justify-content: flex-end; margin-top: 18px; }
+.lc-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.lc-tools .select { width: auto; min-width: 140px; }
+.lc-tools .lc-reg { min-width: 240px; }
+.lc-tools .lc-dl { margin-left: auto; }
+.lc-right { justify-content: flex-end; margin-bottom: 0; }
+.lc-h { margin: 4px 0 -6px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.lc-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.lc-stat { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; padding: 16px 18px; border-radius: 22px; }
+.lc-stat .lc-ic { grid-row: span 2; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; }
+.lc-stat .lc-ic svg { width: 20px; height: 20px; }
+.lc-ic.t-teal { background: rgba(0,127,123,.12); color: #00706c; } .lc-ic.t-sky { background: rgba(14,165,233,.13); color: #035f8a; }
+.lc-ic.t-green { background: rgba(21,122,74,.12); color: #157a4a; } .lc-ic.t-amber { background: rgba(217,119,6,.14); color: #a35a00; } .lc-ic.t-red { background: rgba(220,38,38,.12); color: #b42323; }
+.lc-stat .l { font-size: 13.5px; font-weight: 600; color: var(--ink-2); line-height: 1.25; }
+.lc-stat b { font-size: 30px; line-height: 1.1; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.lc-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.lc-month h3 { margin: 0 0 14px; font-size: 17px; }
+.lc-bar { display: grid; grid-template-columns: 110px 1fr 36px; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(14,21,37,.08); font-size: 14.5px; }
+.lc-bar i { display: block; height: 10px; width: var(--w); min-width: 4px; border-radius: 0 4px 4px 0; background: var(--primary, #007F7B); }
+.lc-bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.btn.btn-semi { background: #fff4e5; color: #8a4b00; border: 1px solid #f3c98b; }
+.btn.btn-semi:hover { background: #ffe9c9; }
+[data-theme="dark"] .btn.btn-semi { background: #4a3410; color: #ffd08a; border-color: #6b4a14; }
+[data-theme="dark"] .lc-stat b { color: var(--ink); }
+[data-theme="dark"] .lc-bar { border-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .lc-ic.t-teal, [data-theme="dark"] .lc-ic.t-green { color: #8fe3da; } [data-theme="dark"] .lc-ic.t-sky { color: #9fd8f7; } [data-theme="dark"] .lc-ic.t-amber { color: #ffd08a; } [data-theme="dark"] .lc-ic.t-red { color: #ffb3b3; }
+@media (max-width: 900px) { .lc-grid { grid-template-columns: 1fr; } .lc-span2 { grid-column: auto; } .lc-two { grid-template-columns: 1fr; } .lc-card { padding: 18px; } .lc-tools .lc-dl { margin-left: 0; } .lc-bar { grid-template-columns: 90px 1fr 30px; } }
+.lc > *, .lc .tf { min-width: 0; }
+.lc .tbl-wrap { overflow-x: auto; }
+.lc .tbl td { vertical-align: middle; }
+@media (min-width: 901px) {
+.lc .tbl td:nth-child(2) { min-width: 150px; }
+.lc .tbl .row-btns { flex-wrap: nowrap; white-space: nowrap; }
+.lc-files .tbl td:nth-child(5) { min-width: 190px; font-size: 13.5px; color: var(--ink-2); }
+.lc-files .tbl td:nth-child(6), .lc-files .tbl td:nth-child(7) { text-align: center; }
+}
+.lc-grid { align-items: start; }
+.lc-grid .input, .lc-grid .select { height: 46px; }
+.lc-grid .field > label { min-height: 20px; }
