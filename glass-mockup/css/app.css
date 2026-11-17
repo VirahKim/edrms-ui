@@ -2185,3 +2185,15 @@ html:not([data-theme="dark"]) .tbl a.btn-primary, html[data-theme="dark"] .tbl a
   .fp-acts { width: 100%; margin-left: 0; } .fp-acts > * { flex: 1; justify-content: center; }
   .tf-pager { margin-left: 0; width: 100%; justify-content: flex-end; }
 }
+
+/* More actions menu: coloured icons as in the design */
+.file-menu > .fm-g > a { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px; border-radius: 12px; color: var(--ink); text-decoration: none; font-size: 14.5px; }
+.file-menu > .fm-g > a:hover, .file-menu > .fm-g > a:focus-visible { background: rgba(0,127,123,.08); outline: none; }
+.file-menu > .fm-g > a .i { display: grid; place-items: center; } .file-menu > .fm-g > a svg { width: 18px; height: 18px; }
+.more-menu .t-green .i { color: #2f9e5b; } .more-menu .t-teal .i { color: #00625f; } .more-menu .t-sky .i { color: #0e88b0; } .more-menu .t-amber .i { color: #c97a0a; }
+.more-btn svg:last-child { width: 15px; height: 15px; margin-left: -2px; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+#file-menu.more-menu .t-green .i, #file-menu.more-menu .t-green .i svg { color: #2f9e5b !important; stroke: #2f9e5b; }
+#file-menu.more-menu .t-teal .i, #file-menu.more-menu .t-teal .i svg { color: #00625f !important; stroke: #00625f; }
+#file-menu.more-menu .t-sky .i, #file-menu.more-menu .t-sky .i svg { color: #0e88b0 !important; stroke: #0e88b0; }
+#file-menu.more-menu .t-amber .i, #file-menu.more-menu .t-amber .i svg { color: #c97a0a !important; stroke: #c97a0a; }

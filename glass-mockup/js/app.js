@@ -772,21 +772,22 @@ function actionButtons(f) {
   const r = role(), b = [];
   if (f.draft) return r === 'registry' ? `<button class="btn btn-primary" data-act="openDraft" data-id="${f.id}">${ic('folder')} Open file</button><button class="btn btn-glass" data-act="fileTab" data-k="cover">${ic('pen')} Edit cover</button><button class="btn btn-danger-soft" data-act="deleteDraft" data-id="${f.id}">${ic('trash')} Delete draft</button>` : '';
   if (r === 'registry') {
-    if (f.stage === 'registry') b.push(`<button class="btn btn-primary" data-act="sendFile" data-id="${f.id}" data-to="marking">${ic('send')} Send to Marking Officer</button>`);
+    /* Send to Marking Officer · Send outside · Bring up · More actions (plus the step this stage needs) */
+    const away = ['marking', 'action'].includes(f.stage);
     if (f.stage === 'returned_marking') b.push(`<button class="btn btn-primary" data-act="sendFile" data-id="${f.id}" data-to="action">${ic('send')} Send to Action Officer</button>`, `<button class="btn btn-glass" data-act="sendFile" data-id="${f.id}" data-to="marking">${ic('undo')} Back to Marking Officer</button>`);
-    if (f.stage === 'returned_action') b.push(`<button class="btn btn-primary" data-act="fileAway" data-id="${f.id}">${ic('archive')} File away</button>`, `<button class="btn btn-glass" data-act="sendFile" data-id="${f.id}" data-to="marking">${ic('send')} Send to Marking Officer</button>`);
+    if (f.stage === 'returned_action') b.push(`<button class="btn btn-primary" data-act="fileAway" data-id="${f.id}">${ic('archive')} File away</button>`);
     if (f.stage === 'filed') b.push(`<button class="btn btn-glass" data-act="retrieve" data-id="${f.id}">${ic('refresh')} Retrieve from shelf</button>`);
-    b.push(`<a class="btn btn-glass" href="#/upload?file=${f.id}">${ic('upload')} Add document</a>`, `<button class="btn btn-glass" data-act="addBringup" data-id="${f.id}">${ic('calendar')} Bring up</button>`);
-    if (liveDocs(f).length) b.push(`<button class="btn btn-glass" data-act="sendOutside" data-id="${f.id}" title="Send letters outside the organisation. Recorded in the Outward Mail Register.">${ic('send')} Send outside</button>`);
+    if (f.stage !== 'returned_marking') b.push(`<button class="btn ${f.stage === 'registry' ? 'btn-primary' : 'btn-glass'}" data-act="sendFile" data-id="${f.id}" data-to="marking" ${away ? `disabled title="The file is ${STAGES[f.stage].short.toLowerCase()} – it can go to the Marking Officer once it is back in the Registry."` : ''}>${ic('send')} Send to Marking Officer</button>`);
+    b.push(`<button class="btn btn-glass" data-act="sendOutside" data-id="${f.id}" ${liveDocs(f).length ? 'title="Send letters outside the organisation. Recorded in the Outward Mail Register."' : 'disabled title="There are no letters in this file to send."'}>${ic('send')} Send outside</button>`,
+      `<button class="btn btn-glass" data-act="addBringup" data-id="${f.id}">${ic('calendar')} Bring up</button>`);
   }
-  if (r !== 'registry' && f.stage !== 'filed') b.push(`<a class="btn btn-glass" href="#/upload?file=${f.id}">${ic('upload')} Add document</a>`);
   if (r === 'marking' && f.stage === 'marking' && f.withUser === 'vera') b.push(`<button class="btn btn-primary" data-act="markFile" data-id="${f.id}" title="Record what should be done and to whom. The file goes back to the Registry.">${ic('pen')} Mark file</button>`);
   if (r === 'action' && f.stage === 'action' && f.withUser === meId()) b.push(
     `<button class="btn btn-primary" data-act="respond" data-id="${f.id}" title="Answer with a letter, memo or other document - write a new one or upload one.">${ic('reply')} Responses</button>`,
     `<button class="btn btn-glass" data-act="requestFiles" data-id="${f.id}" title="Ask the Registry for more files you need in order to take action.">${ic('filePlus')} Request files</button>`,
     `<button class="btn btn-glass" data-act="delegate" data-id="${f.id}" title="Hand the letter to someone else to act on. They send it back to the Registry when done.">${ic('users')} Delegate</button>`,
     `<button class="btn btn-dark" data-act="done" data-id="${f.id}" title="Use this last, when the work is finished. It goes back to the Registry with what you wrote.">${ic('undo')} Done – return to Registry</button>`);
-  if (!f.draft && f.movements.length) b.push(`<a class="btn btn-glass" href="#/grid/${f.id}" title="What was marked on this file, step by step">${ic('list')} File grid</a>`);
+  if (!f.draft) b.push(`<button class="btn btn-glass more-btn" data-act="moreActions" data-id="${f.id}" aria-haspopup="menu" aria-expanded="false">${ic('moreH')} More actions ${ic('chevD')}</button>`);
   return b.join('');
 }
 function folioBar(f, d) {

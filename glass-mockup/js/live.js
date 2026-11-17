@@ -426,12 +426,33 @@ function openFileMenu(btn, f) {
   m.querySelector('button')?.focus();
   ui.fmBtn = btn;
 }
-function closeFileMenu(refocus) { const m = $('#file-menu'); if (!m) return; m.remove(); if (refocus) ui.fmBtn?.focus(); }
-document.addEventListener('click', e => { if ($('#file-menu') && !e.target.closest('#file-menu') && !e.target.closest('[data-act=fileMenu]')) closeFileMenu(); }, true);
+/* "More actions" on an open file — the less frequent file actions */
+function openMoreMenu(btn, f) {
+  closeFileMenu();
+  const reg = role() === 'registry';
+  const it = (i, l, a, tone, href) => href ? `<a role="menuitem" class="t-${tone}" href="${href}" data-act="fmLink"><span class="i">${ic(i)}</span><span>${l}</span></a>`
+    : `<button role="menuitem" class="t-${tone}" data-act="${a}" data-id="${f.id}"><span class="i">${ic(i)}</span><span>${l}</span></button>`;
+  const canAdd = reg || f.stage !== 'filed';
+  const groups = [
+    [...(canAdd ? [it('upload', 'Add document', '', 'teal', `#/upload?file=${f.id}`)] : []), ...(f.movements.length ? [it('list', 'File grid', '', 'teal', `#/grid/${f.id}`)] : [])],
+    ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub', 'green'), it('pen', 'Rename / Edit', 'fmRename', 'teal'), it('swap', 'Move File', 'fmMove', 'teal'), it('layers', 'Clone', 'fmClone', 'teal')]] : []),
+    [it('share', 'Share', 'fmShare', 'sky'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Notifications: off' : 'Notifications', 'fmNotify', 'amber'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin', 'amber')],
+  ].filter(g => g.length);
+  const m = document.createElement('div');
+  m.id = 'file-menu'; m.className = 'acct-menu file-menu more-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', 'More actions');
+  m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), h = m.offsetHeight, w = m.offsetWidth;
+  m.style.top = Math.max(12, r.bottom + h + 6 < innerHeight ? r.bottom + 6 : r.top - h - 6) + 'px';
+  m.style.left = Math.max(12, Math.min(r.left, innerWidth - w - 12)) + 'px';
+  btn.setAttribute('aria-expanded', 'true'); m.querySelector('button, a')?.focus(); ui.fmBtn = btn;
+}
+function closeFileMenu(refocus) { const m = $('#file-menu'); if (!m) return; m.remove(); ui.fmBtn?.setAttribute('aria-expanded', 'false'); if (refocus) ui.fmBtn?.focus(); }
+document.addEventListener('click', e => { if ($('#file-menu') && !e.target.closest('#file-menu') && !e.target.closest('[data-act=fileMenu], [data-act=moreActions]')) closeFileMenu(); }, true);
 document.addEventListener('keydown', e => {
   const m = $('#file-menu'); if (!m) return;
   if (e.key === 'Escape') { e.preventDefault(); closeFileMenu(true); }
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const b = [...m.querySelectorAll('button')], i = b.indexOf(document.activeElement); b[(i + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length].focus(); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const b = [...m.querySelectorAll('button, a')], i = b.indexOf(document.activeElement); b[(i + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length].focus(); }
 });
 function textModal(icon, title, sub, label, val, act, id, btn) {
   modal(`${mHead(icon, title, sub)}<div class="modal-b"><div class="field"><label for="tm-v">${label}</label><input class="input" id="tm-v" value="${esc(val || '')}"></div><p class="form-err" id="tm-err" role="alert" hidden></p></div>
@@ -532,6 +553,8 @@ Object.assign(ACT, {
   },
   repRefresh: () => { render(); toast('Reports refreshed'); },
   fileMenu: (el, e) => { e.stopPropagation(); const f = getFile(el.dataset.id); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openFileMenu(el, f); },
+  moreActions: (el, e) => { e.stopPropagation(); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openMoreMenu(el, getFile(el.dataset.id)); },
+  fmLink: el => { closeFileMenu(); go(el.getAttribute('href')); },
   fmStage: fmDo(f => { f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} moved to ${f.activity.toLowerCase()}`); }),
   fmDetails: fmDo(f => { ui.fileTab = role() === 'registry' ? 'cover' : 'details'; go(`#/file/${f.id}`); }),
   fmSubmit: fmDo(f => sendModal(f, 'marking')),

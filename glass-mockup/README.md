@@ -50,6 +50,9 @@ Upload › From Officers stays inside the page width at every size, with one pad
 - **Inside a file:** Cover and Upload to this file buttons by Folios. The Folios table has a tick-box per row (and select all), a star per row and a Starred-only filter, and pages of 10 / 25 / 50 with "Showing 1–n of m". Ticking rows shows a bar with View and Version History (one row), Move and Copy to File (they take the next folio numbers in the other file), Share, Download, Star, and Remove from File (Registry).
 - The Overview header has no navigation bar; the side menu handles navigation.
 
+### File action buttons
+On an open file the Registry sees **Send to Marking Officer** (greyed out with a reason while the file is with an officer) · **Send outside** · **Bring up** · **More actions**, plus the step its stage needs (Send to Action Officer, File away, Retrieve from shelf). **More actions** opens a menu with coloured icons: Add document, File grid · New Sub-File, Rename / Edit, Move File, Clone · Share, Notifications, Pin File. Officers keep their own buttons (Mark file, Responses, Request files, Delegate, Done) with More actions holding Add document, File grid, Share, Notifications and Pin File.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`
