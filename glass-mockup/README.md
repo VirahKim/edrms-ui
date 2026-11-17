@@ -48,7 +48,7 @@ Upload › From Officers stays inside the page width at every size, with one pad
 ### Files (matches the live system)
 - **File ⋮ menu** on every file card: Stage (Move to semi-active / active), View Details, Submit to Marking Officer (files in the Registry), Send outside, Add to bring-up diary, New Sub-File, Rename / Edit, Move File (to another registry), Clone (same cover, no documents), Share, Notifications on/off, Pin File (pinned files show a pin and sort first), Star File, Delete (with a warning). Officers see View Details, Share, Notifications, Pin and Star. Arrow keys move through it; Escape closes it.
 - **Inside a file:** Cover and Upload to this file buttons by Folios. The Folios table has a tick-box per row (and select all), a star per row and a Starred-only filter, and pages of 10 / 25 / 50 with "Showing 1–n of m". Ticking rows shows a bar with View and Version History (one row), Move and Copy to File (they take the next folio numbers in the other file), Share, Download, Star, and Remove from File (Registry).
-- The Overview header has its navigation back under the greeting.
+- The Overview header has no navigation bar; the side menu handles navigation.
 
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:

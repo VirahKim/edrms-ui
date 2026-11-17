@@ -469,7 +469,6 @@ function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = 
   /* Overview: a compact header — logo and greeting with the icons on the right, the navigation underneath */
   if (hero) return `<section class="phead glass is-hero hero-compact">
     <div class="hero-row">${hero}${icons}</div>
-    <div class="hero-nav">${topNav()}</div>
   </section>`;
   return `<section class="phead glass">
     <div class="phead-top">
