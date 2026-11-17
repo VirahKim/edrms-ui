@@ -363,7 +363,7 @@ function render() {
     case 'grid': view = viewGrid({ id: parts[1] }); nav = 'files'; break;
     case 'tutorial': view = viewTutorial(parts[1]); nav = 'more'; break;
     case 'guide': view = viewGuide(); nav = 'guide'; if (q.s) after = () => $('#g-' + q.s)?.scrollIntoView({ block: 'start' }); break;
-    case 'settings': view = viewSettings(); nav = 'settings'; break;
+    case 'settings': view = viewSettings(q); nav = 'settings'; break;
     default: if (LIVE_ROUTES[parts[0]]) { view = LIVE_ROUTES[parts[0]](q); nav = parts[0]; } else view = viewDashboard();
   }
   root.innerHTML = parts.length ? `<div class="app">${sidebar(nav)}<main class="main">${view}</main></div>` : `<div class="app no-side"><main class="main">${view}</main></div>`;
@@ -1705,44 +1705,59 @@ function startTour(id, step = 0) {
   QBits.tour(journey, { step, navigate: p => go('#' + p), location: () => '/' + parseHash().parts.join('/') });
 }
 
-function viewSettings() {
-  const p = me();
-  const dark = theme === 'dark';
-  const reg = role() === 'registry';
-  const more = [
-    ['listChecks', 'My Queue', 'Files and notes waiting for you', '#/queue', myQueue().length + notesForMe().length],
-    ['upload', 'Upload Document', 'Add a file, letter or document', '#/upload'],
-    ['calendar', 'Bring Up Diary', 'Files needed again on a date', '#/bringup', bringupsDue().length],
-    ['bell', 'Notifications', 'Everything sent to you', 'openNotifs', unread()],
-    ['book', 'User Guide', 'How the system works', '#/guide'],
-    ['swap', 'Movement Sheets', 'Where every file has been', '#/movements'],
-    ...(reg ? [['layers', 'Files & Records', 'Open, close, dispose', '#/records'], ['users', 'Mail Senders', 'Names used in the mail registers', '#/senders']] : []),
-  ];
-  return pageHead({ crumbs: [['Settings']], title: 'Settings', sub: 'Your tools, profile and appearance.' }) + `
-  <section class="panel glass" style="max-width:820px">
-    <div class="panel-h"><h2>Pages and tools</h2></div>
-    <div class="more-grid">${more.map(([i, l, sub, h, c]) => `${h.startsWith('#') ? `<a class="more-it" href="${h}">` : `<button class="more-it" data-act="${h}">`}<span class="mi">${ic(i)}</span><span><b>${l}</b><small>${sub}</small></span>${c ? `<span class="count">${c}</span>` : ''}${h.startsWith('#') ? '</a>' : '</button>'}`).join('')}</div>
-  </section>
-  <section class="panel glass" style="max-width:820px">
-    <div class="panel-h"><h2>Appearance</h2></div>
-    <div class="appearance">
-      ${themeToggle('qb-theme-toggle--lg')}
-      <p class="muted">Switch between light and dark. Letters and file covers stay as they are on paper.</p>
-    </div>
-  </section>
-  <section class="panel glass" style="max-width:820px">
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px">${avatar(meId(), 'av-lg')}<div><b style="font-size:18px">${esc(p.name)}</b><div class="muted">${esc(p.title)} · ${ROLE_LABEL[role()]}</div></div></div>
-    <dl class="kv"><dt>Department</dt><dd>${esc(p.dept)}</dd><dt>Registry</dt><dd>${regName(p.registry)}</dd><dt>Role (from ERP)</dt><dd>${ROLE_LABEL[role()]}</dd><dt>Data scope</dt><dd>${role() === 'registry' ? 'All registries' : role() === 'action' ? 'Your registry · files routed to you' : 'Files sent to you'}</dd></dl>
-  </section>
-  <section class="panel glass" style="max-width:820px">
-    <div class="panel-h"><h2>Reported issues</h2><span class="n">${S.issues.length}</span><div class="right"><button class="btn btn-light btn-sm" data-act="fabCapture">${ic('scan')} Capture screen</button></div></div>
-    ${S.issues.length ? S.issues.map(x => `<div class="card issue-row">${x.img ? `<img src="${x.img}" alt="Screenshot of the reported issue">` : ''}<div><span class="chip ${x.type === 'Error' ? 't-red' : x.type === 'Question' ? 't-blue' : 't-green'}">${esc(x.type)}</span> <small class="muted">${fmtDT(x.at)} · ${esc(x.page)}</small><p style="margin:6px 0 0">${esc(x.text)}</p></div></div>`).join('') : '<p class="muted" style="margin:0">Nothing reported yet. Use Q-BITS AI → Capture screen when something looks wrong.</p>'}
-  </section>
-  <section class="panel glass" style="max-width:820px">
-    <h3 style="margin:0 0 6px">Mockup data</h3>
-    <p class="muted" style="margin:0 0 14px;font-size:14px">Everything you do in this mockup is kept in this browser only. Reset to start the journeys again.</p>
-    <button class="btn btn-light" data-act="reset">${ic('refresh')} Reset demo data</button>
-  </section>`;
+/* Settings — header card with Dark mode, a row of tab pills, then one panel per tab */
+const emailOf = p => p.email || `${p.name.toLowerCase().replace(/[^a-z ]/g, '').trim().replace(/\s+/g, '.')}@health.go.ke`;
+const SET_TABS = () => [
+  ['users', 'users', 'User Management'],
+  ['registries', 'building', 'Registries'],
+  ['accounts', 'mail', 'External Accounts'],
+  ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'Files & Records']] : []),
+  ['profile', 'user', 'My Profile'],
+  ['tools', 'grid', 'Pages and tools'],
+  ['issues', 'scan', 'Reported Issues'],
+  ['demo', 'refresh', 'Demo data'],
+];
+function viewSettings(q = {}) {
+  const p = me(), reg = role() === 'registry';
+  const tabs = SET_TABS(), tab = tabs.some(t => t[0] === q.tab) ? q.tab : (tabs.some(t => t[0] === ui.setTab) ? ui.setTab : 'users');
+  ui.setTab = tab;
+  const head = (i, t, right = '') => `<div class="set-ph"><h2>${ic(i)} ${t}</h2>${right}</div>`;
+  let body = '';
+  if (tab === 'users') {
+    const ppl = Object.values(PEOPLE);
+    body = head('users', 'User Management', `<a class="btn btn-dark set-ext" href="#/settings?tab=users" data-act="qbitsUsers">${ic('settings')} Manage in Q-BITS</a>`)
+      + `<p class="set-note">Users, roles and departments come from the Q-BITS ERP. Change them there; EDRMS picks them up when the person next signs in.</p>
+      <div class="user-grid">${ppl.map(x => `<div class="user-card">${avatar(x.id, 'av-lg')}<div><b>${esc(x.name)}</b><small>${esc(emailOf(x))} · ${esc(x.title)}</small><span class="chip ghost">${ROLE_LABEL[x.role] || 'Officer'} · ${esc(regName(x.registry) || x.dept || '')}</span></div></div>`).join('')}</div>`;
+  } else if (tab === 'registries') {
+    body = head('building', 'Registries', reg ? `<button class="btn btn-primary btn-sm" data-act="regAdd">${ic('plus')} New registry</button>` : '')
+      + `<div class="user-grid">${REGISTRIES.map(r => { const fs = S.files.filter(f => f.registry === r.id && !f.draft); const off = Object.values(PEOPLE).filter(x => x.role === 'registry' && x.registry === r.id);
+        return `<div class="user-card reg-card"><span class="rc-ic">${ic('building')}</span><div><b>${esc(r.name)}</b><small>${plural(fs.length, 'file')} · ${plural(fs.reduce((a, f) => a + liveDocs(f).length, 0), 'document')}</small><span class="chip ghost">${off.length ? 'Officer: ' + off.map(o => esc(o.name)).join(', ') : 'No registry officer'}</span></div><a class="btn btn-light btn-xs" href="#/files?r=${r.id}">Open</a></div>`; }).join('')}</div>`;
+  } else if (tab === 'accounts') {
+    const mb = ui.upload?.mbx || {};
+    body = head('mail', 'External Accounts') + `<p class="set-note">Connect a mailbox so you can import letters that arrive by email. Only what you search for is read – nothing else in your inbox is touched, and nothing is sent or changed.</p>
+      <div class="mbx">${[['gmail', 'Gmail'], ['outlook', 'Outlook / Microsoft 365']].map(([k, l]) => `<div class="mbx-card card"><span class="mbx-ic">${ic('mail')}</span><div><b>${l}</b><small>${mb[k] ? `Connected · ${esc(emailOf(p))}` : 'Not connected'}</small></div><button class="btn ${mb[k] ? 'btn-light' : 'btn-outline'} btn-sm" data-act="mbxToggle" data-k="${k}">${mb[k] ? 'Disconnect' : 'Connect'}</button></div>`).join('')}</div>`;
+  } else if (tab === 'senders') {
+    body = head('send', 'Mail Senders', `<a class="btn btn-primary btn-sm" href="#/senders">${ic('users')} Manage senders</a>`) + `<p class="set-note">The names used in the Inward and Outward Registers. ${S.senders.filter(x => x.on).length} in use, ${S.senders.filter(x => !x.on).length} switched off.</p>
+      <div class="user-grid">${S.senders.filter(x => x.on).slice(0, 8).map(x => `<div class="user-card"><span class="rc-ic">${ic('building')}</span><div><b>${esc(x.name)}</b><small>${esc(x.kind || x.type || 'Sender')}</small></div></div>`).join('')}</div>`;
+  } else if (tab === 'records') {
+    body = head('layers', 'Files & Records', `<a class="btn btn-primary btn-sm" href="#/records">${ic('layers')} Open Files & Records</a>`) + `<p class="set-note">Opening, closing and disposing of files, and their retention.</p>
+      <div class="user-grid">${[['folderPlus', 'Open a file', `${S.recReqs.filter(x => x.type === 'OPEN').length} requests`], ['lock', 'Close a file', `${S.recReqs.filter(x => x.type === 'CLOSE').length} requests`], ['trash', 'Dispose of a file', `${S.recReqs.filter(x => x.type === 'DISPOSE').length} requests`], ['scan', 'File census', `${(S.censuses || []).length} censuses`]].map(([i, l, n]) => `<a class="user-card" href="#/records"><span class="rc-ic">${ic(i)}</span><div><b>${l}</b><small>${n}</small></div></a>`).join('')}</div>`;
+  } else if (tab === 'profile') {
+    body = head('user', 'My Profile', `<button class="btn btn-light btn-sm" data-act="changePw">${ic('lock')} Change password</button>`) + `<div class="prof">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span><small>${esc(emailOf(p))}</small></div></div>
+      <dl class="kv"><dt>Department</dt><dd>${esc(p.dept)}</dd><dt>Registry</dt><dd>${regName(p.registry)}</dd><dt>Role (from ERP)</dt><dd>${ROLE_LABEL[role()]}</dd><dt>Data scope</dt><dd>${role() === 'registry' ? 'All registries' : 'Files sent to you and the ones you have worked on'}</dd></dl>`;
+  } else if (tab === 'tools') {
+    const more = [['listChecks', 'My Queue', 'Files and notes waiting for you', '#/queue', myQueue().length + notesForMe().length], ['upload', 'Upload Document', 'Add a file, letter or document', '#/upload'], ['calendar', 'Bring Up Diary', 'Files needed again on a date', '#/bringup', bringupsDue().length], ['bell', 'Notifications', 'Everything sent to you', 'openNotifs', unread()], ['book', 'User Guide', 'How the system works', '#/guide'], ['swap', 'Movement Sheets', 'Where every file has been', '#/movements']];
+    body = head('grid', 'Pages and tools') + `<div class="user-grid">${more.map(([i, l, sub, h, c]) => `${h.startsWith('#') ? `<a class="user-card" href="${h}">` : `<button class="user-card" data-act="${h}">`}<span class="rc-ic">${ic(i)}</span><div><b>${l}</b><small>${sub}</small></div>${c ? `<span class="count">${c}</span>` : ''}${h.startsWith('#') ? '</a>' : '</button>'}`).join('')}</div>`;
+  } else if (tab === 'issues') {
+    body = head('scan', 'Reported Issues', `<button class="btn btn-light btn-sm" data-act="fabCapture">${ic('scan')} Capture screen</button>`) + (S.issues.length ? S.issues.map(x => `<div class="card issue-row">${x.img ? `<img src="${x.img}" alt="Screenshot of the reported issue">` : ''}<div><span class="chip ${x.type === 'Error' ? 't-red' : x.type === 'Question' ? 't-blue' : 't-green'}">${esc(x.type)}</span><p>${esc(x.text || '')}</p><small class="muted">${ago(x.at)}</small></div></div>`).join('') : `<p class="set-note">Nothing reported yet. Use Q-BITS AI › Capture Screen to report a problem with a picture of the page.</p>`);
+  } else {
+    body = head('refresh', 'Demo data') + `<p class="set-note">Everything you do in this mockup is kept in this browser only. Reset to start the journeys again.</p><button class="btn btn-light" data-act="reset">${ic('refresh')} Reset demo data</button>`;
+  }
+  const icons = pageHead({ title: '' }).match(/<div class="ph-icons">[\s\S]*?<\/div>/)?.[0] || '';
+  return `<section class="set-head glass"><div class="set-top"><button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button><button class="btn btn-light btn-sm set-back" data-act="goBack" data-fallback="#/">${ic('chevL')} Back</button>${icons}</div>
+      <div class="set-row"><h1>Settings</h1><div class="set-dark"><span id="dm-l">Dark mode</span>${themeToggle()}</div></div></section>
+    <nav class="set-tabs" aria-label="Settings sections">${tabs.map(([k, i, l]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/settings?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
+    <section class="set-panel glass">${body}</section>`;
 }
 
 /* ==========================================================================

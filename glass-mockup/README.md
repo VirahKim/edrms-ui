@@ -53,6 +53,9 @@ Upload › From Officers stays inside the page width at every size, with one pad
 ### File action buttons
 On an open file the Registry sees **Send to Marking Officer** (greyed out with a reason while the file is with an officer) · **Send outside** · **Bring up** · **More actions**, plus the step its stage needs (Send to Action Officer, File away, Retrieve from shelf). **More actions** opens a menu with coloured icons: Add document, File grid · New Sub-File, Rename / Edit, Move File, Clone · Share, Notifications, Pin File. Officers keep their own buttons (Mark file, Responses, Request files, Delegate, Done) with More actions holding Add document, File grid, Share, Notifications and Pin File.
 
+### Settings (Q-BITS ERM layout)
+A header card with Back, the header icons, the **Settings** title and a **Dark mode** switch; a row of tab pills; then one panel. Tabs: **User Management** (everyone's card — name, email, title, role and registry — with *Manage in Q-BITS*, since users come from the ERP) · **Registries** (files, documents and officer per registry; New registry) · **External Accounts** (connect Gmail or Outlook for email import) · **Mail Senders** and **Files & Records** (Registry) · **My Profile** (with Change password) · **Pages and tools** · **Reported Issues** · **Demo data** (reset). Each tab has its own link, e.g. `#/settings?tab=registries`.
+
 ### Signing in
 The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
 - Registry Officer — `john.kimani@health.go.ke`
