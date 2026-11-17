@@ -2355,3 +2355,76 @@ html { zoom: var(--ui-zoom, 1); }
 .lc-grid { align-items: start; }
 .lc-grid .input, .lc-grid .select { height: 46px; }
 .lc-grid .field > label { min-height: 20px; }
+
+/* ==========================================================================
+   Version 2 header (as in the live system): one teal top bar on every page,
+   then the title, details and buttons on the page in dark text
+   ========================================================================== */
+.topbar { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 14px 18px 14px 22px; margin-bottom: 22px; border-radius: 34px; color: #fff;
+  background: linear-gradient(110deg, rgba(0,74,71,.94), rgba(0,104,100,.84)); border: 1px solid rgba(255,255,255,.3); box-shadow: 0 14px 34px rgba(0,50,48,.18); position: relative; z-index: 5; }
+.topbar .crumbs { flex: 1; min-width: 0; gap: 10px; font-size: 18px; }
+.topbar .crumbs a { color: rgba(255,255,255,.88); opacity: 1; text-decoration: none; }
+.topbar .crumbs a:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+.topbar .crumbs [aria-current] { color: #fff; font-weight: 600; }
+.topbar .crumbs svg { width: 16px; height: 16px; opacity: .75; }
+.topbar .ph-icons { margin-left: auto; gap: 10px; }
+.topbar .ph-ic { width: 46px; height: 46px; }
+.topbar .ph-ic.me .av { width: 46px; height: 46px; }
+.tb-back { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px 0 16px; border-radius: 999px; font: inherit; font-size: 17px; font-weight: 500; color: #fff; cursor: pointer;
+  background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.55); transition: background .12s; }
+.tb-back:hover { background: rgba(255,255,255,.22); }
+.tb-back svg { width: 18px; height: 18px; }
+.tb-back:focus-visible, .topbar .crumbs a:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
+.topbar .menu-toggle { flex: none; }
+
+.ptitle { display: flex; align-items: flex-start; gap: 16px 24px; flex-wrap: wrap; margin: 0 6px 22px; color: var(--ink); }
+.ptitle-text { flex: 1 1 380px; min-width: 0; }
+.ptitle h1 { margin: 0; font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; color: var(--ink); overflow-wrap: anywhere; }
+.ptitle .ptitle-sub { margin: 6px 0 0; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); max-width: 820px; }
+.ptitle .ptitle-sub .mono, .ptitle .ptitle-sub code { color: var(--ink); }
+.ptitle .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ptitle .meta .chip { box-shadow: 0 1px 0 rgba(255,255,255,.6) inset; }
+.ptitle .meta .chip.t-neutral, .ptitle .meta .chip.ghost { background: rgba(255,255,255,.8); color: var(--ink); border: 1px solid rgba(15,29,43,.12); }
+.ptitle .logo-disc { width: 64px; height: 64px; flex: none; }
+.ptitle-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; padding-top: 2px; }
+/* every header button reads clearly on the page: secondary ones are white pills with a teal outline */
+.ptitle-acts .btn { height: 44px; padding: 0 18px; font-size: 15px; font-weight: 600; }
+.ptitle-acts .btn:not(.btn-primary):not(.btn-danger) { background: rgba(255,255,255,.88) !important; color: var(--primary, #007F7B) !important; border: 1.5px solid var(--primary, #007F7B) !important; box-shadow: none; }
+.ptitle-acts .btn:not(.btn-primary):not(.btn-danger):hover { background: #fff !important; }
+.ptitle-acts .btn-primary { box-shadow: 0 6px 16px rgba(0,80,78,.22); }
+.ptitle-acts .lbl-select { color: var(--ink); }
+.ptitle h1 .star { background: transparent; border: 0; width: 36px; height: 36px; border-radius: 50%; color: var(--ink-3); display: inline-grid; place-items: center; vertical-align: middle; cursor: pointer; }
+.ptitle h1 .star:hover { background: rgba(255,255,255,.6); }
+.ptitle h1 .star.on { color: #c98a00; } .ptitle h1 .star.on svg { fill: #f2b70f; }
+.ptitle h1 .star svg { width: 22px; height: 22px; }
+/* Overview: the greeting is the page title */
+.ptitle.is-hero { display: block; }
+.ptitle.is-hero .dash-hero { display: flex; align-items: center; gap: 22px; min-height: 0; }
+.ptitle.is-hero .disc-big { width: 112px; height: 112px; margin: 0; flex: none; }
+.ptitle.is-hero .dash-hello { margin: 0; padding: 0; }
+.ptitle.is-hero .dash-hello h1 { font-size: 34px; font-weight: 700; color: var(--ink); margin: 0 0 6px; }
+.ptitle.is-hero .hello-line { color: var(--ink-2); font-size: 16px; flex-wrap: wrap; }
+.ptitle.is-hero .hello-part { color: var(--ink-2); }
+[data-theme="dark"] .ptitle-acts .btn:not(.btn-primary):not(.btn-danger) { background: rgba(10,30,32,.75) !important; color: #8fe3da !important; border-color: #4fb8b0 !important; }
+[data-theme="dark"] .ptitle .meta .chip.t-neutral, [data-theme="dark"] .ptitle .meta .chip.ghost { background: rgba(10,30,32,.75); color: var(--ink); border-color: rgba(255,255,255,.16); }
+[data-theme="dark"] .ptitle h1 .star:hover { background: rgba(255,255,255,.1); }
+[data-theme="dark"] .topbar { background: linear-gradient(110deg, rgba(0,58,56,.95), rgba(0,84,80,.88)); }
+@media (max-width: 900px) {
+  .topbar { min-height: 64px; padding: 10px 12px; gap: 8px; border-radius: 26px; margin-bottom: 16px; }
+  .topbar .crumbs { font-size: 15.5px; }
+  .topbar .crumbs > :not(:last-child) { display: none; }   /* phones show only the current page; Back goes up */
+  .tb-back { height: 40px; width: 40px; padding: 0; justify-content: center; }
+  .tb-back span { display: none; }
+  .topbar .ph-ic, .topbar .ph-ic.me .av { width: 40px; height: 40px; }
+  .topbar .ph-icons { gap: 6px; }
+  .ptitle { margin: 0 2px 16px; }
+  .ptitle h1 { font-size: 24px; }
+  .ptitle .ptitle-sub { font-size: 14.5px; }
+  .ptitle-acts { justify-content: flex-start; margin-left: 0; width: 100%; }
+  .ptitle-acts .btn { height: 40px; padding: 0 14px; font-size: 14px; }
+  .ptitle.is-hero .disc-big { width: 76px; height: 76px; }
+  .ptitle.is-hero .dash-hello h1 { font-size: 24px; }
+  .ptitle.is-hero .hello-line { font-size: 14px; }
+}
+@media (max-width: 480px) { .topbar .ph-ic[data-act=palette] { display: none; } .topbar .crumbs { font-size: 14.5px; } }
+@media print { .topbar { display: none !important; } }

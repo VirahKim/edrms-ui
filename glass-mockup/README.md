@@ -272,6 +272,12 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 - **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
 - **Statistics** – mail and file counts for the chosen year, and inward and outward mail by month.
 
+### Version 2 header
+Version 1 is kept on the `glass-ui-v1` branch. Version 2 follows the live system:
+- **One top bar on every page** – Back, the breadcrumb (Overview › … › this page) and the icons (search, approvals, messages, notifications, account). On phones the menu button, Back and the current page stay; the breadcrumb shortens.
+- **Title, details and buttons on the page** – under the bar, in dark text: the page title, a short line about it, any status chips, and the page's buttons on the right. Secondary buttons are white pills with a teal outline; the main action stays solid teal.
+- The Overview uses the same bar, with the greeting as its title.
+
 ## Journeys (unchanged from the live system)
 
 ```

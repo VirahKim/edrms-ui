@@ -31,6 +31,7 @@ const ICONS = {
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   scrollDown: '<path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/>',
   arrowUp: '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
+  arrowL: '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
   arrowR: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   filePlus: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 18v-6"/>',
@@ -466,29 +467,28 @@ function topNav() {
   const items = navItems();
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
 }
+/* Version 2 header, as in the live system: the same teal top bar on every page (menu, Back, breadcrumb, icons),
+   then the page title, its details and its buttons on the page itself, in dark text. */
 function pageHead({ crumbs = [], title, sub = '', lead = '', right = '', back = null, meta = '', hero = '' }) {
   const icons = `<div class="ph-icons">
         <button class="ph-ic" data-act="palette" aria-label="Search">${ic('search')}</button>
         <button class="ph-ic" data-act="openNotifs" aria-label="Notifications">${ic('bell')}${unread() ? `<span class="badge">${unread()}</span>` : ''}</button>
         <button class="ph-ic me" data-act="acctMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Account: ${esc(me().name)}" title="${esc(me().name)}">${avatar(meId())}</button>
       </div>`;
-  /* Overview: a compact header — logo and greeting with the icons on the right, the navigation underneath */
-  if (hero) return `<section class="phead glass is-hero hero-compact">
-    <div class="hero-row">${hero}${icons}</div>
-  </section>`;
-  return `<section class="phead glass">
-    <div class="phead-top">
-      ${hero ? topNav() : `<button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button><nav class="crumbs" aria-label="Breadcrumb"><a href="#/">EDRMS</a>${crumbs.map(([t, h]) => `${ic('chevR')}${h ? `<a href="${h}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join('')}</nav>`}
+  const trail = hero ? [['Overview']] : [['Overview', '#/'], ...crumbs.filter(([t]) => t !== 'Overview')];
+  const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = back ? back[1] : (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
+  const label = prev ? `Back to ${screenName(prev)}` : back ? back[0] : `Back to ${screenName(encodeRoute(fb))}`;
+  const bar = `<header class="topbar glass">
+      <button class="ph-ic menu-toggle" data-act="openNav" aria-label="Open menu">${ic('menu')}</button>
+      ${hero ? '' : `<button type="button" class="tb-back" data-act="goBack" data-fallback="${esc(fb)}" aria-label="${esc(label)}" title="${esc(label)}">${ic('arrowL')}<span>Back</span></button>`}
+      <nav class="crumbs" aria-label="Breadcrumb">${trail.map(([t, h], k) => `${k ? ic('chevR') : ''}${h && k < trail.length - 1 ? `<a href="${h}">${esc(t)}</a>` : `<span aria-current="page">${esc(t)}</span>`}`).join('')}</nav>
       ${icons}
-    </div>
-    ${hero || ''}
-    ${hero ? '' : `<div class="phead-main">${lead}
-      <div class="phead-titles">${(() => { const st = ui.navStack || [], prev = st.length > 1 ? st[st.length - 2] : null, fb = back ? back[1] : (crumbs.filter(c => c[1]).pop() || [, '#/'])[1];
-        const label = prev ? `Back to ${screenName(prev)}` : back ? back[0] : `Back to ${screenName(encodeRoute(fb))}`;
-        return `<button type="button" class="back" data-act="goBack" data-fallback="${esc(fb)}">${ic('chevL')} ${esc(label)}</button>`; })()}<h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
-      ${right ? `<div class="phead-right">${right}</div>` : ''}
-    </div>`}
-  </section>`;
+    </header>`;
+  if (hero) return bar + `<section class="ptitle is-hero">${hero}</section>`;
+  return bar + `<section class="ptitle">${lead}
+      <div class="ptitle-text"><h1>${title}</h1>${sub ? `<p class="ptitle-sub">${sub}</p>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}</div>
+      ${right ? `<div class="ptitle-acts">${right}</div>` : ''}
+    </section>`;
 }
 const FILES_CRUMB = () => role() === 'registry' ? ['Registries & Files', '#/files'] : ['My Queue', '#/queue'];
 const notFound = () => pageHead({ title: 'Not found' }) + `<div class="panel glass empty">${ic('folder')}<p>That file could not be found.</p><a class="btn btn-primary btn-sm" href="${FILES_CRUMB()[1]}">Back to ${FILES_CRUMB()[0].replace('&', '&amp;')}</a></div>`;
