@@ -423,9 +423,9 @@ function openFileMenu(btn, f) {
   m.id = 'file-menu'; m.className = 'acct-menu file-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', `Options for ${f.name}`);
   m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
   document.body.appendChild(m);
-  const r = btn.getBoundingClientRect(), h = m.offsetHeight, w = m.offsetWidth;
-  m.style.top = Math.max(12, Math.min(r.bottom + 6, innerHeight - h - 12)) + 'px';
-  m.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + 'px';
+  const z = uiZ(), b = btn.getBoundingClientRect(), r = { top: b.top / z, bottom: b.bottom / z, left: b.left / z, right: b.right / z }, h = m.offsetHeight, w = m.offsetWidth, IH = innerHeight / z, IW = innerWidth / z;
+  m.style.top = Math.max(12, Math.min(r.bottom + 6, IH - h - 12)) + 'px';
+  m.style.left = Math.max(12, Math.min(r.right - w, IW - w - 12)) + 'px';
   m.querySelector('button')?.focus();
   ui.fmBtn = btn;
 }
@@ -443,9 +443,9 @@ function openMoreMenu(btn, f) {
   m.id = 'file-menu'; m.className = 'acct-menu file-menu more-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', 'More actions');
   m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
   document.body.appendChild(m);
-  const r = btn.getBoundingClientRect(), h = m.offsetHeight, w = m.offsetWidth;
-  m.style.top = Math.max(12, r.bottom + h + 6 < innerHeight ? r.bottom + 6 : r.top - h - 6) + 'px';
-  m.style.left = Math.max(12, Math.min(r.left, innerWidth - w - 12)) + 'px';
+  const z = uiZ(), b = btn.getBoundingClientRect(), r = { top: b.top / z, bottom: b.bottom / z, left: b.left / z, right: b.right / z }, h = m.offsetHeight, w = m.offsetWidth, IH = innerHeight / z, IW = innerWidth / z;
+  m.style.top = Math.max(12, r.bottom + h + 6 < IH ? r.bottom + 6 : r.top - h - 6) + 'px';
+  m.style.left = Math.max(12, Math.min(r.left, IW - w - 12)) + 'px';
   btn.setAttribute('aria-expanded', 'true'); m.querySelector('button, a')?.focus(); ui.fmBtn = btn;
 }
 function closeFileMenu(refocus) { const m = $('#file-menu'); if (!m) return; m.remove(); ui.fmBtn?.setAttribute('aria-expanded', 'false'); if (refocus) ui.fmBtn?.focus(); }

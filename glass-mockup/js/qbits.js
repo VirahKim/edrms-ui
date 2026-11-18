@@ -25,16 +25,16 @@ window.QBits = (function () {
     if (chromium()) requestAnimationFrame(function () { el.classList.add('is-refract'); });
     el.addEventListener('pointermove', function (e) {
       var r = el.getBoundingClientRect();
-      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      el.style.setProperty('--mx', (e.clientX - r.left) / zf() + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) / zf() + 'px');
     });
     el.addEventListener('pointerleave', function () { el.style.removeProperty('--mx'); el.style.removeProperty('--my'); });
     el.addEventListener('pointerdown', function (e) {
       if (reduced()) return;
       var r = el.getBoundingClientRect(), drop = document.createElement('span');
       drop.className = 'qb-ai__ripple';
-      drop.style.left = (e.clientX - r.left) + 'px';
-      drop.style.top = (e.clientY - r.top) + 'px';
+      drop.style.left = (e.clientX - r.left) / zf() + 'px';
+      drop.style.top = (e.clientY - r.top) / zf() + 'px';
       el.appendChild(drop);
       setTimeout(function () { drop.remove(); }, 700);
       el.classList.remove('is-press'); void el.offsetWidth; el.classList.add('is-press');
@@ -97,6 +97,9 @@ window.QBits = (function () {
   }
   /* ---- From Q-Bits ERM: User Manual tutorial mode — a tooltip tour that moves through the real page ---- */
   var tourNow = null;
+  /* the page may be zoomed (desktop sizing, font size): convert screen pixels into page pixels */
+  function zf() { return parseFloat(getComputedStyle(document.documentElement).zoom) || 1; }
+  function zr(r) { var z = zf(); return { top: r.top / z, left: r.left / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z }; }
   function tourVisible(el) { return !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0; }
   function tourClean(t) { return String(t || '').replace(/\d+/g, '').replace(/\s+/g, ' ').trim(); }
   function tourEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -109,7 +112,7 @@ window.QBits = (function () {
   }
   // Beside the target: below, above, right, left (tall targets: right, left, below, above).
   function tourPlace(r, tw, th) {
-    var GAP = 14, M = 12, vw = innerWidth, vh = innerHeight;
+    var GAP = 14, M = 12, vw = innerWidth / zf(), vh = innerHeight / zf();
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var fits = { bottom: r.bottom + GAP + th <= vh - M, top: r.top - GAP - th >= M, right: r.right + GAP + tw <= vw - M, left: r.left - GAP - tw >= M };
     var order = r.height > vh * 0.45 ? ['right', 'left', 'bottom', 'top'] : ['bottom', 'top', 'right', 'left'];
@@ -125,7 +128,7 @@ window.QBits = (function () {
     var side = innerWidth - r.right > 360 || r.left > 360, need = side ? r.height : r.height + 14 + tipH;
     if (ifNeeded && r.top >= 12 && r.top + need <= vh - 12) return;
     var off = need < vh - TOP - 12 ? Math.max(TOP, (vh - need) / 2) : TOP, prev = el.style.scrollMarginTop;
-    el.style.scrollMarginTop = Math.round(off) + 'px';
+    el.style.scrollMarginTop = Math.round(off / zf()) + 'px';
     el.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
     el.style.scrollMarginTop = prev;
   }
@@ -161,7 +164,7 @@ window.QBits = (function () {
     function position() {
       var tw = tip.offsetWidth, th = tip.offsetHeight;
       if (target && tourVisible(target)) {
-        var r = target.getBoundingClientRect(), key = [r.top, r.left, r.width, r.height, tw, th].map(Math.round).join();
+        var r = zr(target.getBoundingClientRect()), key = [r.top, r.left, r.width, r.height, tw, th].map(Math.round).join();
         if (key === last) return; last = key;
         var covered = !!document.querySelector('.qb-overlay, [aria-modal="true"]');
         ring.hidden = covered;

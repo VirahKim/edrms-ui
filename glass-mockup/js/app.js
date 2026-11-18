@@ -178,6 +178,8 @@ const ui = { navStack: [location.hash || "#/"],
 };
 
 const role = () => S.session;
+/* page zoom (desktop sizing × font size): divide screen pixels by this before placing fixed menus */
+const uiZ = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
 const meId = () => ACCOUNTS[S.session];
 const me = () => PEOPLE[meId()];
 const inboxKey = () => role() === 'registry' ? 'registry' : meId();
@@ -2054,7 +2056,7 @@ function openAcct(btn) {
     <button role="menuitem" data-act="changePw"><span class="i">${ic('settings')}</span><span>Change Password</span></button>
     <button role="menuitem" data-act="logout"><span class="i">${ic('lock')}</span><span>Logout</span></button>`;
   document.body.appendChild(m);
-  const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 10) + 'px'; m.style.right = Math.max(12, innerWidth - r.right) + 'px';
+  const z = uiZ(), r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 10) / z + 'px'; m.style.right = Math.max(12, innerWidth - r.right) / z + 'px';
   btn.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
 }
 function closeAcct(focusBtn) { const m = $('#acct-menu'); if (!m) return; m.remove(); const b = $('.ph-ic.me'); if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBtn) b.focus(); } }
@@ -2363,10 +2365,10 @@ const ACT = {
   palette: () => paletteModal(),
   openNotifs: () => notifDrawer(),
   iconMenu: el => { const m = $('#icon-menu'); if (m) { m.remove(); el.setAttribute('aria-expanded', 'false'); return; }
-    const box = el.closest('.ph-icons'), r = el.getBoundingClientRect();
+    const box = el.closest('.ph-icons'), z = uiZ(), r = el.getBoundingClientRect();
     const items = [...box.querySelectorAll('.ph-ic:not(.ph-more):not(.me)')].map(b => { const lbl = /approvals/.test(b.getAttribute('href') || '') ? 'My tasks' : (b.getAttribute('aria-label') || b.title || '').replace(/,.*$/, ''), badge = b.querySelector('.badge')?.textContent || '';
       return `<button role="menuitem" class="t-teal" data-proxy="${[...box.children].indexOf(b)}"><span class="i">${b.querySelector('svg')?.outerHTML || ''}</span><span>${esc(lbl === 'Search' ? 'Search' : lbl)}</span>${badge ? `<span class="count">${badge}</span>` : ''}</button>`; }).join('');
-    document.body.insertAdjacentHTML('beforeend', `<div id="icon-menu" class="more-menu icon-menu" role="menu" style="top:${r.bottom + 8}px;right:${Math.max(8, innerWidth - r.right)}px">${items}</div>`);
+    document.body.insertAdjacentHTML('beforeend', `<div id="icon-menu" class="more-menu icon-menu" role="menu" style="top:${(r.bottom + 8) / z}px;right:${Math.max(8, innerWidth - r.right) / z}px">${items}</div>`);
     el.setAttribute('aria-expanded', 'true');
     const menu = $('#icon-menu');
     menu.addEventListener('click', e => { const it = e.target.closest('[data-proxy]'); if (!it) return; const target = box.children[+it.dataset.proxy]; menu.remove(); el.setAttribute('aria-expanded', 'false'); target?.click(); });

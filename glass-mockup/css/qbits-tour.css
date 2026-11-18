@@ -38,7 +38,7 @@
 .qb-manual-switch>button{flex:1}
 .qb-tour-ring{position:fixed;z-index:1090;pointer-events:none;border:3px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 0 0 4px var(--primary-glow),0 0 0 9999px var(--scrim);transition:top .25s var(--ease-standard),left .25s var(--ease-standard),width .25s var(--ease-standard),height .25s var(--ease-standard);animation:qb-tour-pulse 1.6s ease-in-out infinite}
 @keyframes qb-tour-pulse{50%{box-shadow:0 0 0 9px var(--primary-subtle),0 0 0 9999px var(--scrim)}}
-.qb-tour{position:fixed;z-index:1100;width:330px;max-width:calc(100vw - 24px);padding:14px 16px 12px;background:var(--surface);color:var(--ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid var(--line);transition:left .3s var(--ease-standard),top .3s var(--ease-standard),opacity var(--duration-base)}
+.qb-tour{position:fixed;z-index:1100;width:330px;max-width:calc(100vw / var(--z, 1) - 24px);padding:14px 16px 12px;background:var(--surface);color:var(--ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid var(--line);transition:left .3s var(--ease-standard),top .3s var(--ease-standard),opacity var(--duration-base)}
 .qb-tour.is-waiting{opacity:0;pointer-events:none}
 .qb-tour.is-floating{left:50%!important;top:auto!important;bottom:24px;transform:translateX(-50%)}
 .qb-tour__arrow{position:absolute;width:16px;height:16px;background:var(--surface);transform:rotate(45deg);border:1px solid var(--line)}
@@ -67,6 +67,6 @@
 .qb-tour__dots .is-on{width:16px;background:var(--primary-ink)}
 .qb-tour__btns{display:flex;gap:6px;flex:none}
 .qb-tour-zoom{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:24px;background:var(--scrim);-webkit-backdrop-filter:blur(var(--blur-scrim));backdrop-filter:blur(var(--blur-scrim));cursor:zoom-out;animation:qb-fade var(--duration-base) var(--ease-standard)}
-.qb-tour-zoom img{max-width:min(1440px,100%);max-height:calc(100dvh - 48px);border-radius:var(--radius-md);box-shadow:var(--shadow-lg)}
-@media (max-width:640px){.qb-tour{width:calc(100vw - 24px)}.qb-tour.is-floating{bottom:96px}}
+.qb-tour-zoom img{max-width:min(1440px,100%);max-height:calc(100dvh / var(--z, 1) - 48px);border-radius:var(--radius-md);box-shadow:var(--shadow-lg)}
+@media (max-width:640px){.qb-tour{width:calc(100vw / var(--z, 1) - 24px)}.qb-tour.is-floating{bottom:96px}}
 @media (prefers-reduced-motion:reduce){.qb-tour,.qb-tour-ring{transition:none;animation:none}}

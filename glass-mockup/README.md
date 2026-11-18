@@ -271,6 +271,9 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 - **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
 - The statistics (mail and file counts for a year, mail by month) moved to the **Reports Dashboard** under *Mail and file lifecycle*.
 
+### Sizing
+On desktop (1200px and wider) the whole interface is drawn at 80% (`html { zoom }`), so a browser at 100% shows the compact layout, with five file cards across on Registries & Files. The Font size preference multiplies on top. Full-height pieces divide `100vh` by the zoom, and menus convert screen pixels with `uiZ()`. The values are recorded in the *EDRMS Glass* design system.
+
 ### Navigation
 Upload Document is in the side navigation for every role, straight after Overview.
 
