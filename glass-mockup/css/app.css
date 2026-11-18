@@ -2473,3 +2473,8 @@ html { zoom: var(--z); }
 
 /* Registries & Files: five file cards across on every desktop screen */
 @media (min-width: 1200px) { .fgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; } }
+
+/* Login: the title is 2px smaller on phones */
+@media (max-width: 920px) { .login-brand h1 { font-size: 32px; } }
+/* Reports › Files chart */
+.lc-fbars .hb-l { font-size: 14px; }
