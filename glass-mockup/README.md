@@ -1,0 +1,323 @@
+# Q-BITS EDRMS — Glass UI mockup
+
+A clickable redesign of the **Q-BITS Electronic Document and Records Management System** (Ministry of Health – State Department for Medical Services). It uses the glass UI and keeps every journey from the live system at [edrms.qbits.africa](https://edrms.qbits.africa).
+
+It is plain HTML, CSS and JavaScript with no build step. Fonts and the screen-capture library are bundled, so it also works offline. Open `index.html`, or serve the folder with GitHub Pages.
+
+![Dashboard](docs/screens/dashboard.jpg)
+
+## What's in it
+
+### Marking Officer tiles
+Files awaiting marking · My tasks · Start a new correspondence · Files I have marked · Request Files · Bring Up Diary.
+
+### Action Officer tiles
+Files to act on · My tasks · New correspondence (a pencil tile, `assets/tiles/correspondence.svg`) · Files I have acted on · Request Files · Bring Up Diary.
+
+### User Manual on the side
+Q-BITS AI → User Manual opens the manual in a panel on the right instead of leaving the page. On desktop the page moves over so both stay visible; on phones it covers the screen. It opens at your role's section, with a search box, section chips, Tutorial mode and Open full manual. Close it with × or Escape.
+
+### Documents sent to you stand out
+When a Marking or Action Officer opens a file that is with them, the documents sent to them are highlighted in the Folios table (warm yellow rows with a gold edge and a **Sent to you** tag), with a line above the table saying how many. The same tag and colour mark those folios in the scroll-through pages view. For files the Registry sends from now on, these are exactly the letters it ticked in *Send to Marking*; for older files they are the folios added since the file last left the officer, or else the newest incoming letter. The Registry sees no highlight.
+
+### Contrast
+Every page, pop-up and side panel was checked with axe-core's colour-contrast rule in light and dark mode for all three roles, and now passes WCAG AA (4.5:1 for normal text). Fixes included darker avatar colours, white text on the green Open buttons in tables, a darker "Email" label on notifications, a dark-on-gold "Sent to you" tag, readable chat times and bubbles in dark mode, and the Active / Semi-active tags and Reject button in dark mode.
+
+### Responsive layout
+- **Phones:** every table turns into stacked cards (column name on the left, value on the right) instead of scrolling sideways; filter bars show the search box and a **Filters** button that opens the date and dropdown filters (with a count of active ones); the My Queue tabs scroll sideways; pages leave room at the bottom so the Q-BITS AI button never hides the last item.
+- **Page headers on phones:** the breadcrumb hides (the Back link takes its place), the icons sit on the right of the menu button, header buttons share a row (full width on very small phones), and on the Overview the title, department and Ministry sit side by side under "Hello, …".
+- **All widths:** no page scrolls sideways (checked at 320, 375, 414, 768, 1024, 1280 and 1440px for all three roles); tile icon glows stay inside their tiles; date filters never spill out of their panel; the greeting line under "Hello" never ends a line on a dot.
+
+### My Queue (matches the live system)
+No Files button in the header. Five tabs across the top: **My Queue** (Files to Act On, Notes for Me) · **File Movement** · **Pending Approvals** (the approvals waiting for you — the same list the header button opens — plus file requests for the Registry) · **Landing Queue** (Registry) · **My Submissions**.
+
+### Registries & Files
+Registry only — Marking and Action Officers no longer see it in their navigation or search, and their file pages lead back to My Queue. The Files toolbar gains a **Stage** filter: All stages · Active · Semi-active.
+
+### Upload Document (matches the live system)
+Four choices in one connected strip at the top (two by two on phones): **Single Document · Bulk Upload · Import from Email · From Officers** (the last for the Registry). Step 2 stays locked ("Select a file first") until a file is chosen. Import from Email first asks you to connect **Gmail** or **Outlook** — only what you search for is read, nothing is sent or changed — then lets you search and tick emails whose attachments become documents; the button shows how many (Next: Details (n)). **From Officers** shows the Correspondence from officers lists (Waiting to be recorded, Recorded – to send on) with Read, Return, Record and file and Send on. The step-1 label follows the tab (File & Document · Files · Find Emails), and there is an ⓘ next to Select a File.
+
+### Folio numbers and order
+- **Folio No fills itself in** when you upload: it shows the next folio in the chosen file (marked *Automatic*) and can't be typed over; in a bulk upload each document takes the next number in turn.
+- **Newest to oldest:** in an open file the scroll-through pages (and the Folios table) list documents by when they came in, newest first — so a reply filed as 1a after folio 4 sits above folio 4. The cover stays on top.
+
+### Upload › Details (matches the live system)
+The document on the left in a viewer with a dark toolbar (annotate, download, print, full screen), **Sign or stamp** above it, and the AI summary below. The form follows the live order — Received From (pick a saved sender or type a new one, which is added to Mail Senders), Reference Number and Reference Date, Subject, **Where Filed** with Change, **Cross-references** (search by subject, sender, reference, file or folio), **Add a physical enclosure**, Confidentiality — then a Registry details box with Date Received, S/NO and the automatic Folio No. Every field uses the same white pill with one thin border; AI-filled fields only add a pale teal tint and an "AI · %" tag. Each label has an ⓘ hint. The finished step in the stepper shows a green tick. On phones the Back / Cancel / Save buttons line up full width.
+Upload › From Officers stays inside the page width at every size, with one padding scale (24px outside, 20px inside).
+
+### Files (matches the live system)
+- **File ⋮ menu** on every file card: Stage (Move to semi-active / active), View Details, Submit to Marking Officer (files in the Registry), Send outside, Add to bring-up diary, New Sub-File, Rename / Edit, Move File (to another registry), Clone (same cover, no documents), Share, Notifications on/off, Pin File (pinned files show a pin and sort first), Star File, Delete (with a warning). Officers see View Details, Share, Notifications, Pin and Star. Arrow keys move through it; Escape closes it.
+- **Inside a file:** Cover and Upload to this file buttons by Folios. The Folios table has a tick-box per row (and select all), a star per row and a Starred-only filter, and pages of 10 / 25 / 50 with "Showing 1–n of m". Ticking rows shows a bar with View and Version History (one row), Move and Copy to File (they take the next folio numbers in the other file), Share, Download, Star, and Remove from File (Registry).
+- The Overview header has no navigation bar; the side menu handles navigation.
+
+### File action buttons
+On an open file the Registry sees **Send to Marking Officer** (greyed out with a reason while the file is with an officer) · **Send outside** · **Bring up** · **More actions**, plus the step its stage needs (Send to Action Officer, File away, Retrieve from shelf). **More actions** opens a menu with coloured icons: Add document, File grid · New Sub-File, Rename / Edit, Move File, Clone · Share, Notifications, Pin File. Officers keep their own buttons (Mark file, Responses, Request files, Delegate, Done) with More actions holding Add document, File grid, Share, Notifications and Pin File.
+
+### Settings (Q-BITS ERM layout, tabs from the live Admin Console)
+The same page header as every other page (breadcrumb with the open tab, Back to Overview, title, header icons) with a **Dark mode** switch on the right; a row of tab pills; then one panel. Each tab has its own link, e.g. `#/settings?tab=retention`.
+- **Admin Console tabs (Registry), as on edrms.qbits.africa/ed-mgt/admin:** **All Documents** (every document with search, filters and pages, plus Open, Lock / Unlock and change Retention) · **Document Types** (metadata fields, OCR on/off, workflow process code, retention rule; New / Edit) · **Retention Rules** (years, what starts the clock, what happens at the end; New / Edit) · **Physical Locations** (Registries › Cabinets › Shelves; add cabinets and shelves) · **Correspondence Templates** (letter, memo, circular, notice, minutes — switch the logo, letterhead, signature and stamp sections and see the page change; Upload a template) · **File Covers** (top line, ministry and default colour, with a live cover preview; used on every file cover).
+- **User Management** (everyone's card with *Manage in Q-BITS*) · **Preferences** — **Theme** (Light, Dark, Match my device) and **Font size** (Small, Default, Large, Extra large; scales the whole interface), remembered in this browser · **Registries** · **External Accounts** · **Mail Senders** and **Files & Records** (Registry) · **My Profile** · **Reported Issues** · **Demo data**.
+- Pages and tools was removed. Marking and Action Officers don't see the Admin Console tabs.
+
+### Signing in
+The sign-in page has no account picker. Sign in with a work email and the demo password `Edrms@2026`:
+- Registry Officer — `john.kimani@health.go.ke`
+- Marking Officer — `vera.wambui@health.go.ke`
+- Action Officer — `virah.creates@health.go.ke`
+
+Any other email, a missing field or a wrong password shows a message under the form. (These are mockup-only details, kept in `js/data.js`.)
+
+### Notifications
+Each notification card shows the file and View on top, the message and sender, then when it arrived at the bottom-left and the channel (Email) at the bottom-right.
+
+### Active / Semi-active tag on files
+Every file carries a records-lifecycle tag: **Active** while it is in use, **Semi-active** once it is filed away, closed, or untouched for 30 days. It shows on the top-right of each file cover, under the file name in the list view (with an Activity filter), and in the file's header — where the Registry Officer can click it to switch between Active and Semi-active.
+On phones the Overview header puts the logo and the icons on one row, with the greeting underneath.
+
+### Carried over from the live system (`js/live.js`)
+Checked on edrms.qbits.africa as the Registry Officer and the Action Officer (viewing only), then rebuilt in the glass style:
+- **Header buttons on every page:** Pending approvals (with a count) and Messages (unread count), between Search and Notifications.
+- **My Pending Approvals** (`#/approvals`): file opening, closing and disposal requests, document upload approvals and documents sent for review — Details · Type · Status · Progress · Due date · Started · Started by, with Overdue flags. Review opens the request; Approve, or Reject with a reason. A Decided tab keeps the history.
+- **Messages** (`#/messages`): a chat inbox — search conversations, start a direct message or a named group, add people to a group, see who is in it, and send messages. On phones the list and the chat take turns.
+- **Correspondence from officers** (Registry, `#/correspondence`): letters, memos, circulars and notices officers have written. Read, Return with a note, or Record and file (it gets an Inward Register number and the next folio in the chosen file); then Send on — by courier, email, hand delivery or registered post when it goes outside, or to an officer inside.
+- **My correspondence** (Marking and Action Officers, `#/mycorrespondence`): Start new correspondence asks "What are you writing?" — Official Letter, Forwarding Letter, Internal Memo, Savingram, Circular, Notice or Minutes of a Meeting — and a subject, then a writing form with a live letterhead preview. Save a draft or Send to Registry; returned items show the Registry's note and can be fixed and resent.
+- **Request Files** (officers, `#/requestfiles`): search other files by subject, reference, name or folio — you see only what each one is — and request access with a reason and a duration. My requests shows what you asked for and the answer.
+- **Reports Dashboard** (`#/reports`): four headline numbers (Total files with active / semi-active split, Total documents with the last 30 days, Pending tasks, SLA breaches), **Files by stage** (one-colour bar chart, each bar opens that stage), **Documents received** per week for the last 8 weeks, **Needs attention** (SLA breaches, access expiring, missing documents, legal hold, awaiting disposal — each with a status colour, icon and word: Act now / Check / Watch / Clear) and **OCR and AI reading** (share read and filed, waiting for review, OCR jobs). Refresh updates the time.
+- **Overview:** "Open Q-BITS AI" on the AI Suggestions card, and each notification shows its channel (Email). The officers' tiles are set out under Marking Officer tiles and Action Officer tiles below.
+- **Side navigation:** the Registry section gains Correspondence and Reports Dashboard; officers get My correspondence, Request files and Reports Dashboard.
+
+### Overview (first page, every role)
+- A **compact glass header**: the Republic of Kenya / Ministry of Health logo with "Hello, <name>" and their title · department · Ministry of Health beside it, search, notifications and account on the right, and the **navigation underneath** — Overview · Registries & Files · My Queue · Bring Up Diary · Settings for the Registry, and Overview · Registries & Files · My Queue · Request file · Settings for the Marking and Action Officers (it scrolls sideways on phones). There is no light/dark switch in the header; it lives in Settings › Appearance.
+- On desktop (1200px and wider) an **AI Suggestions** card sits on top of **Recent Notifications** in a column to the left of the action tiles, and that column stays in view as you scroll. The file movements or files table sits under the tiles, the same width as them. On smaller screens AI Suggestions and notifications come under the tiles (side by side, then stacked on phones). Suggestions are worked out from the files: files waiting to be routed, bring-ups due today, documents to validate, access requests, drafts. Each has a button that takes you there, and the dots switch between them.
+- **Six large tiles** on the right, with counts. Upload, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary use the supplied tile artwork (`assets/tiles/`); the other tiles' icons are drawn to match. The Registry gets Upload Document, Registries and Files, File Movements, Outward Register, Inward Register and Bring Up Diary. Marking and Action Officers get their own six.
+- The Action Officer only sees their own registry.
+- The **top navigation is only on the Overview**. Every other screen has the **side navigation** with the **Q-BITS AI** button first (it opens the Q-BITS AI page), then the same items as the Overview's top navigation except Settings (Overview · Registries & Files · My Queue · Bring Up Diary or Request file; Settings is the gear by your name), plus search, recent notifications, and Settings and Sign out next to your name. Its collapse button shrinks it to icons on desktop and closes it on phones.
+- **Files to act on / Files I have marked or acted on** tiles use the supplied clock and double-tick icons (`assets/tiles/to-act.svg`, `acted.svg`); the **Request file** tile uses `assets/tiles/request.svg`.
+- **Q-BITS AI page** (`#/ai`, from the side-nav Q-BITS AI button, as in the Q-Bits ERM): a full-height chat in shades of blue with the Q-BITS mark, starter questions, "What needs my attention today?" answered from your files, Try asking, What I can do, and New chat. It shares the conversation with the Chat pop-up from the bottom-right Q-BITS AI button.
+- **My Queue** is one page with two tabs: **My Queue** (Files to Act On, Notes for Me, Pending Approvals, Landing Queue, My Submissions) and **File Movement** (what used to be File Routing: search plus stage tabs with counts — the Stage dropdown is gone). Switching tabs doesn't add a step to Back.
+- **Request file** (Marking and Action Officers) asks the Registry for any file, with a reason; the Registry sees it under My Queue › Pending Approvals.
+- **Back to <screen>** sits above the title on every screen (the Q-BITS BackLink): it names and returns to the screen you came from, or the parent page when you arrived directly.
+- **Account menu:** the avatar at the top right opens your name, title and department, with **My Profile**, **Change Password** (checked: current password, 8+ characters with letters and a number, matching confirmation) and **Logout**. Escape or a click outside closes it.
+- **Registries & Files:** picking a registry shows only that registry, with **View all registries** to bring the rest back.
+- **Contrast, light and dark:** every screen for all three officers, plus the AI page, a picked registry and the account menu, is checked by pixel (text against what is actually behind it); all text meets 4.5:1, large text 3:1.
+- **The Registry's side navigation has a Registry section**: Inward Register, Outward Register, Access Requests and Physical Files. Physical Files is about file location (where each paper file is) and has two tabs: **File location** and **File Census**. These pages are no longer listed in Settings.
+- **Settings › Pages and tools** opens everything else: My Queue, Upload Document, Bring Up Diary, Notifications, User Guide, Movement Sheets, and for the Registry Files & Records and Mail Senders.
+- **Every table has search and filters** in one bar above it: a search box, From / To dates on the table's date column (e.g. Sent from / Sent to on the Outward Register), and an All-or-one dropdown for each useful column (From, File, Status, Officer, Type, Confidentiality…), built from the values in the table. A line under the bar shows "N of M entries" and **Clear filters**. Filtering happens in place, so typing never loses focus, and each table remembers its filters while you move around. This covers the Overview tables, Registries & Files (list view), the Folios table, letter Versions, My Queue and File Movement, Inward and Outward Registers, Movement Sheets, Bring Up Diary, Access Requests, Mail Senders, File grid, Physical Files, File Census and Files & Records.
+- **An open file starts with a searchable Folios table** only — no long scroll of pages: Title · Reference · Folio · Type · Created by · Status · Confidentiality · v · Modified. Search by title, reference, folio number, type or officer. Next to the Folios heading, two icons switch between the **table** and **scroll through the pages** (the cover and every folio, with the side panel). Clicking a row (or Enter) opens that letter's own **details page**; links straight to a document open the pages.
+- **Minutes are numbered per letter**: every letter's first minute is I, then II, III… (saved data is renumbered in date order when the mockup loads).
+- **Letter details page** (`#/file/<file>/letter/<folio id>`): the reference, status, confidentiality and type under the title, a star, and four tabs — **Overview** (created by, type, created, folio, expiry, file, tags, and the letter itself with Print and Read in the file), **Metadata** (from who, reference number and date, subject, date received, confidentiality; the Registry can edit and save), **Versions** (upload a new version) and **Cross-References** (refers to, referred to by, physical enclosures, books and legal documents). **Comments** sit on the side: the minutes, sticky notes you can see, and comments anyone can post. In the scroll-through pages each folio bar has **View letter details**. Leaving the file and coming back starts on the table again.
+- **Marking and Action Officers can add files too**: New File and Upload are on Registries & Files, Upload Document is one of their tiles, and an open file has Add document.
+- The main colour is **#007F7B**, over a misty teal mountains background (`assets/bg-mountains.jpg`, 5262 × 2949, darkened in dark mode).
+
+### All Files
+- **Registries** (formerly Folders) are shown at the top. Click one to see only its files.
+- **Sort** (most recent, oldest, size, name) and **Show** (files and registries, files only, registries only, starred, TY, **draft files**) dropdowns, plus a registry picker.
+- **Draft files**: New File has **Save as draft**, and Cancel offers to keep what you typed as a draft. Drafts stay out of every list until you choose **Show → Draft files**. Opening one shows **Open file** (starts using it) and **Delete draft**.
+- **Grid / list** toggle. The list view is a table with Title · Reference · Folio · Type · Created by · Status · Confidentiality · Modified. Click any heading to sort by it.
+- Each card shows the file's **real cover**, the one set when the file was created.
+
+| Grid | List |
+|---|---|
+| ![](docs/screens/all-files.jpg) | ![](docs/screens/all-files-list.jpg) |
+
+### File covers, as in the live New File form
+- New File puts the form on the left and a **live cover preview** on the right. The preview shows File No., Republic of Kenya, Ministry of Health, Department, Subject and the movement sheet.
+- The cover has ten colours, a department line and optional header wording.
+- The same cover appears on the cards, in list thumbnails and at the top of the file. Its movement sheet fills in as the file moves.
+- Opening a file's **Cover** tab and changing the subject, department, colour or wording **updates the real cover straight away**.
+
+**New File follows the live form's rules:**
+- **Reference series:** "…or the next number in a series" shows only while Reference No. is empty. It disappears as soon as you type a reference, and is never offered for Personal or temporary files.
+- **Who can see it:**
+  - **Organization** is visible to everyone.
+  - **Department** is visible to one department and needs a **Department** choice.
+  - **Personal** is visible only to you, and the file gets a personal reference.
+- **Sub-files:** a file with a parent shows "Scope inherited from parent" instead of the scope choice.
+- **Temporary files (TY):** these are opened from an approved request under Files & Records › Requests. The reference is fixed by the request and the file is Confidential. Personal isn't offered.
+- **Visibility in Registries & Files:** Personal and Department files only appear there for the people allowed to see them.
+- **Error messages:** the wording is the live system's own: "Name / Subject is required.", "Please select a department.", "Give the reference number, or the reference series to take the next number from."
+
+### Opening a file
+- The file opens on the **cover**. Scroll down through every folio, from the latest down to folio 1, as in the live system.
+- The side panel has **Folios** (it follows your scroll and you can click to jump), **Notes**, **Movement**, **Cover** (Registry only) and **Details**.
+
+### Comments (minutes) and sticky notes
+![Comments and sticky notes](docs/screens/annotations.jpg)
+
+- **Add comment** writes directly on the page, numbered automatically (I, II, III…) with your signature and the date.
+  - Choose an **ink**: blue-black, black, red or green.
+  - Choose a **hand**: Neat, Print or Cursive.
+  - **Drag** it anywhere on the page and **resize** it from the corner.
+  - You can only move and edit your own comments, and only while the file is with you.
+- **Sticky note**:
+  - Pick one of six colours.
+  - Address it to **everyone** or to **one person**; then only they and you see it.
+  - **Drag** to place it, **fold** it to read what's behind it, or **remove** it.
+  - Notes addressed to you are listed in **My Queue → Notes for Me**.
+
+### Responses with templates
+![Templates](docs/screens/templates.jpg)
+
+The Action Officer's **Responses** form has a **template picker**: Official letter, Internal memo, Circular or Acknowledgement. Each one previews live. **View template** shows the finished page, with two buttons:
+- **Download** saves it as a Word document.
+- **Send** adds it to the file as the next sub-folio (1a, 1b…), signed and stamped if chosen.
+
+You can also upload a document instead of writing one.
+
+### Q-BITS AI
+| Hub | AI chat |
+|---|---|
+| ![](docs/screens/ai-support.jpg) | ![](docs/screens/ai-chat.jpg) |
+
+Both buttons come from the Q-BITS design skill, with its CSS copied exactly into `css/qbits-shell.css`:
+- **Side-nav Q-BITS AI button:** the first item in the side navigation. It's teal frosted glass with the vector qb mark (both shapes white) and a rim that flows every 4s. It opens the AI chat and stays active while the chat is open. When the side navigation is collapsed it becomes a 48px disc.
+- **Bottom-right Q-BITS AI hub:** a teal pill. Clicking it slides the white logo disc to the right end, swaps the label from **Q-BITS AI** to **Ask Q-BITS**, and turns the pill to translucent teal glass. **User Manual**, **Capture Screen** and **Chat** then rise one after another. Escape or a second click closes it.
+
+The hub's three actions:
+- **AI chat** answers from the user guide, with the FAQs as sample questions. In this mockup the answers are matched from a fixed list; they don't come from a live AI.
+- **Capture screen** takes a screenshot of the page you are on and opens **Report an issue**:
+  - **Attach screenshot** (on or off), **Retake** and **Download**.
+  - A **Type** choice of Error, Question or Suggestion.
+  - **Describe the issue**, with the **Page** you were on filled in.
+  - **Cancel** or **Send report**. You can also drag on the screenshot to highlight the problem.
+  - Reports are listed under **Settings**.
+
+  ![Report an issue](docs/screens/capture.jpg)
+- **User guide** is a searchable manual covering every role, comments and sticky notes, All Files, reporting problems and a glossary.
+
+### Upload Document (Registry)
+Same three tabs as the live system: Single Document, Bulk Upload and Upload From Email.
+1. **File & Document**: pick the file (or make a new one) and add the document. **Save & Proceed** always responds and says what's missing.
+2. **OCR and AI** start as soon as the import finishes: Importing → Reading the text (OCR) → Finding the sender, reference, dates and subject (AI) → Checking for duplicates and related folios.
+3. **Details** uses the live system's fields: S/NO (blank = auto), Date Received\*, Received From\*, Sender's Ref No, Sender's Ref Date, Subject\*, Folio No, Confidentiality Level (with Restricted to for Confidential and Secret), Cross-references and Physical enclosures. Fields the AI filled carry an **AI · %** chip until you edit them. Next to the form are a preview and an AI summary. Bulk uploads page through each document. The error messages are the live system's own wording.
+4. **Save** files the document and opens a pop-up: **Back to dashboard**, **Proceed to file** (opens it at the new folio), or **Sign or stamp it first**.
+
+| OCR and AI | Details | Filed |
+|---|---|---|
+| ![](docs/screens/upload-ai.jpg) | ![](docs/screens/upload-details.jpg) | ![](docs/screens/upload-filed.jpg) |
+
+The OCR and AI are simulated in this mockup. They read the file name, the email it came from and the files already in the system.
+
+### Light and dark mode
+The toggle is the Q-BITS design skill's sky switch (CSS in `css/qbits-shell.css`). In light mode it shows a blue sky with the sun and clouds. Clicking it slides the knob right and turns it into a cratered moon, the clouds sink, five stars twinkle, and the page's colours ease over. It is in **Settings › Appearance** (it was taken out of the page headers). The choice is remembered in this browser. Letters and file covers stay paper-coloured in dark mode.
+
+### Overview for each role (live dashboards)
+- **Registry Officer:** nine tiles with the supplied artwork (`assets/tiles/`): Upload Document, Registries and Files, My Tasks, File Movements, Outward Register, Inward Register, Files Requested (access requests), Physical Files and Bring Up Diary. Then comes **File movements**, with **Show movements**. Create File is on Registries & Files, search is in the side navigation, and Files & Records and File Census are under Settings › Pages and tools.
+- **Marking Officer:** the cards are Files sent to me, My tasks, All files, Files awaiting my marking and Files I have marked, followed by a **Files to mark** table (File, Stage, Documents, Sent by, Since, Open).
+- **Action Officer:** the same cards, with Files to act on and Files I have acted on, followed by a **Files to act on** table.
+
+![Marking Officer](docs/screens/dashboard-marking.jpg)
+
+- **Physical Files (File Movement Register):** **Hand over** a whole file or a single document to an officer or a room, with a purpose. It then goes through four states: Waiting for receipt, With holders, Returned, to acknowledge, and Closed. The buttons are Acknowledge receipt, Return to records, and Acknowledge return (which asks for the rack or shelf).
+- **Files & Records:** request to open a new temporary file, close a file or dispose of a closed file, with a reason. Each request is sent for approval. The tabs are Requests, Files (All / Open / Closed / Disposed, with location and last folio), Registers and Statistics. There are also links to File census and the Bring-up diary.
+- **File Census:** start a census of all files or personnel files only. Mark each file Found (and where) or Missing (with remarks), download it, then close the census.
+
+| Physical Files | Files & Records | File Census |
+|---|---|---|
+| ![](docs/screens/physical-files.jpg) | ![](docs/screens/files-records.jpg) | ![](docs/screens/file-census.jpg) |
+
+The reason lists for Files & Records come from the live system's database, which wasn't loading on the live site, so the mockup uses sample reasons.
+
+### Registry tools behind the quick actions
+Inward Register, Outward Register (with Dispatch), Movement Sheets, Bring-up Diary and Access Requests (approve or decline, with an expiry date).
+
+### Sign-in page
+The left panel is #0052BD with the Kenya coat of arms, Ministry of Health with **State Department for Medical Services** as a small tab beneath it, the system name and the Q-BITS lockup ("Powered by CodexAI Kenya"). The form side uses dark text on lighter fields so every label reads clearly against the teal background.
+
+![Sign in](docs/screens/login.jpg)
+
+### User Manual and Tutorial mode
+The User Manual opens from the Q-BITS AI hub. At the top is the design system's **Guide | Tutorial mode** switch, so each journey is listed once instead of appearing both as banner chips and in the guide's contents.
+
+**Tutorial mode** lists seven journeys (32 steps), each with a screenshot of this system (`assets/tutorial/`):
+1. **Getting around** (everyone): the Overview, what needs you today, side navigation, search, light or dark, and Q-BITS AI.
+2. **Receive and file a letter** (Registry): choose the file, add the document, OCR and AI, check the details, the Inward Mail Register, Mail Senders.
+3. **Submit a file for marking** (Registry): open the file, choose which letters the Marking Officer sees, track it in My Queue › File Movement.
+4. **Mark a file** (Marking Officer): Files to mark, record what should be done and by whom, the file grid.
+5. **Act on a file** (Action Officer): read the marking, write a response, comment, request another file, Done.
+6. **Close the loop** (Registry): file it away, send it outside, the Outward Mail Register.
+7. **Paper files and records** (Registry): hand over a paper file, Bring Up Diary, Files Requested, open/close/dispose requests, file census.
+
+Each journey has two ways in:
+- **Start** runs the design system's live tour (`QBits.tour`) on the real screens. It signs you in as the right officer, highlights each control in turn with a ring and a tooltip, and moves between pages for you. **Show screenshot** zooms the step's picture.
+- **Screenshots** opens a page with every step as a card: the picture (click to zoom), what to do, and **Try this step in the system**.
+
+| Tutorial page | Live tour |
+|---|---|
+| ![](docs/screens/tutorial.jpg) | ![](docs/screens/tour.jpg) |
+
+### Journeys added from the live source
+- **My Queue › File Movement:** a search box (file name, reference, letter, sender) and the stages as tabs with counts (they scroll sideways on phones).
+- **Submit to Marking Officer:** tick the letters and documents the Marking Officer should see. Unticked ones are kept back and hidden from them.
+- **Send outside:** records a letter sent out of the Ministry (send to, date, our reference, how it went, remarks) in the **Outward Mail Register**.
+- **Mail Senders:** the names offered under Received From and Send to. Add, edit, search, and switch names off without losing history. It's under Settings and linked from both mail registers.
+- **File grid:** a file's movement sheet as a table, with a CSV download (File grid button on a file).
+
+### Header logo
+The circle in the side navigation and on the Overview carries the Republic of Kenya / Ministry of Health lockup. It's built from the high-resolution coat of arms (`assets/coat-of-arms.png`) and live text, so it stays sharp at any size; the supplied 180px image would blur when scaled.
+
+### Demo files, documents and notifications in every state
+Sign in as each role to see every state the system can show:
+- **Action Officer (Virah):** EDRMS Documents was *sent back* (red strip says why), IT Documents is for action, Q2 Invoices is *delegated* to Mercy Achieng, Measles-Rubella Campaign was *returned from action* with a signed reply. Notifications cover For action, Sent back, request Approved / Declined, Returned correspondence and Bring up.
+- **Marking Officer (Vera):** Senate of Kenya is waiting for marking; Q4 Documents was *sent back for re-marking*. Notifications cover For marking, Sent back, Done (the officer finished) and Approval needed.
+- **Registry (John):** ACME Company Ltd was *returned from marking* (marked to Virah, ready to send on); CodexAI and Measles-Rubella were *returned from action*. Notifications cover Returned, Marked, Requested (file and access), Delegated and new Correspondence.
+- **Document states:** Landing, Draft, Pending approval, Approved, Rejected, Returned for rework, Signed, Sent, Locked, Archived and Filed — each with its own chip.
+- Every notification shows its kind and opens the right place (the file, Request files, Approvals, Correspondence). The *Marking instruction* strip has a **See minute** link that opens the letter and highlights the minute the instruction came from.
+- More actions has **Add document**; File grid and the Cover button next to Upload were removed.
+
+### File Lifecycle (Registry)
+The live *Files & Records* page, renamed **File Lifecycle** and added to the Registry side menu (the count shows requests awaiting approval). - **Requests** – open a new temporary file, close a file or dispose of a closed file. Each one goes for approval; the list below can be searched and filtered by request type, status and date.
+- **Files** – every file with its state (Open, Closed, Disposed) and stage (Active, Semi-active), location, documents and last folio. Filter by state and stage; move a file to semi-active or back, or start a closing or disposal request from the row.
+- **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
+- The statistics moved to the **Reports Dashboard** under *Mail and file lifecycle*: mail counts as tiles, files as two bar charts (opened, closed and disposed in the year; open, closed, awaiting approval and overdue bring-ups right now), and mail by month.
+
+### Sizing
+On desktop (1200px and wider) the whole interface is drawn at 80% (`html { zoom }`), so a browser at 100% shows the compact layout, with five file cards across on Registries & Files. The Font size preference multiplies on top. Full-height pieces divide `100vh` by the zoom, and menus convert screen pixels with `uiZ()`. The values are recorded in the *EDRMS Glass* design system.
+
+### Registers
+The Inward and Outward Mail Registers have **Download Excel** (a .csv that opens in Excel).
+
+### Navigation
+Upload Document is in the side navigation for every role, straight after Overview.
+
+### Version 2 header
+Version 1 is kept on the `glass-ui-v1` branch. Version 2 follows the live system:
+- **One top bar on every page** – Back, the breadcrumb (Overview › … › this page) and the icons (search, approvals, messages, notifications, account). On phones the menu button, Back and the current page stay; the breadcrumb shortens.
+- **Title, details and buttons on the page** – under the bar, in dark text: the page title, a short line about it, any status chips, and the page's buttons on the right. Secondary buttons are white pills with a teal outline; the main action stays solid teal.
+- The Overview keeps the version 1 header (logo, greeting and icons in the teal card). Recent Notifications sit under AI Suggestions on desktop and straight after the tiles on smaller screens. More actions no longer lists Add document (use Upload to this file).
+- On phones, Search, My tasks, Messages and Notifications fold into a three-dots menu at the top right, next to your account.
+
+## Journeys (unchanged from the live system)
+
+```
+Registry ──send──▶ Marking Officer ──mark──▶ Registry ──send──▶ Action Officer ──done──▶ Registry ──▶ Filed away
+```
+
+| Role | Account | Can do |
+|---|---|---|
+| Registry Officer | John Kimani | Upload → Landing Queue → validate. Create files and covers. Send to the Marking Officer, then to the Action Officer the file was marked to. File away. Registers, bring-ups, access requests. |
+| Marking Officer | Vera Wambui, Principal Secretary | Comments and sticky notes on folios. **Mark file** to an Action Officer, which returns it to the Registry. |
+| Action Officer | Virah Creates, Head, National Vaccination Services | Responses from templates, Request files, Delegate, comments and sticky notes, **Done – return to Registry**. |
+
+In the live system each role is a separate login. In the mockup you pick one on the sign-in screen and switch with the avatar at the top right.
+
+## Project layout
+
+```
+index.html               entry point
+css/app.css              design tokens and all components
+js/data.js               people, registries, cover colours, inks, hands, templates, FAQs, user guide, seed files
+js/app.js                router, screens, journeys, annotations, Q-BITS AI
+js/vendor/html2canvas    screen capture (MIT)
+assets/bg-mountains.jpg  background image
+assets/tutorial/         step screenshots used by Tutorial mode (WebP)
+css/qbits-tour.css       Q-BITS design system tokens and Tour, segmented switch
+js/qbits.js              Q-BITS design system behaviour (window.QBits: tour, hub, theme)
+css/qbits-shell.css      Q-BITS AI side button and hub (Q-BITS design skill)
+assets/tiles/            home-page tile artwork (SVG)
+assets/fonts/            Urbanist, DM Mono, Caveat, Kalam, Homemade Apple, Mrs Saint Delafield, Gochi Hand (SIL OFL)
+```
+
+Links use plain names (`#files`, `#file-f1`, `#routing-returned`) so they work everywhere, including inside a claude.ai preview. There, Download asks before saving, and Print saves a printable copy because the preview blocks printing.
+
+Everything you do is saved in your browser only. Use **Settings → Reset demo data** to start again.

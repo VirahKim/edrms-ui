@@ -1,0 +1,667 @@
+/* ==========================================================================
+   Q-BITS EDRMS — features carried over from the live system (edrms.qbits.africa)
+   · Pending approvals (header button + page)        /workflows/approvals/pending
+   · Messages (header button + chat inbox)             /communication/messages/inbox
+   · Correspondence from officers (Registry)           /ed-mgt/correspondence-from-officers
+   · Reports Dashboard                                 /ed-mgt/reports
+   · Overview quick links, "Open Q-BITS AI", notification channel
+   Loaded after app.js; uses its helpers and starts the first render.
+   ========================================================================== */
+
+/* ---------- seed data (added to saved state the first time) ---------- */
+function ensureLive() {
+  if (!S.approvals) S.approvals = [
+    { id: 'ap22', no: 22, type: 'Document (EDMS) - HR Document', title: 'Staff establishment returns – October', approver: 'registry', by: 'virah', at: daysAgo(24, 10), due: daysAgo(23, 17), status: 'open', steps: 1, done: 0, fileId: 'f1' },
+    { id: 'ap8', no: 8, type: 'Records - File opening request', title: 'Cold Chain Equipment Maintenance', approver: 'registry', by: 'henry', at: daysAgo(16, 9), due: daysAgo(15, 17), status: 'open', steps: 1, done: 0 },
+    { id: 'ap11', no: 11, type: 'Records - File opening request', title: 'HR – Temporary personnel files', approver: 'registry', by: 'rachael', at: daysAgo(9, 11), due: daysAgo(8, 17), status: 'open', steps: 1, done: 0 },
+    { id: 'ap13', no: 13, type: 'Document Upload Approval', title: 'Bulk upload – Supply Chain invoices (12 documents)', approver: 'registry', by: 'achieng', at: daysAgo(2, 14), due: daysAhead(1), status: 'open', steps: 2, done: 1, fileId: 'f11' },
+    { id: 'ap14', no: 14, type: 'Records - File closing request', title: 'ICT Handover Report', approver: 'marking', by: 'john', at: daysAgo(1, 14), due: daysAhead(2), status: 'open', steps: 1, done: 0, fileId: 'f10' },
+    { id: 'ap15', no: 15, type: 'Records - File disposal request', title: 'Q2 Invoices – retention ended', approver: 'marking', by: 'rachael', at: daysAgo(3, 10), due: daysAhead(4), status: 'open', steps: 2, done: 0, fileId: 'f11' },
+    { id: 'ap31', no: 31, type: 'Document (EDMS) - Memo', title: 'ICT – Network upgrade schedule', approver: 'action', by: 'erickson', at: daysAgo(1, 9), due: daysAhead(3), status: 'open', steps: 1, done: 0 },
+  ];
+  if (!S.chats) S.chats = [
+    { id: 'c1', title: 'Contract Document For NQCL-MOH', group: true, members: ['john', 'henry', 'virah'], msgs: [
+      { by: 'john', at: daysAgo(26, 22, 21), text: 'Hello. Please share with me the contract document for NQCL-MOH.' },
+      { sys: true, at: daysAgo(26, 22, 25), text: 'John Kimani added Brian Otieno' },
+      { sys: true, at: daysAgo(26, 22, 26), text: 'John Kimani removed Brian Otieno' },
+      { by: 'virah', at: daysAgo(25, 9, 4), text: 'Shared it in the IT Documents file, folio 3.' } ] },
+    { id: 'c2', title: '', group: false, members: ['john', 'otieno'], msgs: [
+      { by: 'otieno', at: daysAgo(40, 10, 2), text: 'Hi John, is the press statement file back with you?' },
+      { by: 'john', at: daysAgo(40, 10, 9), text: 'Hello. How can I help you?' } ] },
+    { id: 'c3', title: '', group: false, members: ['vera', 'john'], msgs: [
+      { by: 'john', at: daysAgo(0, 9, 14), text: 'Senate of Kenya file is with you for marking. The hearing is on 6 Nov.' } ] },
+    { id: 'c4', title: '', group: false, members: ['virah', 'erickson'], msgs: [
+      { by: 'erickson', at: daysAgo(2, 15, 40), text: 'Can you confirm the vaccine stock figures for the memo?' } ] },
+  ];
+  if (!S.corr) S.corr = [
+    { id: 'co1', subject: 'Correspondence', kind: 'letter', from: 'erickson', goes: 'External', to: 'The Director, KEMSA', at: daysAgo(0, 6, 2), status: 'waiting', body: 'Request for the delivery schedule of ICT equipment for the county vaccine stores.' },
+    { id: 'co2', subject: 'Letter 1', kind: 'letter', from: 'erickson', goes: 'External', to: 'The Chief Executive Officer, KMPDC', at: daysAgo(0, 6, 50), status: 'waiting', body: 'Follow-up on the data-sharing agreement for practitioner records.' },
+    { id: 'co3', subject: 'Staff meeting – Friday', kind: 'memo', from: 'virah', goes: 'Internal', to: 'All staff, National Vaccines and Immunization Programme', at: daysAgo(3, 11), status: 'recorded', fileId: 'f1', recordedAt: daysAgo(3, 14), body: 'All staff are requested to attend the monthly staff meeting on Friday at 10.00 a.m.' },
+  ];
+  S.chats.forEach(c => { c.read = c.read || {}; });
+}
+ensureLive();
+
+/* The kinds offered under "What are you writing?" in the live Start new correspondence */
+const CORR_KINDS = [
+  ['letter', 'Official Letter', "A letter to a person or an office, in the ministry's letterhead."],
+  ['forwarding', 'Forwarding Letter', 'Sends a document or a file on, with a short covering note.'],
+  ['memo', 'Internal Memo', 'A memorandum between offices of the same organisation.'],
+  ['savingram', 'Savingram', 'A routine internal message between government offices.'],
+  ['circular', 'Circular', 'One message sent to many offices, on a stated reference.'],
+  ['notice', 'Notice', 'A public or staff notice.'],
+  ['minutes', 'Minutes of a Meeting', 'Attendance, agenda items and resolutions of a meeting.'],
+];
+const toParas = t => { const a = String(t || '').split(/\n+/).map(x => x.trim()).filter(Boolean); return a.length ? a : [' ']; };
+const CORR_KIND = Object.fromEntries(CORR_KINDS.map(([k, l]) => [k, l]));
+const CORR_TPL = k => ({ memo: 'memo', savingram: 'memo', circular: 'circular' }[k] || 'letter');
+const myApprovals = () => S.approvals.filter(a => a.approver === role() && a.status === 'open');
+const myChats = () => S.chats.filter(c => c.members.includes(meId())).sort((a, b) => lastAt(b).localeCompare(lastAt(a)));
+const lastAt = c => (c.msgs[c.msgs.length - 1] || {}).at || '';
+const chatUnread = c => c.msgs.filter(m => !m.sys && m.by !== meId() && m.at > (c.read[meId()] || '')).length;
+const msgUnread = () => myChats().reduce((n, c) => n + chatUnread(c), 0);
+const corrWaiting = () => S.corr.filter(c => c.status === 'waiting');
+const chatName = c => c.group ? c.title : esc(person(c.members.find(m => m !== meId()) || meId()).name);
+
+/* ---------- header buttons: Pending approvals and Messages (as in the live top bar) ---------- */
+const headerExtras = () => {
+  const ap = myApprovals().length + (role() === 'registry' ? S.requests.filter(x => x.status === 'open').length : 0), mu = msgUnread();
+  return `<a class="ph-ic" href="#/queue?tab=approvals" aria-label="${plural(ap, 'pending approval')}" title="Pending approvals">${ic('listChecks')}${ap ? `<span class="badge">${ap}</span>` : ''}</a>
+    <a class="ph-ic" href="#/messages" aria-label="Messages${mu ? `, ${mu} unread` : ''}" title="Messages">${ic('mail')}${mu ? `<span class="badge">${mu}</span>` : ''}</a>`;
+};
+/* put them between Search and Notifications on every page header */
+function addHeaderExtras(root) {
+  root.querySelectorAll('.ph-icons').forEach(box => {
+    if (box.querySelector('[href="#/queue?tab=approvals"]')) return;
+    const bell = box.querySelector('[data-act=openNotifs]');
+    if (bell) bell.insertAdjacentHTML('beforebegin', headerExtras());
+  });
+}
+
+/* ---------- Pending approvals ---------- */
+function viewApprovals() {
+  const all = S.approvals.filter(a => a.approver === role());
+  const mine = all.filter(a => a.status === 'open');
+  const done = all.filter(a => a.status !== 'open');
+  const due = a => new Date(a.due) < new Date() && a.status === 'open';
+  const rows = list => list.map(a => `<tr><td><b>${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td>
+      <td>${esc(a.type)}</td>
+      <td data-v="${a.status === 'open' ? 'In Progress' : a.status === 'approved' ? 'Approved' : 'Rejected'}"><span class="chip ${a.status === 'open' ? 't-blue' : a.status === 'approved' ? 't-green' : 't-red'}">${a.status === 'open' ? 'In Progress' : a.status === 'approved' ? 'Approved' : 'Rejected'}</span></td>
+      <td><div class="ap-prog"><span style="width:${Math.round((a.done + (a.status === 'open' ? 0 : 1)) / a.steps * 100)}%"></span></div><small class="sub">${a.status === 'open' ? `${a.steps - a.done} pending / ${a.steps}` : `${a.steps} / ${a.steps} done`}</small></td>
+      <td data-d="${a.due}">${fmtDay(a.due)}${due(a) ? ' <span class="chip t-red">Overdue</span>' : ''}</td>
+      <td data-d="${a.at}">${fmtDay(a.at)}</td>
+      <td>${esc(person(a.by).name)}</td>
+      <td>${a.status === 'open' ? `<button class="btn btn-primary btn-xs" data-act="apReview" data-id="${a.id}">${ic('eye')} Review</button>` : `<button class="btn btn-light btn-xs" data-act="apReview" data-id="${a.id}">${ic('eye')} View</button>`}</td></tr>`);
+  const head = ['Details', 'Type', 'Status', 'Progress', 'Due date', 'Started', 'Started by', ''];
+  const tab = (parseHash().q.tab) || 'open';
+  return pageHead({ crumbs: [['My Pending Approvals']], title: 'My Pending Approvals', sub: 'Requests waiting for your approval: file opening, closing and disposal, document uploads and documents sent for review.' }) +
+    `<section class="panel glass"><div class="tabs">
+      <button class="${tab === 'open' ? 'on' : ''}" data-href="#/approvals">Awaiting your approval <span class="n">${mine.length}</span></button>
+      <button class="${tab === 'done' ? 'on' : ''}" data-href="#/approvals?tab=done">Decided <span class="n">${done.length}</span></button></div>
+      ${simpleTable(head, rows(tab === 'done' ? done : mine), tab === 'done' ? 'You have not decided anything yet.' : 'Nothing is waiting for your approval.',
+        { key: 'approvals-' + tab, search: 'Search approvals – title, type or officer', date: [4, 'Due from', 'Due to'], facets: [[1, 'Entity type'], [2, 'Status'], [6, 'Started by']] })}
+    </section>`;
+}
+function approvalsTable() {
+  const mine = S.approvals.filter(a => a.approver === role() && a.status === 'open');
+  const due = a => new Date(a.due) < new Date();
+  const rows = mine.map(a => `<tr><td><b>${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td><td>${esc(a.type)}</td>
+    <td><div class="ap-prog"><span style="width:${Math.round(a.done / a.steps * 100)}%"></span></div><small class="sub">${a.steps - a.done} pending / ${a.steps}</small></td>
+    <td data-d="${a.due}">${fmtDay(a.due)}${due(a) ? ' <span class="chip t-red">Overdue</span>' : ''}</td><td data-d="${a.at}">${fmtDay(a.at)}</td><td>${esc(person(a.by).name)}</td>
+    <td><button class="btn btn-primary btn-xs" data-act="apReview" data-id="${a.id}">${ic('eye')} Review</button></td></tr>`);
+  return simpleTable(['Details', 'Type', 'Progress', 'Due date', 'Started', 'Started by', ''], rows, 'Nothing is waiting for your approval.', { key: 'q-approvals', search: 'Search approvals – title, type or officer', date: [3, 'Due from', 'Due to'], facets: [[1, 'Entity type'], [5, 'Started by']] })
+    + `<p style="margin:12px 0 0"><a class="link-btn" href="#/approvals?tab=done">${ic('checkCircle')} See what you have already decided</a></p>`;
+}
+function apModal(a) {
+  const f = a.fileId && getFile(a.fileId);
+  modal(`${mHead('listChecks', `${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}`, esc(a.type))}
+    <div class="modal-b">
+      <dl class="ap-facts"><dt>Subject</dt><dd>${esc(a.title)}</dd><dt>Started by</dt><dd>${esc(person(a.by).name)} — ${esc(person(a.by).title)}</dd>
+        <dt>Started</dt><dd>${fmtDT(a.at)}</dd><dt>Due</dt><dd>${fmtDT(a.due)}</dd>${f ? `<dt>File</dt><dd><a href="#/file/${f.id}" data-act="close">${esc(f.name)}</a> <span class="mono">${esc(f.ref)}</span></dd>` : ''}
+        <dt>Progress</dt><dd>Step ${Math.min(a.done + 1, a.steps)} of ${a.steps}${a.steps > 1 ? ' — after you, it goes to the next approver' : ''}</dd>
+        ${a.status !== 'open' ? `<dt>Decision</dt><dd>${a.status === 'approved' ? 'Approved' : 'Rejected'} by ${esc(person(a.decidedBy).name)}, ${fmtDT(a.decidedAt)}${a.note ? ` — “${esc(a.note)}”` : ''}</dd>` : ''}</dl>
+      ${a.status === 'open' ? `<div class="field"><label for="ap-note">Comment <span class="muted">(required to reject)</span></label><textarea class="input" id="ap-note" rows="3" placeholder="Add a note for ${esc(person(a.by).name)}"></textarea><p class="form-err" id="ap-err" role="alert" hidden></p></div>` : ''}
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${a.status === 'open' ? `<button class="btn btn-outline danger" data-act="apDecide" data-id="${a.id}" data-k="rejected">${ic('x')} Reject</button><button class="btn btn-primary" data-act="apDecide" data-id="${a.id}" data-k="approved">${ic('check')} Approve</button>` : ''}</div>`, '', '#ap-note');
+}
+
+/* ---------- Messages ---------- */
+ui.chat = ui.chat || { id: null, q: '' };
+function viewMessages(q) {
+  const list = myChats();
+  if (q.c && list.some(c => c.id === q.c)) ui.chat.id = q.c;
+  const cur = list.find(c => c.id === ui.chat.id);
+  if (cur) { cur.read[meId()] = new Date().toISOString(); save(); }
+  const term = (ui.chat.q || '').trim().toLowerCase();
+  const shown = list.filter(c => !term || (chatName(c) + ' ' + c.msgs.map(m => m.text).join(' ')).toLowerCase().includes(term));
+  const preview = c => { const m = c.msgs[c.msgs.length - 1]; if (!m) return 'No messages yet'; return (m.by === meId() ? 'You: ' : m.sys ? '' : (c.group ? person(m.by).name.split(' ')[0] + ': ' : '')) + m.text; };
+  const day = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const item = c => { const u = chatUnread(c); return `<button class="chat-it ${cur && cur.id === c.id ? 'on' : ''}" data-act="chatOpen" data-id="${c.id}">
+      <span class="chat-av">${c.group ? ic('users') : avatar(c.members.find(m => m !== meId()))}</span>
+      <span class="chat-t"><b>${chatName(c)}</b><small>${esc(preview(c))}</small></span>
+      <span class="chat-m"><small>${lastAt(c) ? day(lastAt(c)) : ''}</small>${u ? `<span class="count">${u}</span>` : ''}</span></button>`; };
+  const bubble = m => m.sys ? `<div class="chat-sys">${ic('users')} ${esc(m.text)}</div>`
+    : `<div class="chat-b ${m.by === meId() ? 'me' : ''}">${m.by !== meId() && cur.group ? `<b>${esc(person(m.by).name)}</b>` : ''}<p>${esc(m.text)}</p><time>${new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}${m.by === meId() ? ' ' + ic('check') : ''}</time></div>`;
+  return pageHead({ crumbs: [['Messages']], title: 'Messages', sub: 'Direct messages and requests from other users.' }) +
+    `<section class="chat glass ${cur ? 'has-cur' : ''}">
+      <aside class="chat-list">
+        <div class="chat-lh"><h2>Messages</h2><button class="btn btn-primary btn-sm" data-act="chatNew">${ic('plus')} New</button></div>
+        <label class="input-icon">${ic('search')}<input class="input" id="chat-q" value="${esc(ui.chat.q)}" placeholder="Search conversations…" data-input="chatQ" autocomplete="off"><span class="sr">Search conversations</span></label>
+        <div class="chat-items" id="chat-items">${shown.map(item).join('') || '<p class="muted" style="padding:12px">No conversations match.</p>'}</div>
+      </aside>
+      <div class="chat-pane">${cur ? `
+        <div class="chat-ph"><button class="btn btn-light btn-icon btn-sm chat-back" data-act="chatOpen" data-id="" aria-label="Back to conversations">${ic('chevL')}</button>
+          <span class="chat-av">${cur.group ? ic('users') : avatar(cur.members.find(m => m !== meId()))}</span>
+          <div><b>${chatName(cur)}</b><small>${cur.group ? `${cur.members.length} people: ${cur.members.map(m => m === meId() ? 'You' : esc(person(m).name)).join(', ')}` : esc(person(cur.members.find(m => m !== meId())).title)}</small></div>
+          <span class="sp"></span>${cur.group ? `<button class="btn btn-light btn-sm" data-act="chatAdd" data-id="${cur.id}">${ic('user')} Add</button>` : ''}<button class="btn btn-light btn-icon btn-sm" data-act="chatInfo" data-id="${cur.id}" aria-label="Conversation details">${ic('info')}</button></div>
+        <div class="chat-msgs" id="chat-msgs">${cur.msgs.map(bubble).join('')}</div>
+        <form class="chat-send" data-chat="${cur.id}"><label class="sr" for="chat-in">Message</label><input class="input" id="chat-in" placeholder="Type a message…" autocomplete="off"><button class="btn btn-primary btn-icon" aria-label="Send">${ic('send')}</button></form>`
+      : `<div class="empty chat-empty">${ic('chat')}<div>Select a conversation, or start a new one.</div></div>`}</div>
+    </section>`;
+}
+function chatNewModal(addTo) {
+  const c = addTo && S.chats.find(x => x.id === addTo);
+  const opts = Object.values(PEOPLE).filter(p => p.id !== meId() && !(c && c.members.includes(p.id)));
+  modal(`${mHead(c ? 'user' : 'chat', c ? 'Add people' : 'New message', c ? esc(c.title) : 'Choose one person for a direct message, or several for a group.')}
+    <div class="modal-b">
+      ${c ? '' : `<div class="field"><label for="cn-title">Group name <span class="muted">(only for groups)</span></label><input class="input" id="cn-title" placeholder="e.g. Contract Document For NQCL-MOH"></div>`}
+      <fieldset class="field cn-people"><legend class="label">People</legend>${opts.map(p => `<label class="cn-p"><input type="checkbox" value="${p.id}"> ${avatar(p.id)} <span><b>${esc(p.name)}</b><small>${esc(p.title)}</small></span></label>`).join('')}</fieldset>
+      ${c ? '' : `<div class="field"><label for="cn-msg">Message</label><textarea class="input" id="cn-msg" rows="3"></textarea></div>`}
+      <p class="form-err" id="cn-err" role="alert" hidden></p>
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="${c ? 'chatAddSave' : 'chatCreate'}" data-id="${c ? c.id : ''}">${ic(c ? 'user' : 'send')} ${c ? 'Add to group' : 'Start conversation'}</button></div>`, '', c ? '' : '#cn-title');
+}
+
+/* ---------- Correspondence from officers (Registry) ---------- */
+function viewCorrespondence() {
+  const w = corrWaiting(), rec = S.corr.filter(c => c.status === 'recorded'), past = S.corr.filter(c => ['sent', 'returned'].includes(c.status));
+  const row = (c, acts) => `<tr><td><b>${esc(c.subject)}</b><small class="sub">To: ${esc(c.to)}</small></td><td>${esc(person(c.from).name)}</td><td>${CORR_KIND[c.kind]}</td>
+      <td data-v="${c.goes}"><span class="chip ${c.goes === 'External' ? 't-violet' : 't-teal'}">${c.goes}</span></td><td data-d="${c.at}">${fmtDT(c.at)}</td><td><div class="row-acts">${acts}</div></td></tr>`;
+  const read = c => `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`;
+  const head = ['Subject', 'From', 'Kind', 'Goes to', 'Sent', ''];
+  const spec = k => ({ key: 'corr-' + k, search: 'Search – subject, officer or recipient', date: [4, 'Sent from', 'Sent to'], facets: [[1, 'From'], [2, 'Kind'], [3, 'Goes to']] });
+  return pageHead({ crumbs: [['Correspondence from officers']], title: 'Correspondence from officers', sub: 'Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.' }) + corrLists();
+}
+/* The two (or three) lists — also shown on Upload → From Officers, as in the live system */
+function corrLists() {
+  const w = corrWaiting(), rec = S.corr.filter(c => c.status === 'recorded'), past = S.corr.filter(c => ['sent', 'returned'].includes(c.status));
+  const row = (c, acts) => `<tr><td><b>${esc(c.subject)}</b><small class="sub">To: ${esc(c.to)}</small></td><td>${esc(person(c.from).name)}</td><td>${CORR_KIND[c.kind]}</td>
+      <td data-v="${c.goes}"><span class="chip ${c.goes === 'External' ? 't-violet' : 't-teal'}">${c.goes}</span></td><td data-d="${c.at}">${fmtDT(c.at)}</td><td><div class="row-acts">${acts}</div></td></tr>`;
+  const read = c => `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`;
+  const head = ['Subject', 'From', 'Kind', 'Goes to', 'Sent', ''];
+  const spec = k => ({ key: 'corr-' + k, search: 'Search – subject, officer or recipient', date: [4, 'Sent from', 'Sent to'], facets: [[1, 'From'], [2, 'Kind'], [3, 'Goes to']] });
+  return `<section class="panel glass"><div class="panel-h"><h2>Waiting to be recorded <span class="n-pill">${w.length}</span></h2></div>
+      ${simpleTable(head, w.map(c => row(c, `${read(c)}<button class="btn btn-light btn-xs" data-act="corrReturn" data-id="${c.id}">${ic('undo')} Return</button><button class="btn btn-primary btn-xs" data-act="corrRecord" data-id="${c.id}">${ic('archive')} Record and file</button>`)), 'Nothing is waiting to be recorded.', spec('w'))}</section>
+    <section class="panel glass"><div class="panel-h"><h2>Recorded – to send on <span class="n-pill">${rec.length}</span></h2></div>
+      ${simpleTable([...head.slice(0, 5), 'Filed in', ''], rec.map(c => { const f = getFile(c.fileId); return row(c, `${read(c)}<button class="btn btn-primary btn-xs" data-act="corrSend" data-id="${c.id}">${ic('send')} Send on</button>`).replace('<td><div class="row-acts">', `<td>${f ? fileLink(f) : '—'}</td><td><div class="row-acts">`); }), 'Nothing is waiting to be sent on.', { ...spec('r'), date: [4, 'Sent from', 'Sent to'] })}</section>
+    ${past.length ? `<section class="panel glass"><div class="panel-h"><h2>Sent on or returned <span class="n-pill">${past.length}</span></h2></div>
+      ${simpleTable([...head.slice(0, 5), 'Outcome'], past.map(c => row(c, c.status === 'sent' ? `<span class="chip t-green">${ic('check')} Sent ${fmtDay(c.sentAt)}${c.how ? ' · ' + esc(c.how) : ''}</span>` : `<span class="chip t-amber">Returned to officer</span>`)), '', { ...spec('p') })}</section>` : ''}`;
+}
+function corrReadModal(c) {
+  const p = person(c.from);
+  const ctx = { ref: c.status === 'recorded' || c.status === 'sent' ? 'Recorded' : 'Draft', date: c.at, to: c.to, subject: c.subject.toUpperCase(), body: toParas(c.body), signer: { name: p.name, title: p.title }, signed: c.status === 'recorded' || c.status === 'sent', org: '' };
+  modal(`${mHead('eye', esc(c.subject), `${CORR_KIND[c.kind]} from ${esc(p.name)} · ${c.goes}`)}
+    <div class="modal-b"><div class="page corr-page"><div class="content">${tplHTML(CORR_TPL(c.kind), ctx)}</div></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${c.status === 'waiting' && role() === 'registry' ? `<button class="btn btn-light" data-act="corrReturn" data-id="${c.id}">${ic('undo')} Return</button><button class="btn btn-primary" data-act="corrRecord" data-id="${c.id}">${ic('archive')} Record and file</button>` : ''}</div>`, 'wide');
+}
+function corrRecordModal(c) {
+  modal(`${mHead('archive', 'Record and file', `${esc(c.subject)} — ${CORR_KIND[c.kind]} from ${esc(person(c.from).name)}`)}
+    <div class="modal-b"><p class="muted" style="margin-top:0">It is added to the Inward Register and filed as the next folio in the file you choose.</p>
+      <div class="field"><label for="cr-file">File <span class="req">*</span></label><select class="select" id="cr-file"><option value="">Select a file…</option>${S.files.filter(f => !f.draft && f.state !== 'Disposed').map(f => `<option value="${f.id}">${esc(f.ref)} — ${esc(f.name)}</option>`).join('')}</select></div>
+      <p class="form-err" id="cr-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="corrRecordSave" data-id="${c.id}">${ic('archive')} Record and file</button></div>`, '', '#cr-file');
+}
+function corrReturnModal(c) {
+  modal(`${mHead('undo', 'Return to officer', `${esc(c.subject)} goes back to ${esc(person(c.from).name)}.`)}
+    <div class="modal-b"><div class="field"><label for="crt">What needs to change <span class="req">*</span></label><textarea class="input" id="crt" rows="3"></textarea></div><p class="form-err" id="crt-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="corrReturnSave" data-id="${c.id}">${ic('undo')} Return</button></div>`, '', '#crt');
+}
+function corrSendModal(c) {
+  modal(`${mHead('send', 'Send on', `${esc(c.subject)} to ${esc(c.to)}`)}
+    <div class="modal-b">${c.goes === 'External'
+      ? `<div class="field"><label for="cs-how">How</label><select class="select" id="cs-how"><option>Courier</option><option>Email</option><option>Hand delivery</option><option>Registered post</option></select></div>`
+      : `<div class="field"><label for="cs-to">Send to</label><select class="select" id="cs-to"><option value="">Everyone named in “To”</option>${peopleOpts(p => p.id !== meId())}</select></div>`}</div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="corrSendSave" data-id="${c.id}">${ic('send')} Send on</button></div>`);
+}
+
+/* ---------- My correspondence (Marking and Action Officers) ---------- */
+const CORR_STATUS = { draft: ['Draft', 't-neutral'], waiting: ['With the Registry', 't-amber'], recorded: ['Recorded and filed', 't-blue'], sent: ['Sent', 't-green'], returned: ['Returned to you', 't-red'] };
+function viewMyCorrespondence(q) {
+  const list = S.corr.filter(c => c.from === meId()).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  if (q.new && !ui.corrAsked) { ui.corrAsked = true; setTimeout(() => corrStartModal(), 0); }
+  if (!q.new) ui.corrAsked = false;
+  const rows = list.map(c => { const [st, tone] = CORR_STATUS[c.status]; const f = c.fileId && getFile(c.fileId);
+    return `<tr><td><b>${esc(c.subject)}</b><small class="sub">To: ${esc(c.to || '—')}</small></td><td>${CORR_KIND[c.kind]}</td><td data-v="${c.goes}">${c.goes}</td>
+      <td data-d="${c.at}">${fmtDT(c.at)}</td><td data-v="${st}"><span class="chip ${tone}">${st}</span>${c.status === 'returned' && c.returnNote ? `<small class="sub">“${esc(c.returnNote)}”</small>` : ''}${c.status === 'sent' ? `<small class="sub">${fmtDay(c.sentAt)}${c.how ? ' · ' + esc(c.how) : ''}</small>` : ''}</td>
+      <td>${f ? fileLink(f) : '—'}</td>
+      <td><div class="row-acts">${['draft', 'returned'].includes(c.status) ? `<button class="btn btn-primary btn-xs" data-act="corrEdit" data-id="${c.id}">${ic('pen')} ${c.status === 'draft' ? 'Continue writing' : 'Fix and resend'}</button>` : `<button class="btn btn-light btn-xs" data-act="corrRead" data-id="${c.id}">${ic('eye')} Read</button>`}</div></td></tr>`; });
+  return pageHead({ crumbs: [['My correspondence']], title: 'My correspondence', sub: 'Letters, memos, circulars and notices you start yourself. You write them, the Registry Officer records them in the Inward Register and files them, then they are sent, printed or posted.', right: `<button class="btn btn-white" data-act="corrStart">${ic('fileEdit')} Start new correspondence</button>` }) +
+    `<section class="panel glass">${list.length ? simpleTable(['Subject', 'Kind', 'Goes to', 'Started', 'Status', 'Filed in', ''], rows, '', { key: 'mycorr', search: 'Search – subject or recipient', date: [3, 'Started from', 'Started to'], facets: [[1, 'Kind'], [2, 'Goes to'], [4, 'Status']] })
+      : `<div class="empty">${ic('fileEdit')}<div>You have not started any letters yet.</div><button class="btn btn-primary btn-sm" data-act="corrStart">Start new correspondence</button></div>`}</section>`;
+}
+function corrStartModal() {
+  ui.cw = { kind: 'letter', subject: '' };
+  modal(`${mHead('fileEdit', 'Start new correspondence', '')}
+    <div class="modal-b"><fieldset class="field kind-pick"><legend class="label">What are you writing?</legend>
+      ${CORR_KINDS.map(([k, l, d], i) => `<label class="kind-opt"><input type="radio" name="cw-kind" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${l}</b><small>${d}</small></span></label>`).join('')}</fieldset>
+      <div class="field"><label for="cw-subj">Subject</label><input class="input" id="cw-subj" placeholder="What is it about?"></div><p class="form-err" id="cw-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="corrStartGo">${ic('pen')} Start writing</button></div>`, '', '#cw-subj');
+}
+function corrWriteModal(c) {
+  const p = me();
+  const ctx = { ref: 'Draft', date: new Date().toISOString(), to: c.to || 'Recipient', subject: (c.subject || '').toUpperCase(), body: toParas(c.body), signer: { name: p.name, title: p.title }, signed: false, org: '' };
+  modal(`${mHead('pen', esc(c.subject), `${CORR_KIND[c.kind]} · you write it, the Registry records, files and sends it`)}
+    <div class="modal-b cw-grid">
+      <div class="cw-form">
+        <fieldset class="field radios"><legend class="label">Goes to</legend>
+          <label><input type="radio" name="cw-goes" value="Internal" ${c.goes !== 'External' ? 'checked' : ''}> Inside the ministry</label>
+          <label><input type="radio" name="cw-goes" value="External" ${c.goes === 'External' ? 'checked' : ''}> Outside the ministry</label></fieldset>
+        <div class="field"><label for="cw-to">To <span class="req">*</span></label><input class="input" id="cw-to" value="${esc(c.to || '')}" placeholder="${c.kind === 'circular' ? 'All Heads of Departments / Directorates' : 'e.g. The Director, KEMSA'}" data-cw="to"></div>
+        <div class="field"><label for="cw-subj2">Subject</label><input class="input" id="cw-subj2" value="${esc(c.subject)}" data-cw="subject"></div>
+        <div class="field"><label for="cw-body">${c.kind === 'minutes' ? 'Attendance, agenda and resolutions' : 'Text'} <span class="req">*</span></label><textarea class="input" id="cw-body" rows="9" data-cw="body">${esc(c.body || '')}</textarea></div>
+        ${c.status === 'returned' && c.returnNote ? `<div class="instruction">${ic('undo')} <b>Returned by the Registry:</b> ${esc(c.returnNote)}</div>` : ''}
+        <p class="form-err" id="cw-err2" role="alert" hidden></p>
+      </div>
+      <div class="cw-prev"><div class="page"><div class="content" id="cw-prev">${tplHTML(CORR_TPL(c.kind), ctx)}</div></div></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button><button class="btn btn-outline" data-act="corrSave" data-id="${c.id}">${ic('fileEdit')} Save draft</button><button class="btn btn-primary" data-act="corrSubmit" data-id="${c.id}">${ic('send')} Send to Registry</button></div>`, 'xwide', '#cw-to');
+}
+function corrFromForm(c) {
+  c.to = $('#cw-to').value.trim(); c.subject = $('#cw-subj2').value.trim() || c.subject; c.body = $('#cw-body').value.trim();
+  c.goes = ($$('[name=cw-goes]').find(i => i.checked) || {}).value || 'Internal';
+}
+
+/* ---------- Request Files (Marking and Action Officers) ---------- */
+function rqResults() {
+  const term = (ui.rqTerm || '').trim().toLowerCase();
+  const mineIds = new Set(S.files.filter(f => f.movements.some(m => m.to === meId())).map(f => f.id));
+  const found = term ? S.files.filter(f => !f.draft && !mineIds.has(f.id) && [f.name, f.ref, ...f.docs.map(d => d.title + ' ' + d.folio)].join(' ').toLowerCase().includes(term)) : [];
+  const asking = new Set(S.access.filter(a => a.by === meId() && a.status === 'open').map(a => a.fileId));
+  return term ? (found.length ? `<div class="results" style="margin-top:14px">${found.map(f => `<div class="result card" style="cursor:default"><span class="pg">${ic('lock')}</span><div><b>${esc(f.name)}</b><small><span class="mono">${esc(f.ref)}</span> · ${esc(regName(f.registry))} · ${plural(liveDocs(f).length, 'document')}</small></div><span style="margin-left:auto">${asking.has(f.id) ? '<span class="chip t-amber">Asked – waiting</span>' : `<button class="btn btn-primary btn-sm" data-act="rqAsk" data-id="${f.id}">${ic('lock')} Request access</button>`}</span></div>`).join('')}</div>` : `<p class="muted" style="margin:10px 4px 0">Nothing found for “${esc(ui.rqTerm.trim())}”.</p>`) : '';
+}
+function viewRequestFiles() {
+  const term = (ui.rqTerm || '').trim().toLowerCase();
+  const mineIds = new Set(S.files.filter(f => f.movements.some(m => m.to === meId())).map(f => f.id));
+  const found = term ? S.files.filter(f => !f.draft && !mineIds.has(f.id) && [f.name, f.ref, ...f.docs.map(d => d.title + ' ' + d.folio)].join(' ').toLowerCase().includes(term)) : [];
+  const asked = S.access.filter(a => a.by === meId());
+  const asking = new Set(asked.filter(a => a.status === 'open').map(a => a.fileId));
+  return pageHead({ crumbs: [['Request Files']], title: 'Request Files', sub: 'You see the files sent to you and the ones you have worked on. For any other file or letter, ask the Registry Officer.' }) +
+    `<section class="panel glass"><label class="input-icon rq-search">${ic('search')}<input class="input" id="rq-q" value="${esc(ui.rqTerm || '')}" placeholder="Search by subject, reference number, file name or folio…" autocomplete="off"><span class="sr">Search files</span></label>
+      <p class="muted" style="margin:10px 4px 0">You see only what it is. To read it, request access and say why.</p>
+      <div id="rq-res">${rqResults()}</div></section>
+    <section class="panel glass"><div class="panel-h"><h2>My requests</h2></div>${asked.length ? simpleTable(['File', 'Reason', 'Duration', 'Asked', 'Status'], asked.map(a => { const f = getFile(a.fileId); const st = { open: ['Waiting', 't-amber'], approved: ['Approved', 't-green'], declined: ['Declined', 't-red'] }[a.status] || ['—', ''];
+        return `<tr><td>${a.status === 'approved' ? fileLink(f) : `<b>${esc(f.name)}</b><small class="sub mono">${esc(f.ref)}</small>`}</td><td>${esc(a.reason)}</td><td>${plural(a.days, 'day')}</td><td data-d="${a.at}">${ago(a.at)}</td><td data-v="${st[0]}"><span class="chip ${st[1]}">${st[0]}</span>${a.status === 'approved' && a.expires ? `<small class="sub">Until ${fmtDay(a.expires)}</small>` : ''}</td></tr>`; }), '', { key: 'myreqs', search: 'Search my requests', date: [3, 'Asked from', 'Asked to'], facets: [[4, 'Status']] }) : '<p class="muted" style="margin:0">You have not asked for anything yet.</p>'}</section>`;
+}
+function rqModal(f) {
+  modal(`${mHead('lock', 'Request access', `${esc(f.name)} · ${esc(f.ref)}`)}
+    <div class="modal-b"><div class="field"><label for="rq-why">Why do you need it? <span class="req">*</span></label><textarea class="input" id="rq-why" rows="3"></textarea></div>
+      <div class="field"><label for="rq-days">For how long</label><select class="select" id="rq-days"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></div>
+      <p class="form-err" id="rq-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="rqSend" data-id="${f.id}">${ic('send')} Send request</button></div>`, '', '#rq-why');
+}
+
+/* ---------- Reports Dashboard ---------- */
+function viewReports() {
+  const files = S.files.filter(f => !f.draft), docs = files.flatMap(f => f.docs);
+  const toReg = role() === 'registry';
+  const pending = files.filter(f => ['marking', 'action', 'returned_marking', 'returned_action'].includes(f.stage));
+  const sla = pending.filter(f => daysSince(f.updated) > 7);
+  const expiring = S.access.filter(a => a.status === 'approved' && a.expires && (new Date(a.expires) - Date.now()) / 864e5 <= 30);
+  const missing = (S.censuses || []).flatMap(c => c.items || []).filter(i => i.status === 'MISSING');
+  const disposal = S.recReqs.filter(q => q.type === 'DISPOSE' && q.status !== 'Rejected');
+  const ocrReview = landingDocs(), ocrDone = docs.filter(d => d.status !== 'landing').length;
+  const tasks = pending.length + myApprovals().length;
+  const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  /* headline numbers */
+  const kpi = (icon, n, label, sub, href, tone) => `<a class="kpi glass" href="${href}"><span class="kpi-ic t-${tone}">${ic(icon)}</span><b class="kpi-n">${n}</b><span class="kpi-l">${label}</span><small>${sub}</small></a>`;
+  const kpis = [
+    kpi('folders', files.length, 'Total files', `${files.filter(f => activity(f) === 'Active').length} active · ${files.filter(f => activity(f) !== 'Active').length} semi-active`, toReg ? '#/files' : '#/queue', 'teal'),
+    kpi('file', docs.length, 'Total documents', `${docs.filter(d => daysSince(d.date) <= 30).length} added in the last 30 days`, toReg ? '#/files?show=letters' : '#/queue', 'blue'),
+    kpi('listChecks', tasks, 'Pending tasks', `${pending.length} files moving · ${myApprovals().length} approvals`, '#/queue', 'amber'),
+    kpi('clock', sla.length, 'SLA breaches', sla.length ? 'Files with an officer for more than 7 days' : 'Every file is within 7 days', '#/routing', sla.length ? 'red' : 'green'),
+  ].join('');
+
+  /* files by stage — one series, one hue; horizontal bars sorted in workflow order */
+  const stages = ['registry', ...STAGE_ORDER].map(k => [k, STAGES[k].short, files.filter(f => f.stage === k).length]);
+  const maxS = Math.max(1, ...stages.map(x => x[2]));
+  const stageChart = `<div class="hbars" role="table" aria-label="Files by stage">${stages.map(([k, l, n]) => `<a class="hbar" role="row" href="${k === 'registry' ? (toReg ? '#/files' : '#/routing') : `#/routing?stage=${k}`}" title="${l}: ${plural(n, 'file')}">
+      <span class="hb-l" role="cell">${l}</span><span class="hb-track" role="cell"><span class="hb-fill" style="width:${n ? Math.max(4, n / maxS * 100) : 0}%"></span></span><span class="hb-n" role="cell">${n}</span></a>`).join('')}</div>`;
+
+  /* documents received per week — last 8 weeks (weeks start on Monday) */
+  const wk0 = new Date(); wk0.setHours(0, 0, 0, 0); wk0.setDate(wk0.getDate() - ((wk0.getDay() + 6) % 7));
+  const per = [...Array(8)].map((_, i) => { const st = new Date(wk0); st.setDate(st.getDate() - (7 - i) * 7); const en = new Date(st); en.setDate(en.getDate() + 7);
+    return [st.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), docs.filter(d => { const t = new Date(d.date); return t >= st && t < en; }).length]; });
+  const maxM = Math.max(1, ...per.map(x => x[1]));
+  const monthChart = `<div class="vbars" role="table" aria-label="Documents received per month">${per.map(([l, n], i) => `<div class="vbar${i === per.length - 1 ? ' cur' : ''}" role="row" tabindex="0" title="Week of ${l}: ${plural(n, 'document')}"><span class="vb-n" role="cell">${n || ''}</span><span class="vb-col"><span class="vb-fill" style="height:${n ? Math.max(6, n / maxM * 100) : 0}%"></span></span><span class="vb-l" role="cell">${l}</span></div>`).join('')}</div>`;
+
+  /* needs attention — status colours always with an icon and a word */
+  const att = [
+    ['clock', 'SLA breaches', sla.length, 'Files held by an officer for more than 7 days', '#/routing', 'critical'],
+    ['calendar', 'Access expiring soon', expiring.length, 'Approved access ending within 30 days', '#/access', 'warning'],
+    ['scan', 'Missing documents', missing.length, 'Marked missing in a file census', '#/census', 'serious'],
+    ['lock', 'Under legal hold', 0, 'Files that cannot be closed or disposed of', '#/records?tab=files', 'warning'],
+    ['trash', 'Awaiting disposal', disposal.length, 'Disposal requests not yet completed', '#/records', 'warning'],
+  ];
+  const attList = `<ul class="att">${att.map(([i, l, n, d, h, sev]) => `<li><a href="${h}" class="${n ? 'sev-' + sev : 'sev-ok'}"><span class="att-ic">${ic(n ? i : 'checkCircle')}</span><span class="att-t"><b>${l}</b><small>${d}</small></span><span class="att-n">${n}</span><span class="att-s">${n ? { critical: 'Act now', serious: 'Check', warning: 'Watch' }[sev] : 'Clear'}</span></a></li>`).join('')}</ul>`;
+
+  /* OCR */
+  const jobs = ocrReview.length + 1, pct = Math.round(ocrDone / Math.max(1, ocrDone + ocrReview.length) * 100);
+  const ocr = `<div class="ocr"><div class="ocr-row"><span>Read and filed</span><b>${pct}%</b></div><div class="ocr-bar" role="img" aria-label="${pct}% of documents read and filed"><span style="width:${pct}%"></span></div>
+    <div class="ocr-grid"><a href="#/queue?tab=landing"><b>${ocrReview.length}</b><span>Waiting for review</span></a><a href="#/queue?tab=landing"><b>${jobs}</b><span>OCR jobs</span></a><div><b>${ocrDone}</b><span>Read</span></div></div></div>`;
+
+  return pageHead({ crumbs: [['Reports Dashboard']], title: 'Reports', sub: `How the registry is doing today · updated ${t}`, right: `<button class="btn btn-white" data-act="repRefresh">${ic('refresh')} Refresh</button>` }) +
+    `<section class="kpis">${kpis}</section>
+    <div class="rep-grid2">
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Files by stage</h2><span class="muted">${plural(files.length, 'file')}</span></div>${stageChart}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Documents received</h2><span class="muted">Per week · last 8 weeks</span></div>${monthChart}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>Needs attention</h2><span class="muted">${att.filter(a => a[2]).length ? plural(att.filter(a => a[2]).length, 'item') + ' to look at' : 'All clear'}</span></div>${attList}</section>
+      <section class="panel glass rep-card2"><div class="panel-h"><h2>OCR and AI reading</h2><span class="muted">Uploads</span></div>${ocr}</section>
+    </div>
+    <section class="rep-lc lc" aria-labelledby="rep-lc-h"><div class="rep-lc-h"><div><h2 id="rep-lc-h">Mail and file lifecycle</h2><p class="muted">Inward and outward mail, and files opened, closed and disposed of in the year.</p></div>
+      <select class="select lc-year" data-change="recYear" aria-label="Year">${lcYears().map(y => `<option ${+(ui.rec.year || new Date().getFullYear()) === y ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+      ${lcStats()}</section>`;
+}
+
+/* ---------- Overview extras: Open Q-BITS AI, notification channel ---------- */
+function decorateOverview(root) {
+  root.querySelectorAll('.ai-sugg').forEach(a => { if (!a.querySelector('.ai-open')) a.insertAdjacentHTML('beforeend', `<a class="ai-open" href="#/ai">${ic('sparkles')} Open Q-BITS AI ${ic('chevR')}</a>`); });
+  const emp = root.querySelector('.dash-main .empty');
+  if (emp && role() !== 'registry' && !emp.querySelector('.ask-link')) emp.insertAdjacentHTML('beforeend', `<p class="muted" style="margin:6px 0 0">You see the files sent to you and the ones you have worked on. To see any other file, ask the Registry Officer for access.</p><a class="btn btn-light btn-sm ask-link" href="#/requestfiles">${ic('search')} Find a file and ask for access</a>`);
+  root.querySelectorAll('.notif-card').forEach(n => { if (!n.querySelector('.ch')) (n.querySelector('.nfoot') || n).insertAdjacentHTML('beforeend', '<span class="ch">Email</span>'); });
+}
+/* Registry side navigation: the live Correspondence and Reports pages */
+function decorateSide(root) {
+  const reg = root.querySelector('.sidebar nav[aria-label="Registry pages"]');
+  const cur = parseHash().parts[0];
+  const link = (k, h, l, i, n) => `<a href="${h}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</a>`;
+  if (reg && !reg.querySelector('[href="#/correspondence"]')) reg.insertAdjacentHTML('beforeend', link('correspondence', '#/correspondence', 'Correspondence', 'mail', corrWaiting().length) + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
+  const main = root.querySelector('.sidebar nav.nav');
+  if (main && role() !== 'registry' && !main.querySelector('[href="#/reports"]')) {
+    main.querySelector('[data-act=requestAny]')?.remove();
+    main.insertAdjacentHTML('beforeend', link('mycorrespondence', '#/mycorrespondence', 'My correspondence', 'fileEdit', S.corr.filter(c => c.from === meId() && c.status === 'returned').length) + link('requestfiles', '#/requestfiles', 'Request files', 'filePlus') + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
+  }
+  if (['approvals', 'messages', 'correspondence', 'reports', 'mycorrespondence', 'requestfiles'].includes(cur)) root.querySelectorAll('.sidebar nav a.on').forEach(a => { if (!a.getAttribute('href').includes(cur)) { a.classList.remove('on'); a.removeAttribute('aria-current'); } });
+}
+
+/* ---------- User Manual in a side panel (opened from the Q-BITS AI hub) ---------- */
+ui.man = ui.man || { q: '', open: false };
+const MAN_FOR = () => ({ registry: 'registry', marking: 'marking', action: 'action' })[role()] || 'start';
+function manualPanelHTML() {
+  const t = ui.man.q.trim().toLowerCase(), strip = h => h.replace(/<[^>]+>/g, ' ').toLowerCase();
+  const secs = GUIDE.filter(g => !t || g.title.toLowerCase().includes(t) || strip(g.body).includes(t));
+  return `${mHead('book', 'User Manual', 'Keep it open while you work')}
+    <div class="man-tools"><label class="input-icon">${ic('search')}<input class="input" id="man-q" value="${esc(ui.man.q)}" placeholder="Search the manual…" autocomplete="off"><span class="sr">Search the manual</span></label>
+      <div class="man-toc">${GUIDE.map(g => `<button type="button" data-act="manGo" data-id="${g.id}" class="${g.id === MAN_FOR() ? 'on' : ''}">${g.title}</button>`).join('')}</div></div>
+    <div class="man-body" id="man-body">${secs.length ? secs.map(g => `<article id="man-${g.id}"><h3><span class="ic">${ic(g.icon)}</span>${g.title}</h3>${g.body}</article>`).join('') : '<p class="muted">Nothing in the manual matches that. Try Q-BITS AI → Chat.</p>'}</div>
+    <div class="modal-f"><button class="btn btn-light btn-sm" data-act="manTour">${ic('play')} Tutorial mode</button><a class="btn btn-primary btn-sm" href="#/guide" data-act="manFull">${ic('book')} Open full manual</a></div>`;
+}
+function openManual(scrollTo) {
+  let p = $('#man-panel');
+  if (!p) { p = document.createElement('aside'); p.id = 'man-panel'; p.className = 'man-panel glass'; p.setAttribute('aria-label', 'User Manual'); document.body.appendChild(p); }
+  p.innerHTML = manualPanelHTML(); ui.man.open = true; document.body.classList.add('man-open');
+  p.querySelector('[data-act=close]').dataset.act = 'manClose';
+  const id = scrollTo || MAN_FOR(); setTimeout(() => { const a = $('#man-' + id); if (a) $('#man-body').scrollTop = a.offsetTop - $('#man-body').offsetTop; $('#man-q')?.focus({ preventScroll: true }); }, 0);
+}
+function closeManual() { $('#man-panel')?.remove(); ui.man.open = false; document.body.classList.remove('man-open'); }
+
+/* ---------- File options menu (⋮ on each file card) — as in the live system ---------- */
+function openFileMenu(btn, f) {
+  closeFileMenu();
+  const reg = role() === 'registry', act = activity(f) === 'Active';
+  const it = (i, l, a, extra = '', cls = '') => `<button role="menuitem" class="${cls}" data-act="${a}" data-id="${f.id}" ${extra}><span class="i">${ic(i)}</span><span>${l}</span></button>`;
+  const groups = [
+    [`<div class="fm-stage">Stage: <b>${activity(f)}</b></div>`, ...(reg ? [it('archive', act ? 'Move to semi-active' : 'Move to active', 'fmStage')] : [])],
+    [it('info', 'View Details', 'fmDetails'),
+      ...(reg && f.stage === 'registry' ? [it('send', 'Submit to Marking Officer', 'fmSubmit')] : []),
+      ...(reg ? [it('send', 'Send outside', 'fmOutside'), it('calendar', 'Add to bring-up diary', 'fmBringup')] : [])],
+    ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub'), it('pen', 'Rename / Edit', 'fmRename'), it('swap', 'Move File', 'fmMove'), it('layers', 'Clone', 'fmClone')]] : []),
+    [it('share', 'Share', 'fmShare'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Turn notifications on' : 'Turn notifications off', 'fmNotify'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin'), it('star', f.starred ? 'Unstar File' : 'Star File', 'fmStar')],
+    ...(reg ? [[it('trash', 'Delete', 'fmDelete', '', 'danger')]] : []),
+  ];
+  const m = document.createElement('div');
+  m.id = 'file-menu'; m.className = 'acct-menu file-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', `Options for ${f.name}`);
+  m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
+  document.body.appendChild(m);
+  const z = uiZ(), b = btn.getBoundingClientRect(), r = { top: b.top / z, bottom: b.bottom / z, left: b.left / z, right: b.right / z }, h = m.offsetHeight, w = m.offsetWidth, IH = innerHeight / z, IW = innerWidth / z;
+  m.style.top = Math.max(12, Math.min(r.bottom + 6, IH - h - 12)) + 'px';
+  m.style.left = Math.max(12, Math.min(r.right - w, IW - w - 12)) + 'px';
+  m.querySelector('button')?.focus();
+  ui.fmBtn = btn;
+}
+/* "More actions" on an open file — the less frequent file actions */
+function openMoreMenu(btn, f) {
+  closeFileMenu();
+  const reg = role() === 'registry';
+  const it = (i, l, a, tone, href) => href ? `<a role="menuitem" class="t-${tone}" href="${href}" data-act="fmLink"><span class="i">${ic(i)}</span><span>${l}</span></a>`
+    : `<button role="menuitem" class="t-${tone}" data-act="${a}" data-id="${f.id}"><span class="i">${ic(i)}</span><span>${l}</span></button>`;
+  const groups = [
+    ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub', 'green'), it('pen', 'Rename / Edit', 'fmRename', 'teal'), it('swap', 'Move File', 'fmMove', 'teal'), it('layers', 'Clone', 'fmClone', 'teal')]] : []),
+    [it('share', 'Share', 'fmShare', 'sky'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Notifications: off' : 'Notifications', 'fmNotify', 'amber'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin', 'amber')],
+  ].filter(g => g.length);
+  const m = document.createElement('div');
+  m.id = 'file-menu'; m.className = 'acct-menu file-menu more-menu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', 'More actions');
+  m.innerHTML = groups.map(g => `<div class="fm-g">${g.join('')}</div>`).join('');
+  document.body.appendChild(m);
+  const z = uiZ(), b = btn.getBoundingClientRect(), r = { top: b.top / z, bottom: b.bottom / z, left: b.left / z, right: b.right / z }, h = m.offsetHeight, w = m.offsetWidth, IH = innerHeight / z, IW = innerWidth / z;
+  m.style.top = Math.max(12, r.bottom + h + 6 < IH ? r.bottom + 6 : r.top - h - 6) + 'px';
+  m.style.left = Math.max(12, Math.min(r.left, IW - w - 12)) + 'px';
+  btn.setAttribute('aria-expanded', 'true'); m.querySelector('button, a')?.focus(); ui.fmBtn = btn;
+}
+function closeFileMenu(refocus) { const m = $('#file-menu'); if (!m) return; m.remove(); ui.fmBtn?.setAttribute('aria-expanded', 'false'); if (refocus) ui.fmBtn?.focus(); }
+document.addEventListener('click', e => { if ($('#file-menu') && !e.target.closest('#file-menu') && !e.target.closest('[data-act=fileMenu], [data-act=moreActions]')) closeFileMenu(); }, true);
+document.addEventListener('keydown', e => {
+  const m = $('#file-menu'); if (!m) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeFileMenu(true); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const b = [...m.querySelectorAll('button, a')], i = b.indexOf(document.activeElement); b[(i + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length].focus(); }
+});
+function textModal(icon, title, sub, label, val, act, id, btn) {
+  modal(`${mHead(icon, title, sub)}<div class="modal-b"><div class="field"><label for="tm-v">${label}</label><input class="input" id="tm-v" value="${esc(val || '')}"></div><p class="form-err" id="tm-err" role="alert" hidden></p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="${act}" data-id="${id}">${btn}</button></div>`, '', '#tm-v');
+}
+const fmFile = el => getFile(el.dataset.id);
+const fmDo = fn => el => { const f = fmFile(el); closeFileMenu(); fn(f, el); };
+
+/* ---------- Folio selection and bulk actions ---------- */
+const fSel = fid => ((ui.fsel = ui.fsel || {})[fid] = ui.fsel[fid] || []);
+const selDocs = fid => { const f = getFile(fid); return fSel(fid).map(id => f.docs.find(d => d.id === id)).filter(Boolean); };
+document.addEventListener('click', e => { if (e.target.closest('.row-sel')) e.stopPropagation(); }, true);
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.selall) { const f = getFile(t.dataset.selall); ui.fsel[f.id] = t.checked ? [...$$('.folio-tbl tbody tr:not([hidden]) [data-sel]')].map(c => c.dataset.sel.split(':')[1]) : []; render(); }
+  else if (t.dataset.sel) { const [fid, did] = t.dataset.sel.split(':'), s2 = fSel(fid); ui.fsel[fid] = t.checked ? [...new Set([...s2, did])] : s2.filter(x => x !== did); render(); }
+});
+function pickFileModal(title, sub, act, fid) {
+  modal(`${mHead('folder', title, sub)}<div class="modal-b"><div class="field"><label for="pf-f">File</label><select class="select" id="pf-f">${S.files.filter(x => !x.draft && x.id !== fid).map(x => `<option value="${x.id}">${esc(x.name)} — ${esc(x.ref)}</option>`).join('')}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="${act}" data-id="${fid}">${title}</button></div>`, '', '#pf-f');
+}
+function shareModal(what, link) {
+  modal(`${mHead('share', 'Share', esc(what))}<div class="modal-b"><p class="muted" style="margin-top:0">Only people who can already open it will be able to use the link.</p>
+    <div class="field"><label for="sh-l">Link</label><input class="input" id="sh-l" value="${esc(link)}" readonly></div>
+    <div class="field"><label for="sh-p">Send to an officer</label><select class="select" id="sh-p"><option value="">Choose…</option>${peopleOpts(p => p.id !== meId())}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="shCopy">${ic('layers')} Copy link</button><button class="btn btn-primary" data-act="shSend">${ic('send')} Send</button></div>`);
+}
+
+function bkTransfer(fromId, toId, move) {
+  const a = getFile(fromId), b = getFile(toId), ds = selDocs(fromId);
+  let fo = parseInt(nextFolio(b), 10);
+  ds.forEach(d => { const c = move ? d : { ...JSON.parse(JSON.stringify(d)), id: nid('d') }; c.folio = String(fo++); b.docs.push(c); });
+  if (move) a.docs = a.docs.filter(d => !ds.includes(d));
+  b.updated = new Date().toISOString(); ui.fsel[fromId] = []; save(); closeModal(); render();
+  toast(`${move ? 'Moved' : 'Copied'} ${plural(ds.length, 'folio')} to ${b.name}`);
+}
+/* ---------- routes, actions and inputs ---------- */
+LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrespondence, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
+Object.assign(SCREEN_NAME, { approvals: 'Pending Approvals', messages: 'Messages', correspondence: 'Correspondence from officers', reports: 'Reports Dashboard', 'mycorrespondence': 'My correspondence', 'requestfiles': 'Request Files' });
+LIVE_AFTER = root => { addHeaderExtras(root); decorateOverview(root); decorateSide(root); const m = $('#chat-msgs'); if (m) m.scrollTop = m.scrollHeight; };
+
+Object.assign(ACT, {
+  apReview: el => apModal(S.approvals.find(a => a.id === el.dataset.id)),
+  apDecide: el => {
+    const a = S.approvals.find(x => x.id === el.dataset.id), note = ($('#ap-note')?.value || '').trim(), k = el.dataset.k;
+    if (k === 'rejected' && !note) { const e = $('#ap-err'); e.textContent = 'Write why you are rejecting it, so the officer knows what to change.'; e.hidden = false; $('#ap-note').focus(); return; }
+    Object.assign(a, { status: k, decidedBy: meId(), decidedAt: new Date().toISOString(), note });
+    notify(a.by, `${a.type.replace(/^Document \(EDMS\) - /, '')} #${a.no} was ${k}.`, meId(), a.fileId || null);
+    save(); closeModal(); render(); toast(`${a.type.replace(/^Document \(EDMS\) - /, '')} #${a.no} ${k}`);
+  },
+  chatOpen: el => { ui.chat.id = el.dataset.id || null; if (location.hash !== '#messages' && !location.hash.startsWith('#messages')) go('#/messages'); else render(); setTimeout(() => $('#chat-in')?.focus(), 0); },
+  chatNew: () => chatNewModal(),
+  chatAdd: el => chatNewModal(el.dataset.id),
+  chatInfo: el => { const c = S.chats.find(x => x.id === el.dataset.id); modal(`${mHead('info', chatName(c), c.group ? 'Group conversation' : 'Direct message')}<div class="modal-b"><ul class="cn-members">${c.members.map(m => `<li>${avatar(m)} <span><b>${esc(person(m).name)}</b><small>${esc(person(m).title)}</small></span></li>`).join('')}</ul></div><div class="modal-f"><button class="btn btn-light" data-act="close">Close</button></div>`); },
+  chatCreate: () => {
+    const ids = $$('.cn-people input:checked').map(i => i.value), title = $('#cn-title').value.trim(), msg = $('#cn-msg').value.trim(), err = $('#cn-err');
+    if (!ids.length) { err.textContent = 'Choose at least one person.'; err.hidden = false; return; }
+    if (ids.length > 1 && !title) { err.textContent = 'Give the group a name.'; err.hidden = false; $('#cn-title').focus(); return; }
+    let c = ids.length === 1 && S.chats.find(x => !x.group && x.members.includes(meId()) && x.members.includes(ids[0]));
+    if (!c) { c = { id: nid('c'), title: ids.length > 1 ? title : '', group: ids.length > 1, members: [meId(), ...ids], msgs: [], read: {} }; S.chats.unshift(c); }
+    if (msg) c.msgs.push({ by: meId(), at: new Date().toISOString(), text: msg });
+    ui.chat.id = c.id; save(); closeModal(); go('#/messages');
+  },
+  chatAddSave: el => {
+    const c = S.chats.find(x => x.id === el.dataset.id), ids = $$('.cn-people input:checked').map(i => i.value);
+    if (!ids.length) { const e = $('#cn-err'); e.textContent = 'Choose at least one person.'; e.hidden = false; return; }
+    ids.forEach(id => { c.members.push(id); c.msgs.push({ sys: true, at: new Date().toISOString(), text: `${me().name} added ${person(id).name}` }); });
+    save(); closeModal(); render();
+  },
+  corrRead: el => corrReadModal(S.corr.find(c => c.id === el.dataset.id)),
+  corrRecord: el => corrRecordModal(S.corr.find(c => c.id === el.dataset.id)),
+  corrRecordSave: el => {
+    const c = S.corr.find(x => x.id === el.dataset.id), f = getFile($('#cr-file').value);
+    if (!f) { const e = $('#cr-err'); e.textContent = 'Choose the file to put it in.'; e.hidden = false; return; }
+    const p = person(c.from), serial = S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length + 1;
+    const d = { id: nid('d'), folio: String(nextFolio(f)), title: c.subject, kind: CORR_TPL(c.kind) === 'memo' ? 'memo' : 'letter', mime: 'PDF', from: p.name, date: new Date().toISOString(), edms: 'EDMS-0001-2026-' + String(S.seq + 40).padStart(7, '0'),
+      pages: 1, sizeKB: 120, minutes: [], stickies: [], signed: true, status: 'filed', to: c.to, subject: c.subject.toUpperCase(), body: toParas(c.body), uploadedBy: meId(), serial, confidentiality: 'Internal', crossRefs: [], enclosures: [] };
+    f.docs.push(d); f.updated = new Date().toISOString();
+    Object.assign(c, { status: 'recorded', fileId: f.id, docId: d.id, recordedAt: d.date });
+    notify(c.from, `Your ${CORR_KIND[c.kind].toLowerCase()} “${c.subject}” was recorded and filed.`, meId(), f.id);
+    save(); closeModal(); render(); toast(`Recorded as IN/26/${String(serial).padStart(3, '0')} and filed in ${f.name}`);
+  },
+  corrReturn: el => corrReturnModal(S.corr.find(c => c.id === el.dataset.id)),
+  corrReturnSave: el => {
+    const c = S.corr.find(x => x.id === el.dataset.id), why = $('#crt').value.trim();
+    if (!why) { const e = $('#crt-err'); e.textContent = 'Say what needs to change.'; e.hidden = false; $('#crt').focus(); return; }
+    Object.assign(c, { status: 'returned', returnNote: why, returnedAt: new Date().toISOString() });
+    notify(c.from, `“${c.subject}” was returned to you: ${why}`, meId(), null);
+    save(); closeModal(); render(); toast(`Returned to ${person(c.from).name}`);
+  },
+  corrSend: el => corrSendModal(S.corr.find(c => c.id === el.dataset.id)),
+  corrSendSave: el => {
+    const c = S.corr.find(x => x.id === el.dataset.id), how = $('#cs-how')?.value || '', to = $('#cs-to')?.value || '';
+    Object.assign(c, { status: 'sent', sentAt: new Date().toISOString(), how: how || (to ? 'to ' + person(to).name : 'Internal') });
+    if (to) notify(to, `${CORR_KIND[c.kind]}: ${c.subject}`, c.from, c.fileId);
+    if (c.goes === 'External' && c.docId) S.dispatch[c.docId] = c.sentAt;
+    save(); closeModal(); render(); toast(`${c.subject} sent on`);
+  },
+  repRefresh: () => { render(); toast('Reports refreshed'); },
+  fileMenu: (el, e) => { e.stopPropagation(); const f = getFile(el.dataset.id); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openFileMenu(el, f); },
+  qbitsUsers: () => toast('User management opens in the Q-BITS ERP (not part of this mockup)'),
+  regAdd: () => textModal('building', 'New registry', 'Files can then be opened in it', 'Registry name', '', 'regAddSave', '', `${ic('plus')} Create registry`),
+  regAddSave: () => { const v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'Give the registry a name.'; e2.hidden = false; return; } REGISTRIES.push({ id: nid('r'), name: v }); closeModal(); render(); toast(`${v} created`); },
+  moreActions: (el, e) => { e.stopPropagation(); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openMoreMenu(el, getFile(el.dataset.id)); },
+  fmLink: el => { closeFileMenu(); go(el.getAttribute('href')); },
+  fmStage: fmDo(f => { f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} moved to ${f.activity.toLowerCase()}`); }),
+  fmDetails: fmDo(f => { ui.fileTab = role() === 'registry' ? 'cover' : 'details'; go(`#/file/${f.id}`); }),
+  fmSubmit: fmDo(f => sendModal(f, 'marking')),
+  fmOutside: fmDo(f => sendOutsideModal(f)),
+  fmBringup: fmDo(f => bringupModal(f.id)),
+  fmSub: fmDo(f => textModal('folderPlus', 'New Sub-File', `Inside ${esc(f.name)}`, 'Sub-file name', '', 'fmSubSave', f.id, `${ic('folderPlus')} Create sub-file`)),
+  fmSubSave: el => { const p = getFile(el.dataset.id), v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'Give the sub-file a name.'; e2.hidden = false; return; }
+    const n = S.files.filter(x => x.parent === p.id).length + 1;
+    S.files.unshift({ ...JSON.parse(JSON.stringify(p)), id: nid('f'), name: v, ref: `${p.ref}/${n}`, parent: p.id, docs: [], movements: [], stage: 'registry', withUser: null, markedTo: null, updated: new Date().toISOString(), starred: false, pinned: false, activity: undefined });
+    save(); closeModal(); render(); toast(`Sub-file ${p.ref}/${n} created`); },
+  fmRename: fmDo(f => textModal('pen', 'Rename / Edit', esc(f.ref), 'File name', f.name, 'fmRenameSave', f.id, `${ic('check')} Save`)),
+  fmRenameSave: el => { const f = getFile(el.dataset.id), v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'The name cannot be empty.'; e2.hidden = false; return; } f.name = v; save(); closeModal(); render(); toast('File renamed'); },
+  fmMove: fmDo(f => modal(`${mHead('swap', 'Move File', esc(f.name))}<div class="modal-b"><div class="field"><label for="mv-r">Registry</label><select class="select" id="mv-r">${REGISTRIES.map(r => `<option value="${r.id}" ${r.id === f.registry ? 'selected' : ''}>${r.name}</option>`).join('')}</select></div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="fmMoveSave" data-id="${f.id}">${ic('swap')} Move</button></div>`, '', '#mv-r')),
+  fmMoveSave: el => { const f = getFile(el.dataset.id); f.registry = $('#mv-r').value; save(); closeModal(); render(); toast(`Moved to ${regName(f.registry)}`); },
+  fmClone: fmDo(f => { const c = { ...JSON.parse(JSON.stringify(f)), id: nid('f'), name: `Copy of ${f.name}`, ref: f.ref + '-C', docs: [], movements: [], stage: 'registry', withUser: null, markedTo: null, updated: new Date().toISOString(), starred: false, pinned: false };
+    S.files.unshift(c); save(); render(); toast(`Cloned as “${c.name}” – same cover and settings, no documents`); }),
+  fmShare: fmDo(f => shareModal(`${f.name} · ${f.ref}`, `${location.origin}${location.pathname}#/file/${f.id}`)),
+  fmNotify: fmDo(f => { f.muted = !f.muted; save(); toast(f.muted ? `Notifications off for ${f.name}` : `Notifications on for ${f.name}`); }),
+  fmPin: fmDo(f => { f.pinned = !f.pinned; save(); render(); toast(f.pinned ? `${f.name} pinned to the top` : 'Unpinned'); }),
+  fmStar: fmDo(f => { f.starred = !f.starred; save(); render(); }),
+  fmDelete: fmDo(f => modal(`${mHead('trash', 'Delete this file?', esc(f.name))}<div class="modal-b"><p style="margin-top:0">${liveDocs(f).length ? `It holds ${plural(liveDocs(f).length, 'document')}. Deleting removes the file and its folios from EDRMS.` : 'It holds no documents.'} This cannot be undone. To keep the record but stop using it, move it to semi-active instead.</p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="fmDeleteSave" data-id="${f.id}">${ic('trash')} Delete file</button></div>`)),
+  fmDeleteSave: el => { const f = getFile(el.dataset.id); S.files = S.files.filter(x => x.id !== f.id); save(); closeModal(); go('#/files'); toast(`${f.name} deleted`); },
+  shCopy: () => { const i = $('#sh-l'); i.select(); try { navigator.clipboard?.writeText(i.value); } catch (e) {} toast('Link copied'); },
+  shSend: () => { const to = $('#sh-p').value; if (!to) { $('#sh-p').focus(); return; } notify(to, `Shared with you: ${$('#overlay .modal-h p, #overlay .mh-sub')?.textContent || 'a document'}`, meId(), null); closeModal(); toast(`Shared with ${person(to).name}`); },
+  starFolio: (el, e) => { e.stopPropagation(); const d = getFile(el.dataset.f).docs.find(x => x.id === el.dataset.d); d.starred = !d.starred; save(); render(); },
+  starOnly: () => { ui.fStarOnly = !ui.fStarOnly; render(); },
+  bkClear: el => { ui.fsel[el.dataset.id] = []; render(); },
+  bkView: el => go(`#/file/${el.dataset.id}/letter/${fSel(el.dataset.id)[0]}`),
+  bkVersions: el => { ui.letterTab = 'versions'; go(`#/file/${el.dataset.id}/letter/${fSel(el.dataset.id)[0]}`); },
+  bkStar: el => { const ds = selDocs(el.dataset.id), on = !ds.every(d => d.starred); ds.forEach(d => { d.starred = on; }); save(); render(); toast(on ? `Starred ${plural(ds.length, 'folio')}` : 'Unstarred'); },
+  bkDownload: el => toast(`Downloading ${plural(selDocs(el.dataset.id).length, 'document')} as a zip`),
+  bkShare: el => { const ds = selDocs(el.dataset.id); shareModal(ds.length === 1 ? ds[0].title : plural(ds.length, 'document'), `${location.origin}${location.pathname}#/file/${el.dataset.id}/letter/${ds[0].id}`); },
+  bkMove: el => pickFileModal('Move', `${plural(fSel(el.dataset.id).length, 'folio')} go to another file and take its next folio numbers.`, 'bkMoveSave', el.dataset.id),
+  bkCopy: el => pickFileModal('Copy to File', `A copy goes into the other file; the original stays here.`, 'bkCopySave', el.dataset.id),
+  bkMoveSave: el => bkTransfer(el.dataset.id, $('#pf-f').value, true),
+  bkCopySave: el => bkTransfer(el.dataset.id, $('#pf-f').value, false),
+  bkRemove: el => { const n = fSel(el.dataset.id).length; modal(`${mHead('trash', 'Remove from file?', plural(n, 'folio'))}<div class="modal-b"><p style="margin-top:0">They are taken out of this file. Folio numbers already given are not reused.</p></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="bkRemoveSave" data-id="${el.dataset.id}">${ic('trash')} Remove</button></div>`); },
+  bkRemoveSave: el => { const f = getFile(el.dataset.id), ids = fSel(f.id); f.docs = f.docs.filter(d => !ids.includes(d.id)); ui.fsel[f.id] = []; save(); closeModal(); render(); toast(`Removed ${plural(ids.length, 'folio')}`); },
+  logout: (orig => (...a) => { closeManual(); return orig(...a); })(ACT.logout),
+  fabGuide: () => { setFab(false); if ($('#man-panel')) closeManual(); else openManual(); },
+  manClose: () => closeManual(),
+  manGo: el => { $$('.man-toc button').forEach(b => b.classList.toggle('on', b === el)); const a = $('#man-' + el.dataset.id), body = $('#man-body'); if (!a) { ui.man.q = ''; openManual(el.dataset.id); return; } body.scrollTo({ top: a.offsetTop - body.offsetTop, behavior: 'smooth' }); },
+  manTour: () => { closeManual(); ui.guideMode = 'tour'; go('#/guide'); },
+  manFull: () => { closeManual(); },
+  corrStart: () => corrStartModal(),
+  corrStartGo: () => {
+    const subj = $('#cw-subj').value.trim(), kind = ($$('[name=cw-kind]').find(i => i.checked) || {}).value || 'letter';
+    if (!subj) { const e = $('#cw-err'); e.textContent = 'Write the subject first.'; e.hidden = false; $('#cw-subj').focus(); return; }
+    const c = { id: nid('co'), subject: subj, kind, from: meId(), goes: kind === 'letter' || kind === 'forwarding' ? 'External' : 'Internal', to: '', at: new Date().toISOString(), status: 'draft', body: '' };
+    S.corr.unshift(c); save(); if (!location.hash.startsWith('#mycorrespondence')) go('#/mycorrespondence'); else render(); corrWriteModal(c);
+  },
+  corrEdit: el => corrWriteModal(S.corr.find(c => c.id === el.dataset.id)),
+  corrSave: el => { const c = S.corr.find(x => x.id === el.dataset.id); corrFromForm(c); if (c.status !== 'returned') c.status = 'draft'; save(); closeModal(); render(); toast('Draft saved'); },
+  corrSubmit: el => {
+    const c = S.corr.find(x => x.id === el.dataset.id); corrFromForm(c);
+    const e = $('#cw-err2');
+    if (!c.to) { e.textContent = 'Say who it goes to.'; e.hidden = false; $('#cw-to').focus(); return; }
+    if (!c.body) { e.textContent = 'Write the text before sending it to the Registry.'; e.hidden = false; $('#cw-body').focus(); return; }
+    Object.assign(c, { status: 'waiting', at: new Date().toISOString(), returnNote: '' });
+    notify('registry', `${CORR_KIND[c.kind]} from ${me().name}: ${c.subject}`, meId(), null);
+    save(); closeModal(); render(); toast('Sent to the Registry to record and file');
+  },
+  rqAsk: el => rqModal(getFile(el.dataset.id)),
+  rqSend: el => {
+    const why = $('#rq-why').value.trim();
+    if (!why) { const e = $('#rq-err'); e.textContent = 'Say why you need it.'; e.hidden = false; $('#rq-why').focus(); return; }
+    S.access.unshift({ id: nid('a'), by: meId(), fileId: el.dataset.id, reason: why, days: +$('#rq-days').value, at: new Date().toISOString(), status: 'open' });
+    notify('registry', 'Requested a file.', meId(), el.dataset.id);
+    save(); closeModal(); render(); toast('Request sent to the Registry');
+  },
+});
+document.addEventListener('input', e => {
+  if (e.target.id !== 'chat-q') return;
+  ui.chat.q = e.target.value;
+  const box = $('#chat-items'); if (!box) return;
+  const t = ui.chat.q.trim().toLowerCase();
+  box.querySelectorAll('.chat-it').forEach(b => { b.hidden = !!t && !b.textContent.toLowerCase().includes(t); });
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'rq-q') { ui.rqTerm = t.value; const r = $('#rq-res'); if (r) r.innerHTML = rqResults(); return; }
+  if (t.dataset.cw && $('#cw-prev')) {
+    const p = me(), kind = (S.corr.find(c => c.id === $('[data-act=corrSubmit]')?.dataset.id) || {}).kind || 'letter';
+    $('#cw-prev').innerHTML = tplHTML(CORR_TPL(kind), { ref: 'Draft', date: new Date().toISOString(), to: $('#cw-to').value || 'Recipient', subject: ($('#cw-subj2').value || '').toUpperCase(), body: toParas($('#cw-body').value), signer: { name: p.name, title: p.title }, signed: false, org: '' });
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id !== 'man-q') return;
+  ui.man.q = e.target.value;
+  const t = ui.man.q.trim().toLowerCase(), strip = h => h.replace(/<[^>]+>/g, ' ').toLowerCase(), body = $('#man-body');
+  const secs = GUIDE.filter(g => !t || g.title.toLowerCase().includes(t) || strip(g.body).includes(t));
+  body.innerHTML = secs.length ? secs.map(g => `<article id="man-${g.id}"><h3><span class="ic">${ic(g.icon)}</span>${g.title}</h3>${g.body}</article>`).join('') : '<p class="muted">Nothing in the manual matches that. Try Q-BITS AI → Chat.</p>';
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#man-panel') && !$('#overlay')) closeManual(); });
+document.addEventListener('submit', e => {
+  const f = e.target.closest('.chat-send'); if (!f) return; e.preventDefault();
+  const inp = f.querySelector('#chat-in'), text = inp.value.trim(); if (!text) return;
+  const c = S.chats.find(x => x.id === f.dataset.chat);
+  c.msgs.push({ by: meId(), at: new Date().toISOString(), text }); c.read[meId()] = new Date().toISOString();
+  save(); render(); setTimeout(() => $('#chat-in')?.focus(), 0);
+});
+
+render();
