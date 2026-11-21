@@ -2478,3 +2478,11 @@ html { zoom: var(--z); }
 @media (max-width: 920px) { .login-brand h1 { font-size: 32px; } }
 /* Reports › Files chart */
 .lc-fbars .hb-l { font-size: 14px; }
+
+/* Notifications: buttons to go straight to the file or the document */
+.notif-card .nfoot { flex-wrap: wrap; }
+.notif-card .n-go { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.notif-card .n-go .btn { height: 28px; padding: 0 10px; font-size: 12.5px; gap: 5px; }
+.notif-card .n-go .btn svg { width: 14px; height: 14px; }
+.notif-card .n-go .btn-light { background: rgba(0,127,123,.08); color: #00625f; }
+[data-theme="dark"] .notif-card .n-go .btn-light { background: rgba(143,227,218,.12); color: #8fe3da; }

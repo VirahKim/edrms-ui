@@ -450,7 +450,10 @@ function notifCard(n) {
     <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc(f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><a>View</a></div>
     <p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
-    <div class="nfoot"><span class="ago">${ago(n.at)}</span></div></div>`;
+    <div class="nfoot"><span class="ago">${ago(n.at)}</span>${(() => {
+      if (!f.id) return '';
+      const d = (n.docId && f.docs.find(x => x.id === n.docId)) || [...f.docs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+      return `<span class="n-go"><button type="button" class="btn btn-light btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}" aria-label="Open file ${esc(f.name)}">${ic('folder')} Open file</button>${d ? `<button type="button" class="btn btn-primary btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}/doc/${d.id}" aria-label="Open document ${esc(d.title)}">${ic('file')} Open document</button>` : ''}</span>`; })()}</div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
@@ -2382,6 +2385,7 @@ const ACT = {
     setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('#icon-menu') && !e.target.closest('.ph-more')) { $('#icon-menu')?.remove(); el.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', off); } }), 0);
     menu.querySelector('button')?.focus(); },
   openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } },
+  notifGo: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); } closeModal(); go(el.dataset.to); },
   seeMinute: el => { ui.hlMin = `${el.dataset.doc}:${el.dataset.n}`; go(`#/file/${el.dataset.file}/letter/${el.dataset.doc}`);
     setTimeout(() => { const m = document.querySelector('.note-item.hl'); if (m) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 80); },
   readAll: () => { myNotifs().forEach(n => n.read = true); save(); closeModal(); render(); },

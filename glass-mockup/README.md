@@ -262,7 +262,7 @@ Sign in as each role to see every state the system can show:
 - **Marking Officer (Vera):** Senate of Kenya is waiting for marking; Q4 Documents was *sent back for re-marking*. Notifications cover For marking, Sent back, Done (the officer finished) and Approval needed.
 - **Registry (John):** ACME Company Ltd was *returned from marking* (marked to Virah, ready to send on); CodexAI and Measles-Rubella were *returned from action*. Notifications cover Returned, Marked, Requested (file and access), Delegated and new Correspondence.
 - **Document states:** Landing, Draft, Pending approval, Approved, Rejected, Returned for rework, Signed, Sent, Locked, Archived and Filed — each with its own chip.
-- Every notification shows its kind and opens the right place (the file, Request files, Approvals, Correspondence). The *Marking instruction* strip has a **See minute** link that opens the letter and highlights the minute the instruction came from.
+- Every notification shows its kind and opens the right place (the file, Request files, Approvals, Correspondence). Each one about a file also has **Open file** and **Open document** buttons (the document named in the notification, else the newest in the file). The *Marking instruction* strip has a **See minute** link that opens the letter and highlights the minute the instruction came from.
 - More actions has **Add document**; File grid and the Cover button next to Upload were removed.
 
 ### File Lifecycle (Registry)
