@@ -389,7 +389,7 @@ function extReadModal(x) {
       ${x.note ? `<p><b>Message:</b> ${esc(x.note)}</p>` : ''}${x.returnNote ? `<div class="instruction sent-back">${ic('undo')}<div><b>Returned</b> – ${esc(x.returnNote)}</div></div>` : ''}
       <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF</small></div></div>`).join('')}</div>
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Accept</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Accept</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
 }
 Object.assign(ACT, {
   extTab: (el, e) => { e?.preventDefault(); ui.extTab = el.dataset.k; render(); },
@@ -407,3 +407,23 @@ Object.assign(ACT, {
     if (!S.senders.some(s => s.name.toLowerCase() === x.org.toLowerCase())) S.senders.push({ id: nid('ms'), name: x.org, as: 'sender', on: true });
     save(); closeModal(); go(letterOpen(l)); setTimeout(() => letterSendModal([l.id], 'marking'), 60); toast(`Registered as ${letterNo(l)}. Choose the Marking Officer.`); },
 });
+
+/* ---------- Incoming for me: correspondence from outside sent to the signed-in officer ---------- */
+(function moreOutside() {
+  const add = x => { if (!S.outside.items.some(y => y.id === x.id)) S.outside.items.push(x); };
+  add({ id: 'x5', ref: 'EXT-2026-000005', at: daysAgo(0, 9, 40), org: 'Kilima County Department of Health', person: 'Dr. Amina Wekesa', email: 'health@kilima.example', subject: 'Request for Cold Chain Equipment (copy for the PS)', files: ['01-Kilima-County-Cold-Chain-Request.pdf'], forWho: 'vera', status: 'received', note: 'Copy for the Principal Secretary.' });
+  add({ id: 'x6', ref: 'EXT-2026-000006', at: daysAgo(1, 14, 5), org: 'Afya Bora Medical Supplies Ltd', person: 'Mary Njeri', email: 'accounts@afyabora.example', subject: 'Invoice INV-2026-0937', files: ['07-Afya-Bora-Invoice-INV-2026-0937.pdf'], forWho: 'virah', status: 'toregister', note: 'Invoice for the vaccine carriers delivered on 13 November.' });
+  add({ id: 'x7', ref: 'EXT-2026-000007', at: daysAgo(3, 10, 20), org: 'Health Sector Partners Forum', person: 'Ruth Wanjiru', email: 'secretariat@hspf.example', subject: 'Invitation to the Health Sector Partners Forum', files: ['08-Health-Sector-Forum-Invitation.pdf'], forWho: 'virah', status: 'registered' });
+  save();
+})();
+const incomingForMe = () => S.outside.items.filter(x => x.forWho === meId()).sort((a, b) => b.at.localeCompare(a.at));
+function viewIncoming() {
+  const list = incomingForMe();
+  return pageHead({ crumbs: [['Incoming for me']], title: 'Incoming for Me', sub: 'Correspondence from outside the organisation that was sent to you. Open one to read it; the Registry registers it and routes it to you.' }) + `
+    <section class="panel glass inc-list">${list.length ? list.map(x => `<div class="inc-row${x.seen ? '' : ' unseen'}">
+      <div class="inc-main"><b>${esc(x.subject)}</b><small>From <b>${esc(x.org)}</b> · ${esc(x.ref)} · sent ${fmtDT(x.at)}</small></div>
+      <span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span>
+      <button class="btn btn-outline btn-sm" data-act="incOpen" data-id="${x.id}">${ic('eye')} Open</button></div>`).join('')
+      : `<div class="empty">${ic('checkCircle')}<div>Nothing has been sent to you from outside.</div></div>`}</section>`;
+}
+ACT.incOpen = el => { const x = S.outside.items.find(y => y.id === el.dataset.id); if (!x) return; x.seen = true; save(); render(); extReadModal(x); };

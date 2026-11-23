@@ -265,8 +265,8 @@ Sign in as each role to see every state the system can show:
 - Every notification shows its kind and opens the right place (the file, Request files, Approvals, Correspondence). Each one about a file also has **Open file** and **Open document** buttons (the document named in the notification, else the newest in the file). The *Marking instruction* strip has a **See minute** link that opens the letter and highlights the minute the instruction came from.
 - More actions has **Add document**; File grid and the Cover button next to Upload were removed.
 
-### File Lifecycle (Registry)
-The live *Files & Records* page, renamed **File Lifecycle** and added to the Registry side menu (the count shows requests awaiting approval). - **Requests** – open a new temporary file, close a file or dispose of a closed file. Each one goes for approval; the list below can be searched and filtered by request type, status and date.
+### Files & Records (Registry)
+The live *Files & Records* page, renamed **Files & Records** and added to the Registry side menu (the count shows requests awaiting approval). - **Requests** – open a new temporary file, close a file or dispose of a closed file. Each one goes for approval; the list below can be searched and filtered by request type, status and date.
 - **Files** – every file with its state (Open, Closed, Disposed) and stage (Active, Semi-active), location, documents and last folio. Filter by state and stage; move a file to semi-active or back, or start a closing or disposal request from the row.
 - **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
 - The statistics moved to the **Reports Dashboard** under *Mail and file lifecycle*: mail counts as tiles, files as two bar charts (opened, closed and disposed in the year; open, closed, awaiting approval and overdue bring-ups right now), and mail by month.
@@ -282,6 +282,9 @@ Uploading from a file page (*Upload to this file*) still files straight into tha
 
 ### File Movement
 My Queue › File Movement is the file movement register: one row each time a whole file leaves the Registry for an Action Officer, with the columns **Date, Reference, Subject, Action Officer, RM, Receiving Officer, Date, Returned**. RM is the Registry officer who released the file. Action Officers see the rows for files sent to them. Files are sent with *Send to Action Officer* on the file (the Marking Officer no longer receives files).
+
+### Incoming for me
+Every role has *Incoming for me* in the side navigation (after My Queue): correspondence from outside the organisation that was sent to the signed-in officer, with its status (New, Received, Being registered, Registered, Returned). *Open* shows the sender, message and attachments; for officers the Registry registers it and routes it to them, and once registered it links to the letter in the EDRMS. The count shows items not yet opened.
 
 ### Upload › From Outside
 A fifth Upload tab for the Registry, as in the live system: switch *Accept submissions from outside* on or off, copy the submission link, and set the name senders see (*Shown as*). Submissions are listed with **All, New, Received, To register, Registered, Returned** and a search. *Accept* takes one into the EDRMS, *Register* records it as a new letter in the Inward Register and asks which Marking Officer to send it to, and *Return* sends it back with a reason.

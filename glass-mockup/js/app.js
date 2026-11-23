@@ -309,7 +309,7 @@ function encodeRoute(h) {
   return '#' + seg.join('-');
 }
 /* Names used by Back links: "Back to Registries & Files" */
-const SCREEN_NAME = { correspondence: 'Correspondence', letter: 'Letter', files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'File Lifecycle', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+const SCREEN_NAME = { incoming: 'Incoming for me', correspondence: 'Correspondence', letter: 'Letter', files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'Files & Records', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
@@ -460,13 +460,14 @@ function navItems() {
   /* Registries & Files is the Registry's page; Marking and Action Officers work from My Queue */
   return [['dashboard', '#/', 'Overview', 0, 'grid'], ['upload', '#/upload', 'Upload Document', 0, 'upload'], ...(reg ? [['files', '#/files', 'Registries & Files', 0, 'folders']] : []),
     ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length, 'listChecks'],
+    ['incoming', '#/incoming', 'Incoming for me', typeof incomingForMe === 'function' ? incomingForMe().filter(x => !x.seen).length : 0, 'inboxIn'],
     reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
     ['settings', '#/settings', 'Settings', 0, 'settings']];
 }
 /* Registry pages in the side navigation (moved out of Settings) */
 const REG_PAGES = () => [['inward', '#/inward', 'Inward Register', landingDocs().length, 'inboxIn'], ['outward', '#/outward', 'Outward Register', 0, 'send'],
   ['access', '#/access', 'Access Requests', S.access.filter(a => a.status === 'open').length, 'lock'], ['physical', '#/physical', 'Physical Files', 0, 'archive'],
-  ['records', '#/records', 'File Lifecycle', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'layers']];
+  ['records', '#/records', 'Files & Records', S.recReqs.filter(x => x.status === 'Awaiting approval').length, 'layers']];
 function topNav() {
   const items = navItems();
   return `<nav class="topnav" aria-label="Main">${items.map(([k, h, l, c]) => k === 'request' ? '<button type="button" data-act="requestAny">Request file</button>' : `<a href="${h}" class="${curNav === k ? 'on' : ''}" ${curNav === k ? 'aria-current="page"' : ''}>${l}${c ? `<span class="count">${c}</span>` : ''}</a>`).join('')}</nav>`;
@@ -1440,13 +1441,13 @@ function rackModal(h) {
 }
 
 /* ==========================================================================
-   File Lifecycle: open (TY), close, dispose — each approved first
+   Files & Records: open (TY), close, dispose — each approved first
    ========================================================================== */
 const REC_TYPES = { OPEN: ['Open a new temporary file', 'File opening'], CLOSE: ['Close a file', 'File closing'], DISPOSE: ['Dispose of a closed file', 'File disposal'] };
 const REC_REASONS = { OPEN: ['New subject with no existing file', 'Correspondence waiting for a permanent file', 'Existing file is full – new volume needed'], CLOSE: ['Matter concluded', 'File is full', 'Subject merged into another file', 'No action for over two years'], DISPOSE: ['Retention period has ended', 'Duplicate of another file', 'Transferred to the National Archives'] };
 const REC_STATUS = { 'Awaiting approval': 't-amber', Approved: 't-green', Rejected: 't-red', Cancelled: 't-neutral', 'Could not be applied': 't-red' };
 const LC_TABS = [['requests', 'Requests', 'send'], ['files', 'Files', 'folders'], ['registers', 'Registers', 'book']];
-/* The registers on the File Lifecycle page: each one a list of rows for the chosen year */
+/* The registers on the Files & Records page: each one a list of rows for the chosen year */
 const LC_REGS = { open: 'File opening register', close: 'File closing register', dispose: 'File disposal register', inward: 'Inward mail register', outward: 'Outward mail register' };
 function lcRegister(kind, year) {
   const inYear = d => d && new Date(d).getFullYear() === +year;
@@ -1527,8 +1528,8 @@ function viewRecords(q) {
         <button class="btn btn-light lc-dl" data-act="recRegExcel">${ic('download')} Download Excel</button></div>
       ${simpleTable(head, rows.map(r => `<tr>${r.map((c, i) => `<td${i === 0 || head[i] === 'Reference' || head[i] === 'File' ? ' class="mono"' : ''}>${esc(c)}</td>`).join('')}</tr>`), `No entries in the ${LC_REGS[R.reg].toLowerCase()} for ${R.year}.`, { key: 'lcreg-' + R.reg, search: 'Search this register', paged: true })}</section>`;
   }
-  return pageHead({ crumbs: [['Overview', '#/'], ['File Lifecycle']], title: 'File Lifecycle', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', back: ['Back to Overview', '#/'] }) + `
-    <nav class="set-tabs" aria-label="File Lifecycle sections">${LC_TABS.map(([k, l, i]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/records?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
+  return pageHead({ crumbs: [['Overview', '#/'], ['Files & Records']], title: 'Files and records', sub: 'Open, close and dispose of files. Each one is approved before it takes effect.', back: ['Back to Overview', '#/'] }) + `
+    <nav class="set-tabs" aria-label="Files & Records sections">${LC_TABS.map(([k, l, i]) => `<a class="set-tab ${k === tab ? 'on' : ''}" href="#/records?tab=${k}" ${k === tab ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>
     <div class="lc">${body}</div>`;
 }
 
@@ -1805,7 +1806,7 @@ const SET_TABS = () => [
   ['prefs', 'settings', 'Preferences'],
   ['registries', 'building', 'Registries'],
   ['accounts', 'mail', 'External Accounts'],
-  ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'File Lifecycle']] : []),
+  ...(role() === 'registry' ? [['senders', 'send', 'Mail Senders'], ['records', 'layers', 'Files & Records']] : []),
   ['profile', 'user', 'My Profile'],
   ['issues', 'scan', 'Reported Issues'],
   ['demo', 'refresh', 'Demo data'],
@@ -1835,7 +1836,7 @@ function viewSettings(q = {}) {
     body = head('send', 'Mail Senders', `<a class="btn btn-primary btn-sm" href="#/senders">${ic('users')} Manage senders</a>`) + `<p class="set-note">The names used in the Inward and Outward Registers. ${S.senders.filter(x => x.on).length} in use, ${S.senders.filter(x => !x.on).length} switched off.</p>
       <div class="user-grid">${S.senders.filter(x => x.on).slice(0, 8).map(x => `<div class="user-card"><span class="rc-ic">${ic('building')}</span><div><b>${esc(x.name)}</b><small>${esc(x.kind || x.type || 'Sender')}</small></div></div>`).join('')}</div>`;
   } else if (tab === 'records') {
-    body = head('layers', 'File Lifecycle', `<a class="btn btn-primary btn-sm" href="#/records">${ic('layers')} Open File Lifecycle</a>`) + `<p class="set-note">Opening, closing and disposing of files, and their retention.</p>
+    body = head('layers', 'Files & Records', `<a class="btn btn-primary btn-sm" href="#/records">${ic('layers')} Open Files & Records</a>`) + `<p class="set-note">Opening, closing and disposing of files, and their retention.</p>
       <div class="user-grid">${[['folderPlus', 'Open a file', `${S.recReqs.filter(x => x.type === 'OPEN').length} requests`], ['lock', 'Close a file', `${S.recReqs.filter(x => x.type === 'CLOSE').length} requests`], ['trash', 'Dispose of a file', `${S.recReqs.filter(x => x.type === 'DISPOSE').length} requests`], ['scan', 'File census', `${(S.censuses || []).length} censuses`]].map(([i, l, n]) => `<a class="user-card" href="#/records"><span class="rc-ic">${ic(i)}</span><div><b>${l}</b><small>${n}</small></div></a>`).join('')}</div>`;
   } else if (tab === 'profile') {
     body = head('user', 'My Profile', `<button class="btn btn-light btn-sm" data-act="changePw">${ic('lock')} Change password</button>`) + `<div class="prof">${avatar(meId(), 'av-xl')}<div><b>${esc(p.name)}</b><span>${esc(p.title)}</span><small>${esc(emailOf(p))}</small></div></div>
