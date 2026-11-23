@@ -376,7 +376,7 @@ function decorateSide(root) {
   const cur = parseHash().parts[0];
   const isOn = k => cur === k || (k === 'correspondence' && cur === 'letter' && role() === 'registry');
   const link = (k, h, l, i, n) => `<a href="${h}" class="${isOn(k) ? 'on' : ''}" ${isOn(k) ? 'aria-current="page"' : ''}>${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</a>`;
-  if (reg && !reg.querySelector('[href="#/correspondence"]')) reg.insertAdjacentHTML('beforeend', link('correspondence', '#/correspondence', 'Correspondence', 'mail', lettersWaiting()) + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
+  if (reg && !reg.querySelector('[href="#/correspondence"]')) { reg.insertAdjacentHTML('afterbegin', link('correspondence', '#/correspondence', 'Correspondence', 'mail', lettersWaiting())); reg.insertAdjacentHTML('beforeend', link('reports', '#/reports', 'Reports Dashboard', 'zap')); }
   const main = root.querySelector('.sidebar nav.nav');
   if (main && role() !== 'registry' && !main.querySelector('[href="#/reports"]')) {
     main.querySelector('[data-act=requestAny]')?.remove();
