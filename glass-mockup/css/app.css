@@ -2544,3 +2544,11 @@ html { zoom: var(--z); }
   .set-tabs[aria-label="Correspondence"] .set-tab { justify-content: center; padding: 0 10px; font-size: 13.5px; white-space: normal; text-align: center; line-height: 1.2; min-height: 46px; }
 }
 .lt-kchip { height: 20px; font-size: 11px; margin-left: 6px; vertical-align: middle; }
+/* Letter page: write comments and sticky notes on the letter before it is filed */
+.lt-doc { min-width: 0; }
+.lt-pages { display: grid; gap: 12px; }
+.lt-pages .page { margin: 0 auto; }
+.lt-pages.is-unfiled .folio-bar a[href*="/letter/"] { display: none; }
+.lt-filed-note { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
+.lt-filed-note svg { width: 16px; height: 16px; flex: none; color: #00625f; }
+.lt-notes .note-item { margin-bottom: 8px; }

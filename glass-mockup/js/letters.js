@@ -17,6 +17,21 @@ const getLetter = id => (S.letters || []).find(l => l.id === id);
 const letterOpen = l => `#/letter?id=${l.id}`;
 /* A letter, or another document (report, quotation, invoice, memo, returns…) going through the same journey */
 const letterKind = l => l.kind || (/report|quotation|invoice|returns|minutes|memo|plan|budget|circular/i.test(l.title) ? 'Document' : 'Letter');
+/* Before it is filed, a letter is annotated on its own page: l.doc holds its minutes, sticky notes and comments.
+   letterFile() is a stand-in file (never listed anywhere) so the same comment and sticky-note tools work on it. */
+function letterDoc(l) {
+  if (!l.doc) l.doc = { id: 'd' + l.id, folio: '—', title: l.title, kind: 'letter', mime: 'PDF', from: l.from, date: l.received, edms: `IN/26/${String(l.serial).padStart(3, '0')}`, pages: l.pages, sizeKB: 240,
+    minutes: [], stickies: [], comments: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM, senderRef: l.senderRef, confidentiality: l.conf };
+  return l.doc;
+}
+const LETTER_FILES = {};
+function letterFile(l) {
+  if (!l) return undefined;
+  const vf = LETTER_FILES[l.id] || (LETTER_FILES[l.id] = { id: l.id, virtual: true, ref: `IN/26/${String(l.serial).padStart(3, '0')}`, registry: 'main', type: 'ordinary', cover: { color: 'teal' }, movements: [], createdBy: l.uploadedBy, created: l.received });
+  Object.assign(vf, { name: l.title, docs: [letterDoc(l)], confidentiality: l.conf, updated: l.received,
+    stage: l.stage === 'marking' ? 'marking' : l.stage === 'registry' || l.stage === 'marked' ? 'registry' : 'filed', withUser: l.stage === 'marking' ? (l.withUser || 'vera') : 'registry' });
+  return vf;
+}
 const letterNo = l => `IN/26/${String(l.serial).padStart(3, '0')}`;
 
 function ensureLetters() {
@@ -59,7 +74,7 @@ function letterCtx(l) {
     signer: { name: 'Authorised Officer', title: 'For: ' + l.from }, signed: false, org: l.from };
 }
 const inRegistryFiles = () => S.files.filter(f => !f.draft && ['registry', 'filed'].includes(f.stage) && f.state !== 'Disposed');
-function viewLetter(q) {
+function viewLetterItem(q) {
   const l = getLetter(q.id);
   const r = role(), back = r === 'registry' ? ['Back to Correspondence', '#/correspondence'] : ['Back to My Queue', '#/queue'];
   if (!l) return pageHead({ crumbs: [['Correspondence', '#/correspondence'], ['Letter']], title: 'Letter not found', back }) + `<section class="panel glass"><p class="muted">This letter no longer exists.</p></section>`;
@@ -87,11 +102,12 @@ function viewLetter(q) {
       sub: `From ${esc(l.from)} · ${esc(l.senderRef || 'No reference')} · Received ${fmtDay(l.received)}`,
       meta: `<span class="chip ${stTone}">${stLabel}</span><span class="chip t-neutral">${ic('lock')} ${esc(l.conf)}</span><span class="chip t-neutral">${letterNo(l)}</span>${f ? `<span class="chip t-neutral">${ic('folder')} ${esc(f.name)} · F.${esc(l.folio)}</span>` : ''}` }) + `
     <div class="lt">
-      <section class="lt-doc card"><div class="viewer"><div class="viewer-bar"><span class="vb-name">${esc(l.title)} · ${plural(l.pages, 'page')}</span></div>
-        <div class="viewer-page"><div class="page"><div class="content">${tplHTML('letter', letterCtx(l))}</div></div></div></div></section>
+      <section class="lt-doc">${(() => { if (l.fileId && getFile(l.fileId) && getDoc(getFile(l.fileId), l.docId)) { const ff = getFile(l.fileId), dd = getDoc(ff, l.docId); return `<div class="lt-filed-note">${ic('folder')} Filed as folio ${esc(dd.folio)} in <a href="#/file/${ff.id}/doc/${dd.id}">${esc(ff.name)}</a>. Comments and sticky notes moved with it.</div><div class="pages lt-pages">${folioBar(ff, dd)}${pageHTML(ff, dd)}</div>`; }
+          const vf = letterFile(l), d = letterDoc(l); return `<div class="pages lt-pages is-unfiled">${folioBar(vf, d)}${pageHTML(vf, d)}</div>`; })()}</section>
       <div class="lt-side">
         <section class="panel glass lt-act">${act}</section>
         ${mk ? `<section class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(mk.ins)} <span class="muted">(marked to ${esc(person(mk.to).name)} by ${esc(person(mk.by).name)}, ${fmtDT(mk.at)})</span></div></section>` : ''}
+        ${letterNotesPanel(l)}
         <section class="panel glass"><div class="panel-h"><h2>Movement</h2></div>
           <ol class="lt-moves"><li><span class="dot"></span><div><b>Uploaded by ${esc(person(l.uploadedBy).name)}</b><small>${fmtDT(l.received)}</small></div></li>
           ${l.movements.map(m => `<li><span class="dot"></span><div><b>${esc(who(m.from))} → ${esc(who(m.to))}</b><small>${fmtDT(m.date)}${m.note ? ' · ' + esc(m.note) : ''}</small></div></li>`).join('')}</ol></section>
@@ -99,6 +115,19 @@ function viewLetter(q) {
     </div>`;
 }
 
+function letterNotesPanel(l) {
+  const ff = l.fileId && getFile(l.fileId), d = ff ? getDoc(ff, l.docId) : letterDoc(l);
+  if (!d) return '';
+  const minutes = d.minutes.filter(m => m.n), sticks = d.stickies.filter(seesSticky), comments = d.comments || [];
+  const n = minutes.length + sticks.length + comments.length;
+  return `<section class="panel glass lt-notes"><div class="panel-h"><h2>${ic('chat')} Comments and notes</h2><span class="n-pill">${n}</span></div>
+    ${minutes.map(m => `<div class="note-item" style="cursor:default"><span class="n">${m.n}.</span>${esc(m.text)}<div class="by">${avatar(m.by)} ${esc(person(m.by).name)} · ${fmtDT(m.at)}</div></div>`).join('')}
+    ${sticks.map(x => `<div class="note-item sticky" style="--sn:${stickyCol(x.color)};cursor:default">${ic('sticky')} ${esc(x.text)}<div class="by">${avatar(x.by)} ${esc(person(x.by).name)} → ${esc(x.to === 'public' ? 'Everyone' : x.to === 'registry' ? 'Registry' : person(x.to).name)}</div></div>`).join('')}
+    ${comments.map(c => `<div class="note-item" style="cursor:default">${esc(c.text)}<div class="by">${avatar(c.by)} ${esc(person(c.by).name)} · ${ago(c.at)}</div></div>`).join('')}
+    ${n ? '' : '<p class="muted" style="margin:0 0 10px">No comments yet. Use <b>Add comment</b> to write a minute on the page, or <b>Sticky note</b> to leave a note for someone.</p>'}
+    ${ff ? '' : `<div class="field" style="margin-top:10px"><label for="lt-lcm">Add a comment</label><textarea class="textarea" id="lt-lcm" rows="2" placeholder="Write a comment…"></textarea></div>
+    <button class="btn btn-light btn-sm" data-act="letterComment" data-id="${l.id}" style="margin-top:8px">${ic('send')} Post comment</button>`}</section>`;
+}
 /* ---------- Correspondence (Registry): movement to and from the officers ---------- */
 const CORR_TABS = { marking: 'To Marking Officer', action: 'To Action Officer' };
 const CORR_SUB = {
@@ -212,6 +241,8 @@ Object.assign(ACT, {
     const d = { id: nid('d'), folio, title: l.title, kind: 'letter', mime: 'PDF', from: l.from, date: l.received, edms: 'EDMS-0001-2026-' + String(S.seq + 40).padStart(7, '0'), pages: l.pages, sizeKB: 240,
       minutes: [], stickies: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM,
       uploadedBy: l.uploadedBy, senderRef: l.senderRef, serial: l.serial, confidentiality: l.conf, restricted: [], crossRefs: [], enclosures: [] };
+    const ld = letterDoc(l);   // what was written on the letter before filing comes with it
+    d.minutes = ld.minutes.map(m => ({ ...m })); d.stickies = ld.stickies.map(x => ({ ...x })); d.comments = (ld.comments || []).map(c => ({ ...c })); d.signed = ld.signed;
     f.docs.push(d);
     addMinute(f, d, `${person(l.marking.to).title} – ${l.marking.ins}`, l.marking.by, { ink: 'red' });
     f.markedTo = l.marking.to; f.instruction = l.marking.ins; f.updated = now();
@@ -220,6 +251,8 @@ Object.assign(ACT, {
     ui.lfFile = ''; save(); render(); toast(`Filed as folio ${folio} in ${f.name}`);
   },
   letterSendAction: el => letterSendModal([el.dataset.id], 'action'),
+  letterComment: el => { const l = getLetter(el.dataset.id), t = val('lt-lcm'); if (!l) return; if (!t) { toast('Write a comment first.'); $('#lt-lcm')?.focus(); return; }
+    (letterDoc(l).comments = letterDoc(l).comments || []).push({ text: t, by: meId(), at: now() }); save(); render(); toast('Comment posted'); },
   notifRead: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = !n.read; save(); refreshNotifDrawer(); render(); } },
 });
 /* Choose who a letter goes to: a Marking Officer, or (once filed) an Action Officer with the whole file */
@@ -270,3 +303,8 @@ function notifAction(n) {
   if (n.href && /corr/.test(n.href)) return G(n.href, 'Open', 'mail');
   return '';
 }
+/* On a letter's own page, refresh the Comments and notes panel after writing on the page */
+['mnSave', 'confirmSticky', 'snDel', 'mnDelete', 'mnDel', 'sign'].forEach(k => {
+  const orig = ACT[k]; if (!orig) return;
+  ACT[k] = (...a) => { const r = orig(...a); if (parseHash().parts[0] === 'letter') { const p = $('.lt-notes'), l = getLetter(parseHash().q.id); if (p && l) p.outerHTML = letterNotesPanel(l); } return r; };
+});

@@ -275,6 +275,7 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 1. **Upload** a letter or document – no file is chosen (Upload Document › Single, Bulk or Email).
 2. **Details** – sender, reference, subject, confidentiality and register details. *Save and send to a Marking Officer* opens a chooser (Vera Wambui, John Dalizu…); *Save only* keeps it to send later.
 3. The **Marking Officer** only ever gets letters, never whole files. She finds them under *Letters to mark* in My Queue (and in her notifications), says who should act and what to do, and sends it back to the Registry.
+   On the letter's own page the Marking Officer (and the Registry) keep the live tools: **Add comment** writes a signed minute on the page, **Sticky note** leaves a note for someone, and **Sign / stamp**; a *Comments and notes* panel lists them. Everything written moves with the letter when it is filed.
 4. The **Registry files the letter**: it picks a file in the Registry and the letter becomes the next folio, with the marking as its first minute.
 5. The Registry **sends the whole file to an Action Officer**, choosing who (the officer it was marked to is suggested), with an optional minute.
 Uploading from a file page (*Upload to this file*) still files straight into that file. Letters not yet filed appear in the Inward Mail Register as *Not filed yet*. Each letter has its own page (`#/letter?id=…`) with the document, the next step and its movement.

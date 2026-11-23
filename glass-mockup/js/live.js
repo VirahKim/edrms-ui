@@ -492,7 +492,7 @@ function bkTransfer(fromId, toId, move) {
   toast(`${move ? 'Moved' : 'Copied'} ${plural(ds.length, 'folio')} to ${b.name}`);
 }
 /* ---------- routes, actions and inputs ---------- */
-LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrMovement, letter: viewLetter, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
+LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrMovement, letter: viewLetterItem, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
 Object.assign(SCREEN_NAME, { approvals: 'Pending Approvals', messages: 'Messages', correspondence: 'Correspondence from officers', reports: 'Reports Dashboard', 'mycorrespondence': 'My correspondence', 'requestfiles': 'Request Files' });
 LIVE_AFTER = root => { addHeaderExtras(root); decorateOverview(root); decorateSide(root); const m = $('#chat-msgs'); if (m) m.scrollTop = m.scrollHeight; };
 

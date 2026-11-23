@@ -189,7 +189,7 @@ function person(id) {
   return PEOPLE[id] || { id, name: String(id), title: '' };
 }
 const byName = n => Object.values(PEOPLE).find(p => p.name === n);
-const getFile = id => S.files.find(f => f.id === id);
+const getFile = id => S.files.find(f => f.id === id) || (id && /^L\d/.test(id) && typeof letterFile === 'function' ? letterFile(getLetter(id)) : undefined);
 const getDoc = (f, id) => f && f.docs.find(d => d.id === id);
 const liveDocs = f => f.docs.filter(d => d.status !== 'landing');
 const regName = id => (REGISTRIES.find(r => r.id === id) || {}).name || '—';
