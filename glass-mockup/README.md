@@ -274,10 +274,13 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 ### Registry journey (version 2)
 1. **Upload** a letter or document – no file is chosen (Upload Document › Single, Bulk or Email).
 2. **Details** – sender, reference, subject, confidentiality and register details. *Save and send to Marking Officer* (or *Save only* and send it later).
-3. The **Marking Officer** finds it under *Letters to mark* in My Queue (and in her notifications), says who should act and what to do, and sends it back to the Registry.
+3. The **Marking Officer** only ever gets letters, never whole files. She finds them under *Letters to mark* in My Queue (and in her notifications), says who should act and what to do, and sends it back to the Registry.
 4. The **Registry files the letter**: it picks a file in the Registry and the letter becomes the next folio, with the marking as its first minute.
 5. The Registry **sends the file to the Action Officer** with the marking instruction.
 Uploading from a file page (*Upload to this file*) still files straight into that file. Letters not yet filed appear in the Inward Mail Register as *Not filed yet*. Each letter has its own page (`#/letter?id=…`) with the document, the next step and its movement.
+
+### File Movement
+My Queue › File Movement is the file movement register: one row each time a whole file leaves the Registry for an Action Officer, with the columns **Date, Reference, Subject, Action Officer, RM, Receiving Officer, Date, Returned**. RM is the Registry officer who released the file. Action Officers see the rows for files sent to them. Files are sent with *Send to Action Officer* on the file (the Marking Officer no longer receives files).
 
 ### Correspondence (Registry)
 Title *Correspondence*, sub-title *View movement of letters and files from marking and action officers*. Two main tabs – **To Marking Officer** and **To Action Officer** – each with **All**, **Sent** and **Received** and a line saying what that selection holds. Received from the Marking Officer leads to *File this letter*; received from an Action Officer leads to *File away*. The officers' own drafts (memos, circulars) are still recorded from Upload › From Officers.

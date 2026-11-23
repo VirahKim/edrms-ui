@@ -414,7 +414,7 @@ function openFileMenu(btn, f) {
   const groups = [
     [`<div class="fm-stage">Stage: <b>${activity(f)}</b></div>`, ...(reg ? [it('archive', act ? 'Move to semi-active' : 'Move to active', 'fmStage')] : [])],
     [it('info', 'View Details', 'fmDetails'),
-      ...(reg && f.stage === 'registry' ? [it('send', 'Submit to Marking Officer', 'fmSubmit')] : []),
+      ...(reg && f.stage === 'registry' ? [it('send', 'Send to Action Officer', 'fmSubmit')] : []),
       ...(reg ? [it('send', 'Send outside', 'fmOutside'), it('calendar', 'Add to bring-up diary', 'fmBringup')] : [])],
     ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub'), it('pen', 'Rename / Edit', 'fmRename'), it('swap', 'Move File', 'fmMove'), it('layers', 'Clone', 'fmClone')]] : []),
     [it('share', 'Share', 'fmShare'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Turn notifications on' : 'Turn notifications off', 'fmNotify'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin'), it('star', f.starred ? 'Unstar File' : 'Star File', 'fmStar')],
@@ -562,7 +562,7 @@ Object.assign(ACT, {
   fmLink: el => { closeFileMenu(); go(el.getAttribute('href')); },
   fmStage: fmDo(f => { f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} moved to ${f.activity.toLowerCase()}`); }),
   fmDetails: fmDo(f => { ui.fileTab = role() === 'registry' ? 'cover' : 'details'; go(`#/file/${f.id}`); }),
-  fmSubmit: fmDo(f => sendModal(f, 'marking')),
+  fmSubmit: fmDo(f => sendModal(f, 'action')),
   fmOutside: fmDo(f => sendOutsideModal(f)),
   fmBringup: fmDo(f => bringupModal(f.id)),
   fmSub: fmDo(f => textModal('folderPlus', 'New Sub-File', `Inside ${esc(f.name)}`, 'Sub-file name', '', 'fmSubSave', f.id, `${ic('folderPlus')} Create sub-file`)),

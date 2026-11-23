@@ -39,6 +39,13 @@ function ensureLetters() {
   save();
 }
 ensureLetters();
+/* Only letters go to the Marking Officer: files that were with her go back to the Registry */
+(function onlyLettersToMarking() {
+  if (S.lettersOnlyToMarking) return;
+  S.files.forEach(f => { if (f.stage === 'marking') { f.stage = 'registry'; f.withUser = 'registry'; f.updated = now(); } });
+  S.notifications = S.notifications.filter(n => !(n.to === 'vera' && n.fileId && !n.letterId && ['For marking', 'Sent back'].includes(n.kind)));
+  S.lettersOnlyToMarking = true; save();
+})();
 
 function notifyL(to, kind, text, l) {
   S.notifications.unshift({ id: nid('n'), to, kind, text, from: meId(), fileId: l.fileId || null, letterId: l.id, href: letterOpen(l), at: new Date().toISOString(), read: false });
@@ -94,12 +101,12 @@ function viewLetter(q) {
 const CORR_TABS = { marking: 'To Marking Officer', action: 'To Action Officer' };
 const CORR_SUB = {
   marking: {
-    all: 'Every letter and file sent to the Marking Officer, and what has come back.',
-    sent: 'Letters and files sent to the Marking Officer that are waiting to be marked.',
-    received: 'Letters and files the Marking Officer has marked and sent back. Next: file each letter, then send it to the Action Officer.',
+    all: 'Every letter sent to the Marking Officer, and what has come back.',
+    sent: 'Letters sent to the Marking Officer that are waiting to be marked.',
+    received: 'Letters the Marking Officer has marked and sent back. Next: file each letter, then send it to the Action Officer.',
   },
   action: {
-    all: 'Every file sent to Action Officers, and what has come back.',
+    all: 'Every file sent to Action Officers – the whole file moves – and what has come back.',
     sent: 'Files sent to Action Officers that they are still working on.',
     received: 'Files Action Officers have finished and sent back to the Registry. Next: dispatch the reply or file it away.',
   },
@@ -116,14 +123,6 @@ function markingItems() {
     if (l.stage === 'filed') btn = `<button class="btn btn-primary btn-xs" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>`;
     out.push({ kind: 'Letter', state, at: (back || sent || {}).date || l.received, title: l.title, sub: `${letterNo(l)} · ${l.senderRef || ''}`, href: letterOpen(l), from: l.from,
       status: LETTER_STAGE[l.stage], sent: sent && sent.date, back: back && back.date, to: l.marking ? person(l.marking.to).name : '—', btn });
-  });
-  S.files.filter(f => !f.draft && f.movements.some(m => m.to === 'vera')).forEach(f => {
-    const sent = [...f.movements].reverse().find(m => m.to === 'vera'), back = [...f.movements].reverse().find(m => m.from === 'vera');
-    const state = f.stage === 'marking' ? 'sent' : f.stage === 'returned_marking' ? 'received' : 'done';
-    const status = state === 'sent' ? ['With Marking Officer', 't-blue'] : state === 'received' ? ['Marked – send on', 't-amber'] : [STAGES[f.stage]?.short || 'In Registry', 't-grey'];
-    const btn = state === 'received' ? `<button class="btn btn-primary btn-xs" data-act="sendFile" data-id="${f.id}" data-to="action">${ic('send')} Send to Action Officer</button>` : `<a class="btn btn-light btn-xs" href="#/file/${f.id}">${ic('folder')} Open</a>`;
-    out.push({ kind: 'File', state, at: (back && back.date > sent.date ? back : sent).date, title: f.name, sub: f.ref, href: `#/file/${f.id}`, from: f.docs[0]?.from || '—',
-      status, sent: sent.date, back: back && back.date > sent.date ? back.date : null, to: f.markedTo ? person(f.markedTo).name : '—', btn });
   });
   return out.sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -146,7 +145,7 @@ function viewCorrMovement(q) {
   const list = items.filter(x => show === 'all' || x.state === show);
   const mCount = markingItems().filter(x => x.state === 'received').length, aCount = actionItems().filter(x => x.state === 'received').length;
   const isM = main === 'marking';
-  const head = isM ? ['Letter or file', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
+  const head = isM ? ['Letter', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
   const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'Letter' ? 'is-letter' : ''}">${ic(x.kind === 'Letter' ? 'mail' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a><small class="sub mono">${esc(x.sub)}</small></td>
       <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span></td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
       <td>${isM ? esc(x.to) : `<span class="lt-ins">${esc(x.to)}</span>`}</td><td><div class="row-btns">${x.btn}</div></td></tr>`);
@@ -157,12 +156,12 @@ function viewCorrMovement(q) {
     <section class="panel glass ct-panel">
       <div class="ct-seg" role="tablist" aria-label="${CORR_TABS[main]}">${['all', 'sent', 'received'].map(s => `<a role="tab" class="${s === show ? 'on' : ''}" aria-selected="${s === show}" href="#/correspondence?tab=${main}${s === 'all' ? '' : s}">${showLabel[s]} <span class="n">${count(s)}</span></a>`).join('')}</div>
       <p class="ct-sub">${CORR_SUB[main][show]}</p>
-      ${simpleTable(head, rows, show === 'received' ? (isM ? 'Nothing has come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
-        { key: `ct-${main}-${show}`, search: isM ? 'Search letters and files – subject, sender or reference' : 'Search files – name, reference or officer', date: [3, 'Sent from', 'Sent to'], facets: isM ? [[0, 'Kind'], [2, 'Status']] : [[1, 'Officer'], [2, 'Status']], paged: true })}
+      ${simpleTable(head, rows, show === 'received' ? (isM ? 'No letters have come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
+        { key: `ct-${main}-${show}`, search: isM ? 'Search letters – subject, sender or reference' : 'Search files – name, reference or officer', date: [3, 'Sent from', 'Sent to'], facets: isM ? [[1, 'From'], [2, 'Status']] : [[1, 'Officer'], [2, 'Status']], paged: true })}
     </section>`;
 }
 /* Letters waiting for the Registry (shown as the Correspondence count) */
-const lettersWaiting = () => (S.letters || []).filter(l => ['marked', 'filed'].includes(l.stage)).length + S.files.filter(f => !f.draft && f.stage === 'returned_marking').length;
+const lettersWaiting = () => (S.letters || []).filter(l => ['marked', 'filed'].includes(l.stage)).length;
 /* Letters waiting for the Marking Officer (her My Queue) */
 const lettersToMark = () => (S.letters || []).filter(l => l.stage === 'marking');
 function lettersToMarkPanel() {

@@ -277,7 +277,7 @@ const landingDocs = () => S.files.flatMap(f => f.docs.filter(d => d.status === '
 const notesForMe = () => S.files.flatMap(f => f.docs.flatMap(d => d.stickies.filter(s => s.by !== meId() && (s.to === meId() || (s.to === 'registry' && role() === 'registry'))).map(s => ({ f, d, s }))));
 function myQueue() {
   if (role() === 'registry') return filesNeedRouting();
-  if (role() === 'marking') return filesToMark();
+  if (role() === 'marking') return typeof lettersToMark === 'function' ? lettersToMark() : [];
   return filesToAct();
 }
 /* Dashboard scope: Registry and Action Officers see their own registry */
@@ -576,10 +576,10 @@ function tiles() {
   const mk = r === 'marking';
   /* Marking Officer: the six tiles from the agreed layout */
   if (mk) return [
-    tile('pen', 'Files awaiting marking', `${plural(roleQueue().length, 'file')} waiting for you`, '#/routing?stage=marking', roleQueue().length),
+    tile('pen', 'Letters to mark', `${plural(myQueue().length, 'letter')} waiting for you`, '#/queue', myQueue().length),
     tile('listChecks', 'My tasks', 'Everything assigned to you', '#/queue', myQueue().length),
     tile('swap', 'Start a new correspondence', 'A letter, memo, circular or notice', '#/mycorrespondence?new=1'),
-    tile('check', 'Files I have marked', `${plural(roleDone().length, 'file')} marked`, '#/routing'),
+    tile('check', 'Letters I have marked', `${plural((S.letters || []).filter(l => l.marking && l.marking.by === meId()).length, 'letter')} marked`, '#/queue?tab=marked'),
     tile('filePlus', 'Request Files', 'Ask the Registry for another file or letter', '#/requestfiles'),
     tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
@@ -786,12 +786,12 @@ function actionButtons(f) {
   const r = role(), b = [];
   if (f.draft) return r === 'registry' ? `<button class="btn btn-primary" data-act="openDraft" data-id="${f.id}">${ic('folder')} Open file</button><button class="btn btn-glass" data-act="fileTab" data-k="cover">${ic('pen')} Edit cover</button><button class="btn btn-danger-soft" data-act="deleteDraft" data-id="${f.id}">${ic('trash')} Delete draft</button>` : '';
   if (r === 'registry') {
-    /* Send to Marking Officer · Send outside · Bring up · More actions (plus the step this stage needs) */
+    /* Send to Action Officer · Send outside · Bring up · More actions (plus the step this stage needs). Only letters go to the Marking Officer. */
     const away = ['marking', 'action'].includes(f.stage);
-    if (f.stage === 'returned_marking') b.push(`<button class="btn btn-primary" data-act="sendFile" data-id="${f.id}" data-to="action">${ic('send')} Send to Action Officer</button>`, `<button class="btn btn-glass" data-act="sendFile" data-id="${f.id}" data-to="marking">${ic('undo')} Back to Marking Officer</button>`);
+    if (f.stage === 'returned_marking') b.push(`<button class="btn btn-primary" data-act="sendFile" data-id="${f.id}" data-to="action">${ic('send')} Send to Action Officer</button>`);
     if (f.stage === 'returned_action') b.push(`<button class="btn btn-primary" data-act="fileAway" data-id="${f.id}">${ic('archive')} File away</button>`);
     if (f.stage === 'filed') b.push(`<button class="btn btn-glass" data-act="retrieve" data-id="${f.id}">${ic('refresh')} Retrieve from shelf</button>`);
-    if (f.stage !== 'returned_marking') b.push(`<button class="btn ${f.stage === 'registry' ? 'btn-primary' : 'btn-glass'}" data-act="sendFile" data-id="${f.id}" data-to="marking" ${away ? `disabled title="The file is ${STAGES[f.stage].short.toLowerCase()} – it can go to the Marking Officer once it is back in the Registry."` : ''}>${ic('send')} Send to Marking Officer</button>`);
+    if (!['returned_marking', 'returned_action'].includes(f.stage)) b.push(`<button class="btn ${f.stage === 'registry' ? 'btn-primary' : 'btn-glass'}" data-act="sendFile" data-id="${f.id}" data-to="action" ${away ? `disabled title="The file is ${STAGES[f.stage].short.toLowerCase()} – it can go to an Action Officer once it is back in the Registry."` : ''}>${ic('send')} Send to Action Officer</button>`);
     b.push(`<button class="btn btn-glass" data-act="sendOutside" data-id="${f.id}" ${liveDocs(f).length ? 'title="Send letters outside the organisation. Recorded in the Outward Mail Register."' : 'disabled title="There are no letters in this file to send."'}>${ic('send')} Send outside</button>`,
       `<button class="btn btn-glass" data-act="addBringup" data-id="${f.id}">${ic('calendar')} Bring up</button>`);
   }
@@ -1155,20 +1155,39 @@ function queueHead(which, sub) {
       ...(role() === 'registry' ? [['landing', '#/queue?tab=landing', 'Landing Queue', 'inboxIn', landingDocs().length]] : []),
       ['subs', '#/queue?tab=subs', 'My Submissions', 'upload', 0]].map(([k, h, l, i, n]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}${n ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
 }
-function viewRouting(q) {
-  const stage = q.stage || 'active';
-  const mine = S.files.filter(f => !f.draft && involved(f));
-  const pick = st => st === 'active' ? mine.filter(f => f.stage !== 'filed') : st === 'returned' ? mine.filter(f => f.stage.startsWith('returned')) :
-    st === 'marked' ? filesMarked() : st === 'delegated' ? mine.filter(f => f.delegatedBy === meId()) : mine.filter(f => f.stage === st);
-  const tabs = [['active', 'All active'], ...STAGE_ORDER.map(k => [k, STAGES[k].short]), ...(role() === 'registry' ? [['registry', 'In Registry']] : [])];
-  const extra = { returned: 'Returned files', marked: 'Files I have marked', delegated: 'Delegated files' }[stage];
-  if (extra) tabs.push([stage, extra]);
-  const list = pick(stage).sort((a, b) => b.updated.localeCompare(a.updated));
-  const cur = tabs.find(([k]) => k === stage) || tabs[0];
-  return queueHead('routing', role() === 'registry' ? 'Every file sent for marking or action. To send a file, open it and press Submit to Marking Officer.' : 'Where every file sent to you is now.') + `
-    <section class="panel glass"><div class="tabs stage-tabs" role="tablist" aria-label="Stage">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${stage === k}" class="${stage === k ? 'on' : ''}" data-href="#/routing?stage=${k}">${l} <span class="n">${pick(k).length}</span></button>`).join('')}</div>
-      <div class="panel-h"><h2>${esc(cur[1])}</h2><span class="n">${list.length}</span></div>
-      ${fileTable(list, ['stage', 'with', 'docs', 'sent', 'since'], 'No files at this stage.', 'routing')}
+/* File Movement: the movement register — one row each time a file leaves the Registry for an officer */
+const isRegistryId = id => id === 'registry' || (PEOPLE[id] && PEOPLE[id].role === 'registry');
+function movementRows() {
+  const rows = [];
+  S.files.filter(f => !f.draft).forEach(f => {
+    const mv = [...f.movements].sort((a, b) => a.date.localeCompare(b.date));
+    mv.forEach((m, i) => {
+      if (!isRegistryId(m.from) || isRegistryId(m.to) || (PEOPLE[m.to] && PEOPLE[m.to].role === 'marking')) return;   // whole files go to Action Officers only
+      const later = mv.slice(i + 1), cut = later.findIndex(x => isRegistryId(x.from) && !isRegistryId(x.to));
+      const span = cut < 0 ? later : later.slice(0, cut);
+      const passed = span.find(x => x.from === m.to && !isRegistryId(x.to));
+      const ret = span.find(x => isRegistryId(x.to));
+      const rm = m.from === 'registry' ? ((REGISTRIES.find(r => r.id === f.registry) || {}).officer || 'john') : m.from;
+      rows.push({ f, m, officer: m.to, rm, passed: passed && passed.to, ret: ret && ret.date });
+    });
+  });
+  const me_ = meId(), r = role();
+  return rows.filter(x => r === 'registry' || x.officer === me_ || x.passed === me_).sort((a, b) => b.m.date.localeCompare(a.m.date));
+}
+function viewRouting() {
+  const rows = movementRows();
+  const out = rows.filter(x => !x.ret).length;
+  const who = id => { const p = person(id); return `${esc(p.name)}<small class="sub">${esc(p.title || '')}</small>`; };
+  return queueHead('routing', role() === 'registry' ? 'The file movement register: every time a whole file leaves the Registry for an Action Officer, who received it, and when it came back.' : 'Every file the Registry sent you, when you received it, and when it went back.') + `
+    <section class="panel glass">
+      <div class="panel-h"><h2>File movement register</h2><span class="muted">${plural(rows.length, 'movement')} · ${out} out of the Registry</span></div>
+      ${simpleTable(['Date', 'Reference', 'Subject', 'Action Officer', 'RM', 'Receiving Officer', 'Date', 'Returned'], rows.map(x => `<tr data-href="#/file/${x.f.id}">
+        <td data-d="${x.m.date}">${fmtDT(x.m.date)}</td><td class="mono"><b>${esc(x.f.ref)}</b></td><td><a href="#/file/${x.f.id}"><b>${esc(x.f.name)}</b></a></td>
+        <td data-v="${esc(person(x.officer).name)}">${who(x.officer)}</td><td>${esc(person(x.rm).name)}</td>
+        <td>${esc(person(x.officer).name)}${x.passed ? `<small class="sub">Passed to ${esc(person(x.passed).name)}</small>` : ''}</td>
+        <td>${fmtDT(x.m.date)}</td>
+        <td data-v="${x.ret ? 'Returned' : 'Not returned'}">${x.ret ? `<span class="chip t-green">${ic('check')} ${fmtDT(x.ret)}</span>` : '<span class="chip t-amber">Not returned</span>'}</td></tr>`),
+        'No file has left the Registry yet.', { key: 'mvreg', search: 'Search – reference, subject or officer', date: [0, 'Sent from', 'Sent to'], facets: [[3, 'Action Officer'], [7, 'Returned']], paged: true })}
     </section>`;
 }
 function viewQueue(q) {
@@ -1178,9 +1197,10 @@ function viewQueue(q) {
   const subs = r === 'registry' ? S.files.flatMap(f => f.docs.filter(d => d.uploadedBy === meId() || (f.createdBy === meId() && d.kind !== 'response')).map(d => ({ f, d })))
     : S.files.flatMap(f => f.docs.filter(d => d.kind === 'response' && d.from === me().name).map(d => ({ f, d })));
   const notes = notesForMe();
-  const tabs = [['act', 'Files to Act On', myQueue().length], ['notes', 'Notes for Me', notes.length], ['approvals', 'Pending Approvals', reqs.filter(x => x.status === 'open').length], ['landing', 'Landing Queue', landingDocs().length], ['subs', 'My Submissions', subs.length]];
+  const tabs = [['act', r === 'marking' ? 'Letters to Mark' : 'Files to Act On', myQueue().length], ['notes', 'Notes for Me', notes.length], ['approvals', 'Pending Approvals', reqs.filter(x => x.status === 'open').length], ['landing', 'Landing Queue', landingDocs().length], ['subs', 'My Submissions', subs.length]];
   let body = '';
-  if (tab === 'act') body = (r === 'marking' && typeof lettersToMarkPanel === 'function' ? lettersToMarkPanel() : '') + `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.', 'queue-act');
+  if (tab === 'act' && r === 'marking') body = (typeof lettersToMarkPanel === 'function' && lettersToMarkPanel()) || `<div class="empty">${ic('checkCircle')}<div>No letters waiting for you to mark.</div></div>`;
+  else if (tab === 'act') body = `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.', 'queue-act');
   if (tab === 'notes') body = notes.length ? `<div class="results">${notes.map(({ f, d, s }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}" style="border-left:8px solid ${stickyCol(s.color)}"><span class="pg">${ic('sticky')}</span><div><b>${esc(s.text)}</b><small>From ${esc(person(s.by).name)} · Folio ${esc(d.folio)} in ${esc(f.name)} · ${ago(s.at)}</small></div></a>`).join('')}</div>` : '<div class="card empty">No sticky notes addressed to you.</div>';
   if (tab === 'approvals') body = (typeof approvalsTable === 'function' ? approvalsTable() : '') + (reqs.length ? `<h3 class="sub-h">File requests</h3>` : '') + (reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>${f ? `For ${esc(f.name)} · ` : ''}${esc(x.reason)} · ${ago(x.at)}</small></div>
       <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : (typeof approvalsTable === 'function' ? '' : `<div class="card empty">No requests.</div>`));
