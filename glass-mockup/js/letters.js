@@ -107,7 +107,7 @@ function viewLetterItem(q) {
       <div class="lt-side">
         <section class="panel glass lt-act">${act}</section>
         ${mk ? `<section class="instruction">${ic('sticky')}<div><b>Marking instruction</b> – ${esc(mk.ins)} <span class="muted">(marked to ${esc(person(mk.to).name)} by ${esc(person(mk.by).name)}, ${fmtDT(mk.at)})</span></div></section>` : ''}
-        ${letterNotesPanel(l)}
+        ${r === 'marking' ? letterNotesPanel(l) : ''}
         <section class="panel glass"><div class="panel-h"><h2>Movement</h2></div>
           <ol class="lt-moves"><li><span class="dot"></span><div><b>Uploaded by ${esc(person(l.uploadedBy).name)}</b><small>${fmtDT(l.received)}</small></div></li>
           ${l.movements.map(m => `<li><span class="dot"></span><div><b>${esc(who(m.from))} → ${esc(who(m.to))}</b><small>${fmtDT(m.date)}${m.note ? ' · ' + esc(m.note) : ''}</small></div></li>`).join('')}</ol></section>
