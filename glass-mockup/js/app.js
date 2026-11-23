@@ -2740,7 +2740,7 @@ const ACT = {
       let serial = Math.max(0, ...(S.letters || []).map(l => l.serial), S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length);
       const send = el && el.dataset && el.dataset.send === '1';
       const made = u.files.map((x, i) => { const m = u.metas[i];
-        return { id: nid('L'), serial: m.serial_no ? +m.serial_no : ++serial, title: m.subject.trim(), from: m.source_name.trim(), senderRef: m.sender_ref_no.trim(), received: new Date(m.date_received + 'T09:00').toISOString(),
+        return { id: nid('L'), kind: /\.(xlsx|xls|csv)$/i.test(x.name) ? 'Document' : undefined, serial: m.serial_no ? +m.serial_no : ++serial, title: m.subject.trim(), from: m.source_name.trim(), senderRef: m.sender_ref_no.trim(), received: new Date(m.date_received + 'T09:00').toISOString(),
           pages: m._pages, conf: m.confidentiality_level, stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.name }; });
       S.letters = [...made, ...(S.letters || [])];
       made.forEach(l => { if (l.from && !S.senders.some(x => x.name.toLowerCase() === l.from.toLowerCase())) S.senders.push({ id: nid('ms'), name: l.from, as: 'sender', on: true }); });

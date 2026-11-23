@@ -15,6 +15,8 @@ const LETTER_STAGE = {
 };
 const getLetter = id => (S.letters || []).find(l => l.id === id);
 const letterOpen = l => `#/letter?id=${l.id}`;
+/* A letter, or another document (report, quotation, invoice, memo, returns…) going through the same journey */
+const letterKind = l => l.kind || (/report|quotation|invoice|returns|minutes|memo|plan|budget|circular/i.test(l.title) ? 'Document' : 'Letter');
 const letterNo = l => `IN/26/${String(l.serial).padStart(3, '0')}`;
 
 function ensureLetters() {
@@ -66,16 +68,16 @@ function viewLetter(q) {
   let act = '';
   if (r === 'registry' && l.stage === 'registry') act = `<h3>Next: send it to a Marking Officer</h3><p class="muted">Choose who marks it. They read it, say what should be done and by whom, and send it back to you.</p>
       <button class="btn btn-primary" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button>`;
-  else if (r === 'marking' && l.stage === 'marking') act = `<h3>Mark this letter</h3><p class="muted">Say who should act on it and what they should do. It goes back to the Registry to be filed and sent on.</p>
+  else if (r === 'marking' && l.stage === 'marking') act = `<h3>Mark this ${letterKind(l).toLowerCase()}</h3><p class="muted">Say who should act on it and what they should do. It goes back to the Registry to be filed and sent on.</p>
       <div class="field"><label for="lm-to">Action Officer</label><select class="select" id="lm-to">${peopleOpts(p => p.role === 'action', 'virah')}</select></div>
       <div class="field"><label for="lm-ins">Instruction <span class="req">*</span></label><textarea class="textarea" id="lm-ins" placeholder="e.g. Head NVS – please prepare a response by Friday"></textarea></div>
       <button class="btn btn-primary" data-act="letterMark" data-id="${l.id}">${ic('undo')} Mark and send back to Registry</button>`;
   else if (r === 'registry' && l.stage === 'marked') {
     const files = inRegistryFiles();
-    act = `<h3>Next: file this letter</h3><p class="muted">Choose the file it belongs in. It becomes the next folio there, with the marking as its first minute.</p>
+    act = `<h3>Next: file this ${letterKind(l).toLowerCase()}</h3><p class="muted">Choose the file it belongs in. It becomes the next folio there, with the marking as its first minute.</p>
       <div class="field"><label for="lf-file">File <span class="req">*</span></label><select class="select" id="lf-file" data-change="letterFilePick"><option value="">Search or select file…</option>${files.map(ff => `<option value="${ff.id}" ${ui.lfFile === ff.id ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}</option>`).join('')}</select>
         <span class="hint">${ui.lfFile && getFile(ui.lfFile) ? `It will be folio ${nextFolio(getFile(ui.lfFile))} in ${esc(getFile(ui.lfFile).name)}.` : 'Only files that are in the Registry are listed.'}</span></div>
-      <button class="btn btn-primary" data-act="letterFile" data-id="${l.id}">${ic('archive')} File this letter</button>`;
+      <button class="btn btn-primary" data-act="letterFile" data-id="${l.id}">${ic('archive')} File this ${letterKind(l).toLowerCase()}</button>`;
   } else if (r === 'registry' && l.stage === 'filed') act = `<h3>Next: send it to the Action Officer</h3><p class="muted">Filed as folio ${esc(l.folio)} in ${f ? esc(f.name) : 'the file'}. It was marked to ${esc(person(mk.to).name)}; choose the Action Officer the whole file goes to.</p>
       <div class="lt-btns"><button class="btn btn-primary" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in file</a>` : ''}</div>`;
   else if (l.stage === 'action') act = `<h3>Sent to the Action Officer</h3><p class="muted">The file is with ${esc(person(l.actionTo || mk.to).name)}. Follow it on Correspondence › To Action Officer.</p>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in ${esc(f.name)}</a>` : ''}`;
@@ -101,9 +103,9 @@ function viewLetter(q) {
 const CORR_TABS = { marking: 'To Marking Officer', action: 'To Action Officer' };
 const CORR_SUB = {
   marking: {
-    all: 'Every letter sent to the Marking Officer, and what has come back.',
-    sent: 'Letters sent to the Marking Officer that are waiting to be marked.',
-    received: 'Letters the Marking Officer has marked and sent back. Next: file each letter, then send it to the Action Officer.',
+    all: 'Every letter or document sent to the Marking Officer, and what has come back.',
+    sent: 'Letters and documents sent to the Marking Officer that are waiting to be marked.',
+    received: 'Letters and documents the Marking Officer has marked and sent back. Next: file each one, then send the file to the Action Officer.',
   },
   action: {
     all: 'Every file sent to Action Officers – the whole file moves – and what has come back.',
@@ -120,9 +122,9 @@ function markingItems() {
     const state = l.stage === 'marking' ? 'sent' : l.stage === 'marked' ? 'received' : l.stage === 'registry' ? 'unsent' : 'done';
     let btn = `<a class="btn btn-light btn-xs" href="${letterOpen(l)}">${ic('eye')} Open</a>`;
     if (l.stage === 'registry') btn = `<button class="btn btn-primary btn-xs" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button>`;
-    if (l.stage === 'marked') btn = `<a class="btn btn-primary btn-xs" href="${letterOpen(l)}">${ic('archive')} File this letter</a>`;
+    if (l.stage === 'marked') btn = `<a class="btn btn-primary btn-xs" href="${letterOpen(l)}">${ic('archive')} File this ${letterKind(l).toLowerCase()}</a>`;
     if (l.stage === 'filed') btn = `<button class="btn btn-primary btn-xs" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>`;
-    out.push({ kind: 'Letter', state, at: (back || sent || {}).date || l.received, title: l.title, sub: `${letterNo(l)} · ${l.senderRef || ''}`, href: letterOpen(l), from: l.from,
+    out.push({ kind: letterKind(l), state, at: (back || sent || {}).date || l.received, title: l.title, sub: `${letterNo(l)} · ${l.senderRef || ''}`, href: letterOpen(l), from: l.from,
       status: LETTER_STAGE[l.stage], withName: sent ? person(sent.to).name : '', sent: sent && sent.date, back: back && back.date, to: l.marking ? person(l.marking.to).name : '—', btn });
   });
   return out.sort((a, b) => b.at.localeCompare(a.at));
@@ -146,19 +148,19 @@ function viewCorrMovement(q) {
   const list = items.filter(x => show === 'all' || x.state === show);
   const mCount = markingItems().filter(x => x.state === 'received').length, aCount = actionItems().filter(x => x.state === 'received').length;
   const isM = main === 'marking';
-  const head = isM ? ['Letter', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
-  const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'Letter' ? 'is-letter' : ''}">${ic(x.kind === 'Letter' ? 'mail' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a><small class="sub mono">${esc(x.sub)}</small></td>
+  const head = isM ? ['Letter or document', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
+  const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'File' ? '' : 'is-letter'}" title="${x.kind}">${ic(x.kind === 'Letter' ? 'mail' : x.kind === 'Document' ? 'file' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a>${isM ? ` <span class="chip t-neutral lt-kchip">${x.kind}</span>` : ''}<small class="sub mono">${esc(x.sub)}</small></td>
       <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span>${x.withName ? `<small class="sub">${isM ? 'Marking Officer' : 'Officer'}: ${esc(x.withName)}</small>` : ''}</td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
       <td>${isM ? esc(x.to) : `<span class="lt-ins">${esc(x.to)}</span>`}</td><td><div class="row-btns">${x.btn}</div></td></tr>`);
   const showLabel = { all: 'All', sent: 'Sent', received: 'Received' };
   return pageHead({ crumbs: [['Correspondence']], title: 'Correspondence', sub: 'View movement of letters and files from marking and action officers',
-      right: `<a class="btn btn-primary" href="#/upload">${ic('upload')} Upload a letter</a>` }) + `
+      right: `<a class="btn btn-primary" href="#/upload">${ic('upload')} Upload a letter or document</a>` }) + `
     <nav class="set-tabs" aria-label="Correspondence">${Object.entries(CORR_TABS).map(([k, l]) => `<a class="set-tab ${k === main ? 'on' : ''}" href="#/correspondence?tab=${k}" ${k === main ? 'aria-current="page"' : ''}>${ic(k === 'marking' ? 'pen' : 'user')} ${l}${(k === 'marking' ? mCount : aCount) ? `<span class="count">${k === 'marking' ? mCount : aCount}</span>` : ''}</a>`).join('')}</nav>
     <section class="panel glass ct-panel">
       <div class="ct-seg" role="tablist" aria-label="${CORR_TABS[main]}">${['all', 'sent', 'received'].map(s => `<a role="tab" class="${s === show ? 'on' : ''}" aria-selected="${s === show}" href="#/correspondence?tab=${main}${s === 'all' ? '' : s}">${showLabel[s]} <span class="n">${count(s)}</span></a>`).join('')}</div>
       <p class="ct-sub">${CORR_SUB[main][show]}</p>
-      ${simpleTable(head, rows, show === 'received' ? (isM ? 'No letters have come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
-        { key: `ct-${main}-${show}`, search: isM ? 'Search letters – subject, sender or reference' : 'Search files – name, reference or officer', date: [3, 'Sent from', 'Sent to'], facets: isM ? [[1, 'From'], [2, 'Status']] : [[1, 'Officer'], [2, 'Status']], paged: true })}
+      ${simpleTable(head, rows, show === 'received' ? (isM ? 'No letters or documents have come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
+        { key: `ct-${main}-${show}`, search: isM ? 'Search letters and documents – subject, sender or reference' : 'Search files – name, reference or officer', date: [3, 'Sent from', 'Sent to'], facets: isM ? [[0, 'Letter or document'], [1, 'From'], [2, 'Status']] : [[1, 'Officer'], [2, 'Status']], paged: true })}
     </section>`;
 }
 /* Letters waiting for the Registry (shown as the Correspondence count) */
@@ -169,7 +171,7 @@ function lettersToMarkPanel() {
   const ls = lettersToMark(); if (!ls.length) return '';
   return `<section class="panel glass lt-tomark"><div class="panel-h"><h2>Letters to mark <span class="n-pill">${ls.length}</span></h2></div>
     <p class="muted" style="margin:-4px 0 12px">Letters the Registry sent you. Mark each one and it goes back to be filed.</p>
-    ${simpleTable(['Letter', 'From', 'Received', ''], ls.map(l => `<tr data-href="${letterOpen(l)}"><td><b>${esc(l.title)}</b><small class="sub mono">${letterNo(l)} · ${esc(l.senderRef)}</small></td><td>${esc(l.from)}</td><td>${fmtDT(l.received)}</td><td><a class="btn btn-primary btn-xs" href="${letterOpen(l)}">${ic('pen')} Mark</a></td></tr>`), '')}</section>`;
+    ${simpleTable(['Letter or document', 'From', 'Received', ''], ls.map(l => `<tr data-href="${letterOpen(l)}"><td><b>${esc(l.title)}</b><small class="sub mono">${letterNo(l)} · ${esc(l.senderRef)}</small></td><td>${esc(l.from)}</td><td>${fmtDT(l.received)}</td><td><a class="btn btn-primary btn-xs" href="${letterOpen(l)}">${ic('pen')} Mark</a></td></tr>`), '')}</section>`;
 }
 
 Object.assign(ACT, {
@@ -249,9 +251,9 @@ function notifAction(n) {
   const l = n.letterId && getLetter(n.letterId);
   if (l) {
     if (r === 'registry' && l.stage === 'registry') return B('letterSendMark', 'Send to Marking Officer', 'send', `data-id="${l.id}"`);
-    if (r === 'registry' && l.stage === 'marked') return G(letterOpen(l), 'File this letter', 'archive');
+    if (r === 'registry' && l.stage === 'marked') return G(letterOpen(l), `File this ${letterKind(l).toLowerCase()}`, 'archive');
     if (r === 'registry' && l.stage === 'filed') return B('letterSendAction', 'Send to Action Officer', 'send', `data-id="${l.id}"`);
-    if (r === 'marking' && l.stage === 'marking') return G(letterOpen(l), 'Mark this letter', 'pen');
+    if (r === 'marking' && l.stage === 'marking') return G(letterOpen(l), `Mark this ${letterKind(l).toLowerCase()}`, 'pen');
     return G(letterOpen(l), 'Open letter', 'mail');
   }
   const f = n.fileId && getFile(n.fileId);
