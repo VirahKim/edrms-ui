@@ -1703,7 +1703,7 @@ function viewUpload(q) {
         ${u.err ? `<p class="form-err" role="alert">${esc(u.err)}</p>` : ''}
       </div>
     </div>`;
-    foot = `<button class="btn btn-light" data-act="upBack">${ic('chevL')} Back</button><button class="btn btn-light" data-act="upCancel">Cancel</button>${f ? `<button class="btn btn-primary" data-act="upSave">${ic('check')} Save ${n > 1 ? plural(n, 'document') : 'document'}</button>` : `<button class="btn btn-outline" data-act="upSave">${ic('check')} Save only</button><button class="btn btn-primary" data-act="upSave" data-send="1">${ic('send')} Save and send to Marking Officer</button>`}`;
+    foot = `<button class="btn btn-light" data-act="upBack">${ic('chevL')} Back</button><button class="btn btn-light" data-act="upCancel">Cancel</button>${f ? `<button class="btn btn-primary" data-act="upSave">${ic('check')} Save ${n > 1 ? plural(n, 'document') : 'document'}</button>` : `<button class="btn btn-outline" data-act="upSave">${ic('check')} Save only</button><button class="btn btn-primary" data-act="upSave" data-send="1">${ic('send')} Save and send to a Marking Officer</button>`}`;
   }
   const s2 = u.step !== 1;
   return head(`${plural(S.files.length, 'File')} · ${plural(total, 'Document')}${S.drafts.length ? ` · <a style="color:#fff;text-decoration:underline" href="#" data-act="openDrafts">${plural(S.drafts.length, 'draft')}</a>` : ''}`) + `
@@ -2744,10 +2744,10 @@ const ACT = {
           pages: m._pages, conf: m.confidentiality_level, stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.name }; });
       S.letters = [...made, ...(S.letters || [])];
       made.forEach(l => { if (l.from && !S.senders.some(x => x.name.toLowerCase() === l.from.toLowerCase())) S.senders.push({ id: nid('ms'), name: l.from, as: 'sender', on: true }); });
-      if (send) made.forEach(l => { l.stage = 'marking'; l.movements.push({ date: now(), from: meId(), to: 'vera' }); notifyL('vera', 'For marking', `A new letter was sent to you for marking: ${l.title}.`, l); });
       save(); ui.upload = freshUpload();
-      go(made.length === 1 ? letterOpen(made[0]) : '#/correspondence?tab=marking' + (send ? 'sent' : ''));
-      toast(send ? `${made.length === 1 ? 'Saved and sent' : plural(made.length, 'letter') + ' saved and sent'} to the Marking Officer` : `${made.length === 1 ? 'Letter saved' : plural(made.length, 'letter') + ' saved'}. Send ${made.length === 1 ? 'it' : 'them'} to the Marking Officer when ready.`);
+      go(made.length === 1 ? letterOpen(made[0]) : '#/correspondence?tab=marking');
+      if (send) setTimeout(() => letterSendModal(made.map(l => l.id), 'marking'), 60);
+      else toast(`${made.length === 1 ? 'Letter saved' : plural(made.length, 'letter') + ' saved'}. Send ${made.length === 1 ? 'it' : 'them'} to a Marking Officer when ready.`);
       return;
     }
     let folio = parseInt(nextFolio(f), 10);

@@ -64,7 +64,7 @@ function viewLetter(q) {
   const [stLabel, stTone] = LETTER_STAGE[l.stage];
   const f = getFile(l.fileId), mk = l.marking;
   let act = '';
-  if (r === 'registry' && l.stage === 'registry') act = `<h3>Next: send it to the Marking Officer</h3><p class="muted">The Marking Officer reads it, says what should be done and by whom, and sends it back to you.</p>
+  if (r === 'registry' && l.stage === 'registry') act = `<h3>Next: send it to a Marking Officer</h3><p class="muted">Choose who marks it. They read it, say what should be done and by whom, and send it back to you.</p>
       <button class="btn btn-primary" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button>`;
   else if (r === 'marking' && l.stage === 'marking') act = `<h3>Mark this letter</h3><p class="muted">Say who should act on it and what they should do. It goes back to the Registry to be filed and sent on.</p>
       <div class="field"><label for="lm-to">Action Officer</label><select class="select" id="lm-to">${peopleOpts(p => p.role === 'action', 'virah')}</select></div>
@@ -76,10 +76,10 @@ function viewLetter(q) {
       <div class="field"><label for="lf-file">File <span class="req">*</span></label><select class="select" id="lf-file" data-change="letterFilePick"><option value="">Search or select file…</option>${files.map(ff => `<option value="${ff.id}" ${ui.lfFile === ff.id ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}</option>`).join('')}</select>
         <span class="hint">${ui.lfFile && getFile(ui.lfFile) ? `It will be folio ${nextFolio(getFile(ui.lfFile))} in ${esc(getFile(ui.lfFile).name)}.` : 'Only files that are in the Registry are listed.'}</span></div>
       <button class="btn btn-primary" data-act="letterFile" data-id="${l.id}">${ic('archive')} File this letter</button>`;
-  } else if (r === 'registry' && l.stage === 'filed') act = `<h3>Next: send it to the Action Officer</h3><p class="muted">Filed as folio ${esc(l.folio)} in ${f ? esc(f.name) : 'the file'}. The file goes to ${esc(person(mk.to).name)} with the marking instruction.</p>
-      <div class="lt-btns"><button class="btn btn-primary" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to ${esc(person(mk.to).name)}</button>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in file</a>` : ''}</div>`;
-  else if (l.stage === 'action') act = `<h3>Sent to the Action Officer</h3><p class="muted">The file is with ${esc(person(mk.to).name)}. Follow it on Correspondence › To Action Officer.</p>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in ${esc(f.name)}</a>` : ''}`;
-  else act = `<h3>${esc(stLabel)}</h3><p class="muted">${l.stage === 'marking' ? 'Waiting for the Marking Officer.' : 'Nothing for you to do on this letter right now.'}</p>`;
+  } else if (r === 'registry' && l.stage === 'filed') act = `<h3>Next: send it to the Action Officer</h3><p class="muted">Filed as folio ${esc(l.folio)} in ${f ? esc(f.name) : 'the file'}. It was marked to ${esc(person(mk.to).name)}; choose the Action Officer the whole file goes to.</p>
+      <div class="lt-btns"><button class="btn btn-primary" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in file</a>` : ''}</div>`;
+  else if (l.stage === 'action') act = `<h3>Sent to the Action Officer</h3><p class="muted">The file is with ${esc(person(l.actionTo || mk.to).name)}. Follow it on Correspondence › To Action Officer.</p>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in ${esc(f.name)}</a>` : ''}`;
+  else act = `<h3>${esc(stLabel)}</h3><p class="muted">${l.stage === 'marking' ? `Waiting for ${esc(person(l.withUser || 'vera').name)} to mark it.` : 'Nothing for you to do on this letter right now.'}</p>`;
   const who = id => id === 'registry' ? 'Registry' : person(id).name;
   return pageHead({ crumbs: [[r === 'registry' ? 'Correspondence' : 'My Queue', r === 'registry' ? '#/correspondence' : '#/queue'], [l.title]], back, title: esc(l.title),
       sub: `From ${esc(l.from)} · ${esc(l.senderRef || 'No reference')} · Received ${fmtDay(l.received)}`,
@@ -112,17 +112,18 @@ const CORR_SUB = {
   },
 };
 const isActionOfficer = id => PEOPLE[id] && PEOPLE[id].role === 'action';
+const isMarkingOfficer = id => PEOPLE[id] && PEOPLE[id].role === 'marking';
 function markingItems() {
   const out = [];
   (S.letters || []).forEach(l => {
-    const sent = [...l.movements].reverse().find(m => m.to === 'vera'), back = [...l.movements].reverse().find(m => m.from === 'vera');
+    const sent = [...l.movements].reverse().find(m => isMarkingOfficer(m.to)), back = [...l.movements].reverse().find(m => isMarkingOfficer(m.from));
     const state = l.stage === 'marking' ? 'sent' : l.stage === 'marked' ? 'received' : l.stage === 'registry' ? 'unsent' : 'done';
     let btn = `<a class="btn btn-light btn-xs" href="${letterOpen(l)}">${ic('eye')} Open</a>`;
     if (l.stage === 'registry') btn = `<button class="btn btn-primary btn-xs" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button>`;
     if (l.stage === 'marked') btn = `<a class="btn btn-primary btn-xs" href="${letterOpen(l)}">${ic('archive')} File this letter</a>`;
     if (l.stage === 'filed') btn = `<button class="btn btn-primary btn-xs" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>`;
     out.push({ kind: 'Letter', state, at: (back || sent || {}).date || l.received, title: l.title, sub: `${letterNo(l)} · ${l.senderRef || ''}`, href: letterOpen(l), from: l.from,
-      status: LETTER_STAGE[l.stage], sent: sent && sent.date, back: back && back.date, to: l.marking ? person(l.marking.to).name : '—', btn });
+      status: LETTER_STAGE[l.stage], withName: sent ? person(sent.to).name : '', sent: sent && sent.date, back: back && back.date, to: l.marking ? person(l.marking.to).name : '—', btn });
   });
   return out.sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -147,7 +148,7 @@ function viewCorrMovement(q) {
   const isM = main === 'marking';
   const head = isM ? ['Letter', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
   const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'Letter' ? 'is-letter' : ''}">${ic(x.kind === 'Letter' ? 'mail' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a><small class="sub mono">${esc(x.sub)}</small></td>
-      <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span></td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
+      <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span>${x.withName ? `<small class="sub">${isM ? 'Marking Officer' : 'Officer'}: ${esc(x.withName)}</small>` : ''}</td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
       <td>${isM ? esc(x.to) : `<span class="lt-ins">${esc(x.to)}</span>`}</td><td><div class="row-btns">${x.btn}</div></td></tr>`);
   const showLabel = { all: 'All', sent: 'Sent', received: 'Received' };
   return pageHead({ crumbs: [['Correspondence']], title: 'Correspondence', sub: 'View movement of letters and files from marking and action officers',
@@ -163,7 +164,7 @@ function viewCorrMovement(q) {
 /* Letters waiting for the Registry (shown as the Correspondence count) */
 const lettersWaiting = () => (S.letters || []).filter(l => ['marked', 'filed'].includes(l.stage)).length;
 /* Letters waiting for the Marking Officer (her My Queue) */
-const lettersToMark = () => (S.letters || []).filter(l => l.stage === 'marking');
+const lettersToMark = () => (S.letters || []).filter(l => l.stage === 'marking' && (l.withUser || 'vera') === meId());
 function lettersToMarkPanel() {
   const ls = lettersToMark(); if (!ls.length) return '';
   return `<section class="panel glass lt-tomark"><div class="panel-h"><h2>Letters to mark <span class="n-pill">${ls.length}</span></h2></div>
@@ -173,11 +174,26 @@ function lettersToMarkPanel() {
 
 Object.assign(ACT, {
   letterFilePick: el => { ui.lfFile = el.value; render(); },
-  letterSendMark: el => {
-    const l = getLetter(el.dataset.id); if (!l) return;
-    l.stage = 'marking'; l.movements.push({ date: now(), from: meId(), to: 'vera' });
-    notifyL('vera', 'For marking', `A new letter was sent to you for marking: ${l.title}.`, l);
-    save(); render(); refreshNotifDrawer(); toast('Sent to the Marking Officer');
+  letterSendMark: el => letterSendModal((el.dataset.ids || el.dataset.id).split(','), 'marking'),
+  letterSendConfirm: el => {
+    const ids = el.dataset.ids.split(','), to = val('ls-to'), note = val('ls-note'), mk = el.dataset.to === 'marking';
+    if (!to) { const e = $('#ls-err'); e.textContent = `Choose the ${mk ? 'Marking' : 'Action'} Officer.`; e.hidden = false; return; }
+    ids.forEach(id => {
+      const l = getLetter(id); if (!l) return;
+      if (mk) {
+        l.stage = 'marking'; l.withUser = to; l.movements.push({ date: now(), from: meId(), to, note });
+        notifyL(to, 'For marking', `A new letter was sent to you for marking: ${l.title}.`, l);
+      } else {
+        const f = getFile(l.fileId); if (!f) return;
+        f.stage = 'action'; f.withUser = to; f.markedTo = to; f.instruction = l.marking.ins; f.sentBy = meId(); f.delegatedBy = null;
+        if (note) addMinute(f, getDoc(f, l.docId), note, meId());
+        move(f, meId(), to);
+        S.notifications.unshift({ id: nid('n'), to, kind: 'For action', text: `File forwarded to you: ${l.title} (folio ${l.folio}).`, from: meId(), fileId: f.id, docId: l.docId, at: now(), read: false });
+        l.stage = 'action'; l.actionTo = to; l.movements.push({ date: now(), from: 'registry', to, note: `Whole file ${f.name} sent` });
+      }
+    });
+    save(); closeModal(); render(); refreshNotifDrawer();
+    toast(`${ids.length > 1 ? plural(ids.length, 'letter') : 'Sent'}${ids.length > 1 ? ' sent' : ''} to ${person(to).name}`);
   },
   letterMark: el => {
     const l = getLetter(el.dataset.id), ins = need('lm-ins', 'Instruction'); if (!l || !ins) return;
@@ -201,17 +217,25 @@ Object.assign(ACT, {
     l.movements.push({ date: now(), from: 'registry', to: 'registry', note: `Filed as folio ${folio} in ${f.name}` });
     ui.lfFile = ''; save(); render(); toast(`Filed as folio ${folio} in ${f.name}`);
   },
-  letterSendAction: el => {
-    const l = getLetter(el.dataset.id), f = l && getFile(l.fileId); if (!l || !f) return;
-    const to = l.marking.to;
-    f.stage = 'action'; f.withUser = to; f.markedTo = to; f.instruction = l.marking.ins; f.sentBy = meId(); f.delegatedBy = null;
-    move(f, meId(), to);
-    S.notifications.unshift({ id: nid('n'), to, kind: 'For action', text: `File forwarded to you: ${l.title} (folio ${l.folio}).`, from: meId(), fileId: f.id, docId: l.docId, at: now(), read: false });
-    l.stage = 'action'; l.movements.push({ date: now(), from: 'registry', to });
-    save(); render(); refreshNotifDrawer(); toast(`Sent to ${person(to).name}`);
-  },
+  letterSendAction: el => letterSendModal([el.dataset.id], 'action'),
   notifRead: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = !n.read; save(); refreshNotifDrawer(); render(); } },
 });
+/* Choose who a letter goes to: a Marking Officer, or (once filed) an Action Officer with the whole file */
+function letterSendModal(ids, to) {
+  const ls = ids.map(getLetter).filter(Boolean); if (!ls.length) return;
+  const mk = to === 'marking', l = ls[0], f = !mk && getFile(l.fileId);
+  modal(`${mHead('send', mk ? 'Send to a Marking Officer' : 'Send to an Action Officer', ls.length > 1 ? plural(ls.length, 'letter') : esc(l.title))}
+    <div class="modal-b">
+      ${mk ? '' : `<div class="instruction" style="margin:0">${ic('sticky')}<div><b>Marked to ${esc(person(l.marking.to).name)}</b> – ${esc(l.marking.ins)}</div></div>
+        <p class="form-note">${ic('folder')} The whole file goes: ${f ? `<b>${esc(f.name)}</b> (${esc(f.ref)}), with this letter as folio ${esc(l.folio)}` : 'the file this letter is in'}.</p>`}
+      <div class="field"><label for="ls-to">${mk ? 'Marking Officer' : 'Action Officer'} <span class="req">*</span></label>
+        <select class="select" id="ls-to"><option value="">Choose who to send it to…</option>${peopleOpts(p => p.role === (mk ? 'marking' : 'action'), mk ? '' : l.marking.to)}</select>
+        <span class="hint">${mk ? 'They mark it and send it back to the Registry to be filed.' : 'Usually the officer it was marked to. Choose another officer if it should go elsewhere.'}</span></div>
+      <div class="field"><label for="ls-note">${mk ? 'Note' : 'Minute'} <span class="muted" style="font-weight:500">(optional)</span></label><textarea class="textarea" id="ls-note" placeholder="${mk ? 'e.g. Urgent – reply needed by Friday' : 'e.g. Follow the marking instruction'}"></textarea></div>
+      <p class="form-err" id="ls-err" role="alert" hidden></p>
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="letterSendConfirm" data-to="${to}" data-ids="${ids.join(',')}">${ic('send')} Send</button></div>`, '', '#ls-to');
+}
 /* Keep the notification pop-up open after an action, with fresh contents */
 function refreshNotifDrawer() {
   const list = document.querySelector('#drawer .list'); if (!list) return;
@@ -226,7 +250,7 @@ function notifAction(n) {
   if (l) {
     if (r === 'registry' && l.stage === 'registry') return B('letterSendMark', 'Send to Marking Officer', 'send', `data-id="${l.id}"`);
     if (r === 'registry' && l.stage === 'marked') return G(letterOpen(l), 'File this letter', 'archive');
-    if (r === 'registry' && l.stage === 'filed') return B('letterSendAction', `Send to ${esc(person(l.marking.to).name)}`, 'send', `data-id="${l.id}"`);
+    if (r === 'registry' && l.stage === 'filed') return B('letterSendAction', 'Send to Action Officer', 'send', `data-id="${l.id}"`);
     if (r === 'marking' && l.stage === 'marking') return G(letterOpen(l), 'Mark this letter', 'pen');
     return G(letterOpen(l), 'Open letter', 'mail');
   }
