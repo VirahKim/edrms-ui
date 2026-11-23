@@ -129,7 +129,7 @@ function letterNotesPanel(l) {
     <button class="btn btn-light btn-sm" data-act="letterComment" data-id="${l.id}" style="margin-top:8px">${ic('send')} Post comment</button>`}</section>`;
 }
 /* ---------- Correspondence (Registry): movement to and from the officers ---------- */
-const CORR_TABS = { marking: 'To Marking Officer', action: 'To Action Officer' };
+const CORR_TABS = { received: 'Received', marking: 'To Marking Officer', action: 'To Action Officer' };
 const CORR_SUB = {
   marking: {
     all: 'Every letter or document sent to the Marking Officer, and what has come back.',
@@ -171,24 +171,31 @@ function actionItems() {
   }).sort((a, b) => b.at.localeCompare(a.at));
 }
 function viewCorrMovement(q) {
-  const [main, show] = (() => { const t = q.tab || 'marking'; const m = t.startsWith('action') ? 'action' : 'marking'; const s = t.slice(m.length) || 'all'; return [m, ['all', 'sent', 'received'].includes(s) ? s : 'all']; })();
-  const items = main === 'marking' ? markingItems() : actionItems();
+  const [main, show] = (() => { const t = q.tab || 'received'; if (t === 'received') return ['received', 'all']; const m = t.startsWith('action') ? 'action' : 'marking'; const s = t.slice(m.length) || 'all'; return [m, ['all', 'sent', 'received'].includes(s) ? s : 'all']; })();
+  const recv = (S.letters || []).filter(l => l.stage === 'registry');
+  const items = main === 'marking' ? markingItems() : main === 'action' ? actionItems() : [];
   const count = s => items.filter(x => s === 'all' || x.state === s).length;
   const list = items.filter(x => show === 'all' || x.state === show);
   const mCount = markingItems().filter(x => x.state === 'received').length, aCount = actionItems().filter(x => x.state === 'received').length;
+  const nTab = k => k === 'received' ? recv.length : k === 'marking' ? mCount : aCount;
+  const head = pageHead({ crumbs: [['Correspondence']], title: 'Correspondence', sub: 'View movement of letters and files from marking and action officers' }) + `
+    <div class="ct-head"><nav class="set-tabs" aria-label="Correspondence">${Object.entries(CORR_TABS).map(([k, l]) => `<a class="set-tab ${k === main ? 'on' : ''}" href="#/correspondence?tab=${k}" ${k === main ? 'aria-current="page"' : ''}>${ic(k === 'received' ? 'inboxIn' : k === 'marking' ? 'pen' : 'user')} ${l}${nTab(k) ? `<span class="count">${nTab(k)}</span>` : ''}</a>`).join('')}</nav>
+      <a class="btn btn-primary" href="#/upload">${ic('upload')} Upload a letter or document</a></div>`;
+  if (main === 'received') return head + `<section class="panel glass ct-panel"><p class="ct-sub" style="margin-top:0">Letters and documents received and recorded, waiting to be sent to a Marking Officer.</p>
+      ${simpleTable(['Letter or document', 'From', 'Received', 'Uploaded by', ''], recv.map(l => `<tr data-s="${esc(letterNo(l))}"><td data-v="${letterKind(l)}"><span class="lt-kind is-letter">${ic(letterKind(l) === 'Letter' ? 'mail' : 'file')}</span><a href="${letterOpen(l)}"><b>${esc(l.title)}</b></a> <span class="chip t-neutral lt-kchip">${letterKind(l)}</span><small class="sub mono">${letterNo(l)} · ${esc(l.senderRef || '')}</small></td>
+        <td>${esc(l.from)}</td><td data-d="${l.received}">${fmtDT(l.received)}</td><td>${esc(person(l.uploadedBy).name)}</td><td><div class="row-btns"><button class="btn btn-primary btn-xs" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button></div></td></tr>`),
+        'Nothing received and waiting. Upload a letter to start.', { key: 'ct-received', search: 'Search letters and documents – subject, sender or reference', date: [2, 'Received from', 'Received to'], facets: [[0, 'Letter or document'], [1, 'From']] })}</section>`;
   const isM = main === 'marking';
-  const head = isM ? ['Letter or document', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
+  const thead = isM ? ['Letter or document', 'From', 'Status', 'Sent', 'Returned', 'Marked to', ''] : ['File', 'Officer', 'Status', 'Sent', 'Returned', 'Instruction', ''];
   const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'File' ? '' : 'is-letter'}" title="${x.kind}">${ic(x.kind === 'Letter' ? 'mail' : x.kind === 'Document' ? 'file' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a>${isM ? ` <span class="chip t-neutral lt-kchip">${x.kind}</span>` : ''}<small class="sub mono">${esc(x.sub)}</small></td>
       <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span>${x.withName ? `<small class="sub">${isM ? 'Marking Officer' : 'Officer'}: ${esc(x.withName)}</small>` : ''}</td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
       <td>${isM ? esc(x.to) : `<span class="lt-ins">${esc(x.to)}</span>`}</td><td><div class="row-btns">${x.btn}</div></td></tr>`);
   const showLabel = { all: 'All', sent: 'Sent', received: 'Received' };
-  return pageHead({ crumbs: [['Correspondence']], title: 'Correspondence', sub: 'View movement of letters and files from marking and action officers',
-      right: `<a class="btn btn-primary" href="#/upload">${ic('upload')} Upload a letter or document</a>` }) + `
-    <nav class="set-tabs" aria-label="Correspondence">${Object.entries(CORR_TABS).map(([k, l]) => `<a class="set-tab ${k === main ? 'on' : ''}" href="#/correspondence?tab=${k}" ${k === main ? 'aria-current="page"' : ''}>${ic(k === 'marking' ? 'pen' : 'user')} ${l}${(k === 'marking' ? mCount : aCount) ? `<span class="count">${k === 'marking' ? mCount : aCount}</span>` : ''}</a>`).join('')}</nav>
+  return head + `
     <section class="panel glass ct-panel">
       <div class="ct-seg" role="tablist" aria-label="${CORR_TABS[main]}">${['all', 'sent', 'received'].map(s => `<a role="tab" class="${s === show ? 'on' : ''}" aria-selected="${s === show}" href="#/correspondence?tab=${main}${s === 'all' ? '' : s}">${showLabel[s]} <span class="n">${count(s)}</span></a>`).join('')}</div>
       <p class="ct-sub">${CORR_SUB[main][show]}</p>
-      ${simpleTable(head, rows, show === 'received' ? (isM ? 'No letters or documents have come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
+      ${simpleTable(thead, rows, show === 'received' ? (isM ? 'No letters or documents have come back from the Marking Officer yet.' : 'Nothing has come back from Action Officers yet.') : 'Nothing here yet.',
         { key: `ct-${main}-${show}`, search: isM ? 'Search letters and documents – subject, sender or reference' : 'Search files – name, reference or officer', date: [3, 'Sent from', 'Sent to'], facets: isM ? [[0, 'Letter or document'], [1, 'From'], [2, 'Status']] : [[1, 'Officer'], [2, 'Status']], paged: true })}
     </section>`;
 }

@@ -1173,13 +1173,16 @@ function movementRows() {
   const me_ = meId(), r = role();
   return rows.filter(x => r === 'registry' || x.officer === me_ || x.passed === me_).sort((a, b) => b.m.date.localeCompare(a.m.date));
 }
-function viewRouting() {
+function viewRouting(q = {}) {
+  const reg = q.stage === 'physical' ? 'physical' : 'electronic';
   const rows = movementRows();
   const out = rows.filter(x => !x.ret).length;
   const who = id => { const p = person(id); return `${esc(p.name)}<small class="sub">${esc(p.title || '')}</small>`; };
-  return queueHead('routing', role() === 'registry' ? 'The file movement register: every time a whole file leaves the Registry for an Action Officer, who received it, and when it came back.' : 'Every file the Registry sent you, when you received it, and when it went back.') + `
+  const regTabs = `<div class="fm-head"><nav class="set-tabs" aria-label="File movement registers">${[['electronic', 'Electronic File Movement Register', 'route'], ['physical', 'Physical File Movement Register', 'archive']].map(([k, l, i]) => `<a class="set-tab ${reg === k ? 'on' : ''}" href="#/routing${k === 'physical' ? '?stage=physical' : ''}" ${reg === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>${reg === 'physical' && role() === 'registry' ? `<button class="btn btn-primary" data-act="handOver">${ic('send')} Hand over</button>` : ''}</div>`;
+  if (reg === 'physical') return queueHead('routing', 'Physical files, and single documents taken out of them, and where they are. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.') + regTabs + physicalRegister(ui.phTab || 'open', k => `data-act="phTab" data-k="${k}"`);
+  return queueHead('routing', role() === 'registry' ? 'The electronic file movement register: every time a whole file leaves the Registry for an Action Officer, who received it, and when it came back.' : 'Every file the Registry sent you, when you received it, and when it went back.') + regTabs + `
     <section class="panel glass">
-      <div class="panel-h"><h2>File movement register</h2><span class="muted">${plural(rows.length, 'movement')} · ${out} out of the Registry</span></div>
+      <div class="panel-h"><h2>Electronic file movement register</h2><span class="muted">${plural(rows.length, 'movement')} · ${out} out of the Registry</span></div>
       ${simpleTable(['Date', 'Reference', 'Subject', 'Action Officer', 'RM', 'Receiving Officer', 'Date', 'Returned'], rows.map(x => `<tr data-href="#/file/${x.f.id}">
         <td data-d="${x.m.date}">${fmtDT(x.m.date)}</td><td class="mono"><b>${esc(x.f.ref)}</b></td><td><a href="#/file/${x.f.id}"><b>${esc(x.f.name)}</b></a></td>
         <td data-v="${esc(person(x.officer).name)}">${who(x.officer)}</td><td>${esc(person(x.rm).name)}</td>
@@ -1398,21 +1401,24 @@ function physHead(which, sub, right = '') {
   return pageHead({ crumbs: [['Physical Files', which === 'census' ? '#/physical' : ''], ...(which === 'census' ? [['File Census']] : [])], title: 'Physical Files', sub, right }) +
     `<div class="queue-switch seg solid" role="tablist" aria-label="Physical Files">${[['location', '#/physical', 'File location', 'archive'], ['census', '#/census', 'File Census', 'checkCircle']].map(([k, h, l, i]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}</button>`).join('')}</div>`;
 }
-function viewPhysical(q) {
-  const tab = q.tab || 'open';
+function physicalRegister(tab, tabAttr) {
+  const mine = role() === 'registry' ? () => true : h => h.to === meId();
   const tabs = [['open', 'Open', x => x.status !== 'CLOSED'], ['SENT', 'Waiting for receipt', x => x.status === 'SENT'], ['RECEIVED', 'With holders', x => x.status === 'RECEIVED'], ['RETURNED', 'Returned, to acknowledge', x => x.status === 'RETURNED'], ['CLOSED', 'Closed', x => x.status === 'CLOSED']];
   const pick = tabs.find(t => t[0] === tab) || tabs[0];
-  const list = S.handovers.filter(pick[2]).sort((a, b) => b.sent.localeCompare(a.sent));
+  const all = S.handovers.filter(mine), list = all.filter(pick[2]).sort((a, b) => b.sent.localeCompare(a.sent));
   const act = h => h.status === 'SENT' ? `<button class="btn btn-primary btn-xs" data-act="hoReceive" data-id="${h.id}">${ic('check')} Acknowledge receipt</button>`
     : h.status === 'RECEIVED' ? `<button class="btn btn-light btn-xs" data-act="hoReturn" data-id="${h.id}">${ic('undo')} Return to records</button>`
-    : h.status === 'RETURNED' ? `<button class="btn btn-primary btn-xs" data-act="hoAckReturn" data-id="${h.id}">${ic('checkCircle')} Acknowledge return</button>` : '';
-  return physHead('location', 'Where every physical file, and any single document taken out of it, is now. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.', `<button class="btn btn-white" data-act="handOver">${ic('send')} Hand over</button>`) + `
-    <section class="panel glass dense"><div class="tabs">${tabs.map(([k, l, fn]) => `<button class="${pick[0] === k ? 'on' : ''}" data-href="#/physical?tab=${k}">${l} <span class="n">${S.handovers.filter(fn).length}</span></button>`).join('')}</div>
+    : h.status === 'RETURNED' && role() === 'registry' ? `<button class="btn btn-primary btn-xs" data-act="hoAckReturn" data-id="${h.id}">${ic('checkCircle')} Acknowledge return</button>` : '';
+  return `<section class="panel glass dense"><div class="tabs">${tabs.map(([k, l, fn]) => `<button class="${pick[0] === k ? 'on' : ''}" ${tabAttr(k)}>${l} <span class="n">${all.filter(fn).length}</span></button>`).join('')}</div>
     ${simpleTable(['Physical file', 'Moving', 'Document', 'Status', 'With', 'Sent', 'Returned'], list.map(h => { const f = getFile(h.fileId); const d = h.docId && getDoc(f, h.docId);
       return `<tr><td>${fileLink(f)}<small class="sub">${esc(f.location)}</small></td><td>${h.what === 'file' ? 'Whole file' : 'Single document'}</td><td>${d ? `Folio ${esc(d.folio)} · ${esc(d.title)}` : '<span class="muted">All documents in the file</span>'}</td>
         <td><span class="chip ${HO_STATUS[h.status][1]}">${HO_STATUS[h.status][0]}</span>${h.received ? `<small class="sub">Received ${fmtDT(h.received)}</small>` : ''}${h.closed ? `<small class="sub">Acknowledged ${fmtDT(h.closed)}</small>` : ''}${act(h) ? `<div style="margin-top:8px">${act(h)}</div>` : ''}</td>
         <td><div class="fname">${hoWith(h)}</div>${h.purpose ? `<small class="sub">${esc(h.purpose)}</small>` : ''}</td><td data-d="${h.sent}">${fmtDT(h.sent)}</td><td>${h.returned ? fmtDT(h.returned) : '—'}</td></tr>`; }), 'Nothing here.', { key: 'physical', search: 'Search – file, reference, document or holder', date: [5, 'Sent from', 'Sent to'], facets: [[0, 'Physical file'], [1, 'Moving'], [3, 'Status'], [4, 'With']] })}
     </section>`;
+}
+function viewPhysical(q) {
+  return physHead('location', 'Where every physical file, and any single document taken out of it, is now. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.', `<button class="btn btn-white" data-act="handOver">${ic('send')} Hand over</button>`) +
+    physicalRegister(q.tab || 'open', k => `data-href="#/physical?tab=${k}"`);
 }
 function handOverModal() {
   const o = ui.ho; const f = getFile(o.fileId);
@@ -2404,6 +2410,7 @@ const ACT = {
     setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('#icon-menu') && !e.target.closest('.ph-more')) { $('#icon-menu')?.remove(); el.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', off); } }), 0);
     menu.querySelector('button')?.focus(); },
   openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); if (typeof notifModal === 'function') notifModal(n); else { closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } } },
+  phTab: el => { ui.phTab = el.dataset.k; render(); },
   notifGo: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); } closeModal(); go(el.dataset.to); },
   seeMinute: el => { ui.hlMin = `${el.dataset.doc}:${el.dataset.n}`; go(`#/file/${el.dataset.file}/letter/${el.dataset.doc}`);
     setTimeout(() => { const m = document.querySelector('.note-item.hl'); if (m) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 80); },
