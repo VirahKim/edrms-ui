@@ -2626,3 +2626,6 @@ html { zoom: var(--z); }
   .set-tabs[aria-label="Correspondence"] .set-tab svg { display: none; }
   .set-tabs[aria-label="Correspondence"] .set-tab .count { margin-left: 2px; min-width: 18px; height: 18px; font-size: 11px; }
 }
+
+/* Upload: the short how-it-works line sits under the upload area */
+.up-body > .up-lead { order: 99; }
