@@ -374,14 +374,15 @@ function decorateOverview(root) {
 function decorateSide(root) {
   const reg = root.querySelector('.sidebar nav[aria-label="Registry pages"]');
   const cur = parseHash().parts[0];
-  const link = (k, h, l, i, n) => `<a href="${h}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</a>`;
-  if (reg && !reg.querySelector('[href="#/correspondence"]')) reg.insertAdjacentHTML('beforeend', link('correspondence', '#/correspondence', 'Correspondence', 'mail', corrWaiting().length) + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
+  const isOn = k => cur === k || (k === 'correspondence' && cur === 'letter' && role() === 'registry');
+  const link = (k, h, l, i, n) => `<a href="${h}" class="${isOn(k) ? 'on' : ''}" ${isOn(k) ? 'aria-current="page"' : ''}>${ic(i)} ${l}${n ? `<span class="count">${n}</span>` : ''}</a>`;
+  if (reg && !reg.querySelector('[href="#/correspondence"]')) reg.insertAdjacentHTML('beforeend', link('correspondence', '#/correspondence', 'Correspondence', 'mail', lettersWaiting()) + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
   const main = root.querySelector('.sidebar nav.nav');
   if (main && role() !== 'registry' && !main.querySelector('[href="#/reports"]')) {
     main.querySelector('[data-act=requestAny]')?.remove();
     main.insertAdjacentHTML('beforeend', link('mycorrespondence', '#/mycorrespondence', 'My correspondence', 'fileEdit', S.corr.filter(c => c.from === meId() && c.status === 'returned').length) + link('requestfiles', '#/requestfiles', 'Request files', 'filePlus') + link('reports', '#/reports', 'Reports Dashboard', 'zap'));
   }
-  if (['approvals', 'messages', 'correspondence', 'reports', 'mycorrespondence', 'requestfiles'].includes(cur)) root.querySelectorAll('.sidebar nav a.on').forEach(a => { if (!a.getAttribute('href').includes(cur)) { a.classList.remove('on'); a.removeAttribute('aria-current'); } });
+  if (['approvals', 'messages', 'correspondence', 'reports', 'mycorrespondence', 'requestfiles', 'letter'].includes(cur)) root.querySelectorAll('.sidebar nav a.on').forEach(a => { if (!a.getAttribute('href').includes(cur === 'letter' ? 'correspondence' : cur)) { a.classList.remove('on'); a.removeAttribute('aria-current'); } });
 }
 
 /* ---------- User Manual in a side panel (opened from the Q-BITS AI hub) ---------- */
@@ -491,7 +492,7 @@ function bkTransfer(fromId, toId, move) {
   toast(`${move ? 'Moved' : 'Copied'} ${plural(ds.length, 'folio')} to ${b.name}`);
 }
 /* ---------- routes, actions and inputs ---------- */
-LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrespondence, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
+LIVE_ROUTES = { approvals: viewApprovals, messages: viewMessages, correspondence: viewCorrMovement, letter: viewLetter, reports: viewReports, 'mycorrespondence': viewMyCorrespondence, 'requestfiles': viewRequestFiles };
 Object.assign(SCREEN_NAME, { approvals: 'Pending Approvals', messages: 'Messages', correspondence: 'Correspondence from officers', reports: 'Reports Dashboard', 'mycorrespondence': 'My correspondence', 'requestfiles': 'Request Files' });
 LIVE_AFTER = root => { addHeaderExtras(root); decorateOverview(root); decorateSide(root); const m = $('#chat-msgs'); if (m) m.scrollTop = m.scrollHeight; };
 

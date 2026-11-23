@@ -296,7 +296,7 @@ const myBringups = () => S.bringups.filter(b => role() === 'registry' ? true : b
 /* Links are written as '#/path?key=value' in the code and turned into plain
    names in the address bar ('#file-f1-doc-d8', '#routing-returnedaction'),
    which is what the claude.ai preview allows. */
-const ROUTE_PARAM = { routing: 'stage', queue: 'tab', guide: 's', upload: 'file', files: 'r', records: 'tab' };
+const ROUTE_PARAM = { routing: 'stage', queue: 'tab', guide: 's', upload: 'file', files: 'r', records: 'tab', correspondence: 'tab', letter: 'id' };
 const ROUTE_ALIAS = { settings: 'profile' };
 function encodeRoute(h) {
   const [path, qs] = String(h).replace(/^#\/?/, '').split('?');
@@ -307,7 +307,7 @@ function encodeRoute(h) {
   return '#' + seg.join('-');
 }
 /* Names used by Back links: "Back to Registries & Files" */
-const SCREEN_NAME = { files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'File Lifecycle', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
+const SCREEN_NAME = { correspondence: 'Correspondence', letter: 'Letter', files: 'Registries & Files', routing: 'My Queue', queue: 'My Queue', bringup: 'Bring Up Diary', settings: 'Settings', guide: 'User Manual', upload: 'Upload Document', inward: 'Inward Mail Register', outward: 'Outward Mail Register', movements: 'Movement Sheets', physical: 'Physical Files', access: 'Files Requested', senders: 'Mail Senders', records: 'File Lifecycle', census: 'Physical Files', tutorial: 'Tutorial', grid: 'File grid', ai: 'Q-BITS AI', notifications: 'Notifications' };
 function screenName(h) {
   const { parts } = parseHash(h);
   if (!parts.length) return 'Overview';
@@ -447,13 +447,14 @@ const NOTIF_TONE = { 'Sent back': 't-red', Declined: 't-red', Approved: 't-green
 function notifCard(n) {
   const f = getFile(n.fileId) || {}; const p = person(n.from);
   return `<div class="notif-card ${n.read ? '' : 'unread'}" data-act="openNotif" data-id="${n.id}">
-    <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc(f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><a>View</a></div>
+    <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc((n.letterId && typeof getLetter === 'function' && getLetter(n.letterId)?.title) || f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><button type="button" class="n-read" data-act="notifRead" data-id="${n.id}" aria-label="${n.read ? 'Mark as unread' : 'Mark as read'}" title="${n.read ? 'Mark as unread' : 'Mark as read'}">${ic(n.read ? 'mail' : 'check')}</button></div>
     <p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
     <div class="nfoot"><span class="ago">${ago(n.at)}</span>${(() => {
-      if (!f.id) return '';
+      const act = typeof notifAction === 'function' ? notifAction(n) : '';
+      if (!f.id) return act ? `<span class="n-go">${act}</span>` : '';
       const d = (n.docId && f.docs.find(x => x.id === n.docId)) || [...f.docs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-      return `<span class="n-go"><button type="button" class="btn btn-light btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}" aria-label="Open file ${esc(f.name)}">${ic('folder')} Open file</button>${d ? `<button type="button" class="btn btn-primary btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}/doc/${d.id}" aria-label="Open document ${esc(d.title)}">${ic('file')} Open document</button>` : ''}</span>`; })()}</div></div>`;
+      return `<span class="n-go">${act}<button type="button" class="btn btn-light btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}" aria-label="Open file ${esc(f.name)}">${ic('folder')} Open file</button>${d ? `<button type="button" class="btn ${act ? 'btn-light' : 'btn-primary'} btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}/doc/${d.id}" aria-label="Open document ${esc(d.title)}">${ic('file')} Open document</button>` : ''}</span>`; })()}</div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
@@ -1179,7 +1180,7 @@ function viewQueue(q) {
   const notes = notesForMe();
   const tabs = [['act', 'Files to Act On', myQueue().length], ['notes', 'Notes for Me', notes.length], ['approvals', 'Pending Approvals', reqs.filter(x => x.status === 'open').length], ['landing', 'Landing Queue', landingDocs().length], ['subs', 'My Submissions', subs.length]];
   let body = '';
-  if (tab === 'act') body = `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.', 'queue-act');
+  if (tab === 'act') body = (r === 'marking' && typeof lettersToMarkPanel === 'function' ? lettersToMarkPanel() : '') + `<p class="muted" style="margin:0 0 14px">Files sent to you that are waiting for your ${r === 'marking' ? 'marking' : r === 'action' ? 'action' : 'routing'}.</p>` + fileTable(myQueue(), ['stage', 'with', 'docs', 'sent', 'since'], 'Nothing waiting for you.', 'queue-act');
   if (tab === 'notes') body = notes.length ? `<div class="results">${notes.map(({ f, d, s }) => `<a class="result card" href="#/file/${f.id}/doc/${d.id}" style="border-left:8px solid ${stickyCol(s.color)}"><span class="pg">${ic('sticky')}</span><div><b>${esc(s.text)}</b><small>From ${esc(person(s.by).name)} · Folio ${esc(d.folio)} in ${esc(f.name)} · ${ago(s.at)}</small></div></a>`).join('')}</div>` : '<div class="card empty">No sticky notes addressed to you.</div>';
   if (tab === 'approvals') body = (typeof approvalsTable === 'function' ? approvalsTable() : '') + (reqs.length ? `<h3 class="sub-h">File requests</h3>` : '') + (reqs.length ? `<div class="results">${reqs.map(x => { const f = getFile(x.fileId); return `<div class="result card" style="cursor:default"><span class="pg">${ic('filePlus')}</span><div><b>${esc(person(x.by).name)} requested <span class="mono">${esc(x.want)}</span></b><small>${f ? `For ${esc(f.name)} · ` : ''}${esc(x.reason)} · ${ago(x.at)}</small></div>
       <span style="margin-left:auto">${r === 'registry' && x.status === 'open' ? `<button class="btn btn-primary btn-sm" data-act="approveReq" data-id="${x.id}">${ic('send')} Send file</button>` : `<span class="chip ${x.status === 'open' ? 't-amber' : 't-green'}">${x.status === 'open' ? 'Pending' : 'Sent to you'}</span>`}</span></div>`; }).join('')}</div>` : (typeof approvalsTable === 'function' ? '' : `<div class="card empty">No requests.</div>`));
@@ -1309,7 +1310,7 @@ const fileLink = f => `<a href="#/file/${f.id}"><b>${esc(f.name)}</b></a><small 
 function viewInward() {
   const rows = S.files.flatMap(f => f.docs.filter(d => d.kind !== 'response').map(d => ({ f, d }))).sort((a, b) => b.d.date.localeCompare(a.d.date));
   return pageHead({ crumbs: [['Inward Register']], title: 'Inward Mail Register', sub: 'A report of every document filed through Upload — Single, Bulk and Email. To add an entry, upload the document and fill in its details.', right: `<button class="btn btn-white" data-act="regExcel" data-k="inward">${ic('download')} Download Excel</button><a class="btn btn-glass" style="color:#fff" href="#/senders">${ic('users')} Mail Senders</a>${role() === 'registry' ? `<a class="btn btn-white" href="#/upload">${ic('upload')} Upload document</a>` : ''}` }) +
-    `<section class="panel glass">${simpleTable(['No.', 'Received', 'From', 'Subject', 'File', 'Folio', 'Status'], rows.map(({ f, d }, i) => `<tr data-href="#/file/${f.id}/doc/${d.id}"><td class="mono">IN/26/${String(d.serial || rows.length - i).padStart(3, '0')}</td><td data-d="${d.date}">${fmtDay(d.date)}</td><td>${esc(d.from)}</td><td>${esc(d.title)}</td><td>${fileLink(f)}</td><td class="mono">${esc(d.folio)}</td><td>${d.status === 'landing' ? '<span class="chip t-violet">Landing</span>' : '<span class="chip t-green">Filed</span>'}</td></tr>`), 'No mail registered.', { key: 'inward', search: 'Received from, subject or reference', date: [1, 'Received from', 'Received to'], facets: [[2, 'From'], [4, 'File'], [6, 'Status']] })}</section>`;
+    `<section class="panel glass">${simpleTable(['No.', 'Received', 'From', 'Subject', 'File', 'Folio', 'Status'], [...(S.letters || []).filter(l => !l.fileId).map(l => `<tr data-href="${letterOpen(l)}"><td class="mono">${letterNo(l)}</td><td data-d="${l.received}">${fmtDay(l.received)}</td><td>${esc(l.from)}</td><td>${esc(l.title)}</td><td><span class="muted">Not filed yet</span></td><td class="mono">—</td><td><span class="chip ${LETTER_STAGE[l.stage][1]}">${LETTER_STAGE[l.stage][0]}</span></td></tr>`), ...rows.map(({ f, d }, i) => `<tr data-href="#/file/${f.id}/doc/${d.id}"><td class="mono">IN/26/${String(d.serial || rows.length - i).padStart(3, '0')}</td><td data-d="${d.date}">${fmtDay(d.date)}</td><td>${esc(d.from)}</td><td>${esc(d.title)}</td><td>${fileLink(f)}</td><td class="mono">${esc(d.folio)}</td><td>${d.status === 'landing' ? '<span class="chip t-violet">Landing</span>' : '<span class="chip t-green">Filed</span>'}</td></tr>`)], 'No mail registered.', { key: 'inward', search: 'Received from, subject or reference', date: [1, 'Received from', 'Received to'], facets: [[2, 'From'], [4, 'File'], [6, 'Status']] })}</section>`;
 }
 function viewOutward() {
   const rows = S.files.flatMap(f => f.docs.filter(d => d.kind === 'response').map(d => ({ f, d }))).sort((a, b) => b.d.date.localeCompare(a.d.date));
@@ -1609,22 +1610,21 @@ function viewUpload(q) {
   let step, foot;
   if (u.step === 1) {
     step = `<div class="up-body">
-      <div class="field"><label class="label" for="up-file">1. Select a File <span class="req">*</span> <span class="info-tip" tabindex="0" title="Every document must be in a file. Choose an existing file or create a new one.">${ic('info')}</span></label><span class="hint" style="color:var(--ink-2)">Every document must be in a file</span>
-        <div style="display:flex;gap:10px;flex-wrap:wrap"><select class="select" id="up-file" style="flex:1;min-width:220px" data-change="uploadFile">${fileOpts}</select><button class="btn btn-glass btn-sm" style="height:46px" data-act="newFile">${ic('folderPlus')} New File</button></div></div>
-      ${u.tab === 'email' ? `<div class="field"><span class="label">2. Find Emails</span><span class="hint" style="color:var(--ink-2)">Connect a mailbox to search it for attachments. Only what you search for is read — nothing else in your inbox is touched, and nothing is ever sent or modified.</span>
+      ${f ? `<div class="up-into">${ic('folder')}<span>Uploading into <b>${esc(f.name)}</b> <small class="mono">${esc(f.ref)}</small></span><button class="link-btn" data-act="upClearFile">Upload as a new letter instead</button></div>` : `<p class="up-lead">${ic('mail')}<span>Upload the letter or document. You add its details next, then send it to the Marking Officer. You choose the file after it is marked.</span></p>`}
+      ${u.tab === 'email' ? `<div class="field"><span class="label">Find Emails</span><span class="hint" style="color:var(--ink-2)">Connect a mailbox to search it for attachments. Only what you search for is read — nothing else in your inbox is touched, and nothing is ever sent or modified.</span>
         <div class="mbx">${[['gmail', 'Gmail'], ['outlook', 'Outlook']].map(([k, l]) => { const on = (u.mbx || {})[k]; return `<div class="mbx-card card"><span class="mbx-ic">${ic('mail')}</span><div><b>${l}</b><small>${on ? `Connected · ${esc(me().name.toLowerCase().replace(/\s+/g, '.'))}@health.go.ke` : 'Not connected'}</small></div><button class="btn ${on ? 'btn-light' : 'btn-outline'} btn-sm" data-act="mbxToggle" data-k="${k}">${on ? 'Disconnect' : 'Connect'}</button></div>`; }).join('')}</div>
-        ${!f ? `<div class="locked-zone">${ic('lock')}<p>Select a file first</p></div>` : !Object.values(u.mbx || {}).some(Boolean) ? `<p class="muted" style="margin:4px 0 0">Connect Gmail or Outlook to see emails with attachments.</p>`
+        ${!Object.values(u.mbx || {}).some(Boolean) ? `<p class="muted" style="margin:4px 0 0">Connect Gmail or Outlook to see emails with attachments.</p>`
         : `<label class="input-icon" style="margin-top:4px">${ic('search')}<input class="input" id="mbx-q" value="${esc(u.mq || '')}" placeholder="Search emails – sender, subject or attachment" data-input="mbxQuery" autocomplete="off"><span class="sr">Search emails</span></label>
         <div class="results" id="mbx-list">${MAILBOX.filter(m => !u.mq || (m.subject + ' ' + m.from + ' ' + m.att).toLowerCase().includes(u.mq.toLowerCase())).map(m => `<label class="result card" style="cursor:pointer"><input type="checkbox" data-change="mailPick" value="${m.id}" ${u.files.some(x => x.id === m.id) ? 'checked' : ''}><span class="pg">${ic('mail')}</span><div><b>${esc(m.subject)}</b><small>${esc(m.from)} · ${esc(m.att)}</small></div></label>`).join('') || '<p class="muted">No emails match.</p>'}</div>`}
         <button class="btn btn-light btn-sm" style="justify-self:start" data-act="mbxRefresh">${ic('refresh')} Refresh</button></div>`
-      : `<div class="field"><span class="label">2. Add Document${u.tab === 'bulk' ? 's' : ''}</span><span class="hint" style="color:var(--ink-2)">${u.tab === 'bulk' ? 'Drop several files at once – each becomes its own folio' : 'OCR and AI start as soon as the import finishes.'}</span>
-        ${!f ? `<div class="locked-zone">${ic('lock')}<p>Select a file first</p>${u.tab === 'bulk' ? '<small class="muted">No files added yet.</small>' : ''}</div>` : `<label class="dropzone" id="dropzone"><input type="file" class="sr" data-change="pickUpload" ${u.tab === 'bulk' ? 'multiple' : ''} accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt">
+      : `<div class="field"><span class="label">Add Document${u.tab === 'bulk' ? 's' : ''}</span><span class="hint" style="color:var(--ink-2)">${u.tab === 'bulk' ? 'Drop several files at once – each becomes its own folio' : 'OCR and AI start as soon as the import finishes.'}</span>
+        ${`<label class="dropzone" id="dropzone"><input type="file" class="sr" data-change="pickUpload" ${u.tab === 'bulk' ? 'multiple' : ''} accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt">
           ${u.files.length ? `<div style="display:grid;gap:8px">${u.files.map(x => `<div class="file-chosen">${ic('file')}<div><b>${esc(x.name)}</b><br><small class="muted">${esc(x.size)}</small></div></div>`).join('')}<span class="hint">Click to choose different file${u.tab === 'bulk' ? 's' : ''}</span></div>`
           : `<div><div class="cloud"><span>${ic('arrowUp')}</span></div><p>Drop file${u.tab === 'bulk' ? 's' : ''} here or click to browse</p><p class="muted">PDF, DOCX, XLSX, PNG, JPG up to 100 MB</p></div>`}
         </label>`}</div>`}
       ${u.err ? `<p class="form-err" role="alert">${esc(u.err)}</p>` : ''}
     </div>`;
-    foot = `<button class="btn btn-light" data-act="upCancel">Cancel</button><button class="btn btn-primary" data-act="upNext" ${f && u.files.length ? '' : 'aria-disabled="true"'}>Next: Details${u.tab === 'email' ? ` (${u.files.length})` : ''} ${ic('arrowR')}</button>`;
+    foot = `<button class="btn btn-light" data-act="upCancel">Cancel</button><button class="btn btn-primary" data-act="upNext" ${u.files.length ? '' : 'aria-disabled="true"'}>Next: Details${u.tab === 'email' ? ` (${u.files.length})` : ''} ${ic('arrowR')}</button>`;
   } else if (u.step === 'ai') {
     const ph = AI_PHASES(u.files.length === 1 ? u.files[0].name : plural(u.files.length, 'document'));
     step = `<div class="ai-run" aria-live="polite"><div class="ai-orb">${ic('sparkles')}</div><h3>Reading your document${u.files.length > 1 ? 's' : ''}</h3><p class="muted" style="margin:0">OCR and AI start as soon as the import finishes. You can check everything on the next step.</p>
@@ -1650,9 +1650,9 @@ function viewUpload(q) {
             <button class="vb-btn" data-act="upDl" aria-label="Download" title="Download">${ic('download')}</button>
             <button class="vb-btn" data-act="print" aria-label="Print" title="Print">${ic('printer')}</button>
             <button class="vb-btn vb-on" data-act="upFull" aria-label="${u.full ? 'Exit full screen' : 'Full screen'}" title="${u.full ? 'Exit full screen' : 'Full screen'}">${ic(u.full ? 'x' : 'expand')}</button></div>
-          <div class="viewer-page">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>Folio ${esc(String(+nextFolio(f) + u.idx))}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', pageCtx)}</div></div>`}</div>
+          <div class="viewer-page">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>${f ? `Folio ${esc(String(+nextFolio(f) + u.idx))}` : 'New letter'}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', pageCtx)}</div></div>`}</div>
         </div>
-        <div class="ai-box"><b>${ic('sparkles')} AI summary</b><p>${esc(m._summary)}</p><small>OCR confidence ${m._ocr}% · going into ${esc(f?.name || '')}</small></div>
+        <div class="ai-box"><b>${ic('sparkles')} AI summary</b><p>${esc(m._summary)}</p><small>OCR confidence ${m._ocr}% · ${f ? `going into ${esc(f.name)}` : 'saved as a new letter'}</small></div>
       </aside>
       <div class="det-form">
         ${n > 1 ? `<div class="pager"><button class="btn btn-light btn-sm btn-icon" data-act="upDoc" data-d="-1" ${u.idx === 0 ? 'disabled' : ''} aria-label="Previous document">${ic('chevL')}</button>Document ${u.idx + 1} of ${n} <span class="muted">· ${esc(x.name)}</span><button class="btn btn-light btn-sm btn-icon" data-act="upDoc" data-d="1" ${u.idx === n - 1 ? 'disabled' : ''} aria-label="Next document">${ic('chevR')}</button></div>` : ''}
@@ -1663,9 +1663,9 @@ function viewUpload(q) {
         <div class="two"><div class="field"><label for="um-sender_ref_no">Reference Number ${tip('The sender’s own reference, as printed on the letter.')} ${ai('sender_ref_no')}</label><input class="input ${cls('sender_ref_no')}" id="um-sender_ref_no" data-um="sender_ref_no" value="${esc(m.sender_ref_no)}" placeholder="e.g. KNH/ADM/22/14"></div>
           <div class="field"><label for="um-sender_ref_date">Reference Date ${tip('The date written on the letter.')} ${ai('sender_ref_date')}</label><input class="input ${cls('sender_ref_date')}" type="date" id="um-sender_ref_date" data-um="sender_ref_date" value="${esc(m.sender_ref_date)}"></div></div>
         <div class="field"><label for="um-subject">Subject <span class="req">*</span> ${ai('subject')}</label><input class="input ${cls('subject')}" id="um-subject" data-um="subject" value="${esc(m.subject)}" placeholder="What the letter is about"></div>
-        <div class="field"><span class="label">Where Filed ${tip('The file this document goes into. It becomes the next folio there.')}</span>
+        ${f ? `<div class="field"><span class="label">Where Filed ${tip('The file this document goes into. It becomes the next folio there.')}</span>
           ${u.changing ? `<select class="select" data-change="upMoveFile" aria-label="Choose another file">${S.files.filter(ff => !ff.draft).map(ff => `<option value="${ff.id}" ${ff.id === u.fileId ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}</option>`).join('')}</select>`
-          : `<div class="where-filed">${ic('folder')}<span><b>${esc(f?.name || '')}</b><small>${esc(f?.ref || '')} · ${esc(regName(f?.registry))}</small></span><button class="link-btn" data-act="upChangeFile">Change</button></div>`}</div>
+          : `<div class="where-filed">${ic('folder')}<span><b>${esc(f?.name || '')}</b><small>${esc(f?.ref || '')} · ${esc(regName(f?.registry))}</small></span><button class="link-btn" data-act="upChangeFile">Change</button></div>`}</div>` : `<div class="field"><span class="label">Where Filed</span><div class="where-filed">${ic('mail')}<span><b>Not filed yet</b><small>You choose the file after the Marking Officer marks it and sends it back.</small></span></div></div>`}
         <div class="field"><span class="label">Cross-references ${tip('Link this document to related letters in any file.')} ${ai('cross_refs')}</span>
           ${m.cross_refs.length ? `<div class="x-chips">${m.cross_refs.map(id => { const r = docById(id); return r ? `<span class="x-chip">${esc(r.f.name)} · F.${esc(r.d.folio)} ${esc(r.d.title)}<button data-act="rmXref" data-id="${id}" aria-label="Remove cross-reference">${ic('x')}</button></span>` : ''; }).join('')}</div>` : ''}
           <div class="xr-search"><label class="input-icon">${ic('search')}<input class="input" id="xr-q" value="${esc(u.xq || '')}" placeholder="Search by subject, sender, reference no., file or folio…" data-input="xrQuery" autocomplete="off"><span class="sr">Search documents to cross-reference</span></label>
@@ -1678,19 +1678,19 @@ function viewUpload(q) {
         <fieldset class="reg-box"><legend>Registry details</legend>
           <div class="three"><div class="field"><label for="um-date_received">Date Received <span class="req">*</span></label><input class="input" type="date" id="um-date_received" data-um="date_received" value="${esc(m.date_received)}"></div>
             <div class="field"><label for="um-serial_no">S/NO ${tip('Inward Register number. Leave blank and it is given the next number.')}</label><input class="input" id="um-serial_no" data-um="serial_no" inputmode="numeric" value="${esc(m.serial_no)}" placeholder="Auto"></div>
-            <div class="field"><label for="um-folio_no">Folio No <span class="auto-chip">${ic('zap')} Automatic</span></label><input class="input auto-val" id="um-folio_no" value="${esc(String(+nextFolio(f) + u.idx))}" readonly aria-readonly="true"></div></div>
-          <span class="hint">The folio is the next number in ${esc(f?.name || 'the file')}${n > 1 ? ' — each document takes the next one' : ''}.</span></fieldset>
+            <div class="field"><label for="um-folio_no">Folio No <span class="auto-chip">${ic('zap')} Automatic</span></label><input class="input auto-val" id="um-folio_no" value="${f ? esc(String(+nextFolio(f) + u.idx)) : 'Given when filed'}" readonly aria-readonly="true"></div></div>
+          <span class="hint">${f ? `The folio is the next number in ${esc(f.name)}${n > 1 ? ' — each document takes the next one' : ''}.` : 'The folio is given when the letter is filed.'}</span></fieldset>
         ${u.err ? `<p class="form-err" role="alert">${esc(u.err)}</p>` : ''}
       </div>
     </div>`;
-    foot = `<button class="btn btn-light" data-act="upBack">${ic('chevL')} Back</button><button class="btn btn-light" data-act="upCancel">Cancel</button><button class="btn btn-primary" data-act="upSave">${ic('check')} Save ${n > 1 ? plural(n, 'document') : 'document'}</button>`;
+    foot = `<button class="btn btn-light" data-act="upBack">${ic('chevL')} Back</button><button class="btn btn-light" data-act="upCancel">Cancel</button>${f ? `<button class="btn btn-primary" data-act="upSave">${ic('check')} Save ${n > 1 ? plural(n, 'document') : 'document'}</button>` : `<button class="btn btn-outline" data-act="upSave">${ic('check')} Save only</button><button class="btn btn-primary" data-act="upSave" data-send="1">${ic('send')} Save and send to Marking Officer</button>`}`;
   }
   const s2 = u.step !== 1;
   return head(`${plural(S.files.length, 'File')} · ${plural(total, 'Document')}${S.drafts.length ? ` · <a style="color:#fff;text-decoration:underline" href="#" data-act="openDrafts">${plural(S.drafts.length, 'draft')}</a>` : ''}`) + `
     <div class="upload-wrap">
       <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
       ${u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
-        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on ${s2 ? 'done' : ''}"><i>${s2 ? ic('check') : '1'}</i>${{ bulk: 'Files', email: 'Find Emails' }[u.tab] || 'File &amp; Document'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
+        <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on ${s2 ? 'done' : ''}"><i>${s2 ? ic('check') : '1'}</i>${{ email: 'Find Emails' }[u.tab] || 'Upload'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
         ${step}
         <div class="up-foot">${foot}</div>
       </section>`}
@@ -2500,9 +2500,10 @@ const ACT = {
   regExcel: el => { const out = el.dataset.k === 'outward', q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = S.files.flatMap(f => f.docs.filter(d => out ? d.kind === 'response' : d.kind !== 'response').map(d => ({ f, d }))).sort((a, b) => b.d.date.localeCompare(a.d.date));
     const head = out ? ['Date', 'To', 'Subject', 'Written by', 'File reference', 'File', 'Folio', 'Dispatch'] : ['No.', 'Received', 'From', 'Subject', 'File reference', 'File', 'Folio', 'Status'];
-    const body = rows.map(({ f, d }, i) => out
+    const extra = out ? [] : (S.letters || []).filter(l => !l.fileId).map(l => [letterNo(l), fmtDay(l.received), l.from, l.title, '', 'Not filed yet', '', LETTER_STAGE[l.stage][0]]);
+    const body = [...extra, ...rows.map(({ f, d }, i) => out
       ? [fmtDay(d.date), d.to, d.title, d.from, f.ref, f.name, d.folio, S.dispatch[d.id] ? 'Sent' : 'Waiting']
-      : [`IN/26/${String(d.serial || rows.length - i).padStart(3, '0')}`, fmtDay(d.date), d.from, d.title, f.ref, f.name, d.folio, d.status === 'landing' ? 'Landing' : 'Filed']);
+      : [`IN/26/${String(d.serial || rows.length - i).padStart(3, '0')}`, fmtDay(d.date), d.from, d.title, f.ref, f.name, d.folio, d.status === 'landing' ? 'Landing' : 'Filed'])];
     saveFile(`${out ? 'Outward' : 'Inward'} Mail Register.csv`, [head, ...body].map(r => r.map(q).join(',')).join('\n'), 'text/csv');
     toast(`Downloaded the ${out ? 'outward' : 'inward'} mail register (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}).`); },
   recRegExcel: () => { const R = ui.rec, { head, rows } = lcRegister(R.reg, R.year), q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -2690,7 +2691,6 @@ const ACT = {
   upTab: el => { ui.upload.tab = el.dataset.k; ui.upload.files = []; ui.upload.step = 1; ui.upload.err = ''; render(); },
   upNext: () => {
     const u = ui.upload;
-    if (!u.fileId) { u.err = 'Select a File first – every document must be in a file.'; render(); $('#up-file')?.focus(); return; }
     if (!u.files.length) { u.err = u.tab === 'email' ? 'Pick at least one email to import.' : 'Add a document to upload.'; render(); return; }
     u.err = ''; runAI();
   },
@@ -2712,9 +2712,24 @@ const ACT = {
   draftDelete: () => { ui.upload = freshUpload(); closeModal(); go('#/'); },
   draftSave: () => { const u = ui.upload; S.drafts.push({ ...u, step: u.step === 'ai' ? 1 : u.step, files: u.files.map(x => ({ ...x, url: '' })), err: '', at: now() }); save(); ui.upload = freshUpload(); closeModal(); go('#/'); toast('Draft saved'); },
   openDrafts: (el, e) => { e.preventDefault(); const d = S.drafts.pop(); if (d) { ui.upload = { ...d }; save(); render(); toast('Draft restored'); } },
-  upSave: () => {
+  upClearFile: () => { ui.upload.fileId = ''; render(); },
+  upSave: el => {
     const u = ui.upload, f = getFile(u.fileId);
     for (let i = 0; i < u.metas.length; i++) { const err = validateMeta(u.metas[i]); if (err) { u.idx = i; u.err = err; render(); return; } }
+    if (!f) {   /* version 2 journey: a new letter, not in a file yet */
+      let serial = Math.max(0, ...(S.letters || []).map(l => l.serial), S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length);
+      const send = el && el.dataset && el.dataset.send === '1';
+      const made = u.files.map((x, i) => { const m = u.metas[i];
+        return { id: nid('L'), serial: m.serial_no ? +m.serial_no : ++serial, title: m.subject.trim(), from: m.source_name.trim(), senderRef: m.sender_ref_no.trim(), received: new Date(m.date_received + 'T09:00').toISOString(),
+          pages: m._pages, conf: m.confidentiality_level, stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.name }; });
+      S.letters = [...made, ...(S.letters || [])];
+      made.forEach(l => { if (l.from && !S.senders.some(x => x.name.toLowerCase() === l.from.toLowerCase())) S.senders.push({ id: nid('ms'), name: l.from, as: 'sender', on: true }); });
+      if (send) made.forEach(l => { l.stage = 'marking'; l.movements.push({ date: now(), from: meId(), to: 'vera' }); notifyL('vera', 'For marking', `A new letter was sent to you for marking: ${l.title}.`, l); });
+      save(); ui.upload = freshUpload();
+      go(made.length === 1 ? letterOpen(made[0]) : '#/correspondence?tab=marking' + (send ? 'sent' : ''));
+      toast(send ? `${made.length === 1 ? 'Saved and sent' : plural(made.length, 'letter') + ' saved and sent'} to the Marking Officer` : `${made.length === 1 ? 'Letter saved' : plural(made.length, 'letter') + ' saved'}. Send ${made.length === 1 ? 'it' : 'them'} to the Marking Officer when ready.`);
+      return;
+    }
     let folio = parseInt(nextFolio(f), 10);
     let serial = S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length;
     const added = u.files.map((x, i) => {
@@ -2845,6 +2860,7 @@ document.addEventListener('change', e => {
   if (k === 'recReason') ui.rec.reason = t.value;
   if (k === 'recYear') { ui.rec.year = +t.value; render(); }
   if (k === 'recReg') { ui.rec.reg = t.value; render(); }
+  if (k === 'letterFilePick') { ui.lfFile = t.value; const h = t.parentElement.querySelector('.hint'), ff = getFile(t.value); if (h) h.textContent = ff ? `It will be folio ${nextFolio(ff)} in ${ff.name}.` : 'Only files that are in the Registry are listed.'; }
   if (k === 'cnCovers') ui.census.covers = t.value;
   if (k === 'pickUpload') { ui.upload.files = [...t.files].map(asUpload); ui.upload.err = ''; render(); }
   if (k === 'umConf') { const m = ui.upload.metas[ui.upload.idx]; m.confidentiality_level = t.value; m._touched.confidentiality_level = true; render(); }

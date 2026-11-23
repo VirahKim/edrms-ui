@@ -271,6 +271,20 @@ The live *Files & Records* page, renamed **File Lifecycle** and added to the Reg
 - **Registers** – the file opening, closing and disposal registers and the inward and outward mail registers for a chosen year, with Download Excel.
 - The statistics moved to the **Reports Dashboard** under *Mail and file lifecycle*: mail counts as tiles, files as two bar charts (opened, closed and disposed in the year; open, closed, awaiting approval and overdue bring-ups right now), and mail by month.
 
+### Registry journey (version 2)
+1. **Upload** a letter or document – no file is chosen (Upload Document › Single, Bulk or Email).
+2. **Details** – sender, reference, subject, confidentiality and register details. *Save and send to Marking Officer* (or *Save only* and send it later).
+3. The **Marking Officer** finds it under *Letters to mark* in My Queue (and in her notifications), says who should act and what to do, and sends it back to the Registry.
+4. The **Registry files the letter**: it picks a file in the Registry and the letter becomes the next folio, with the marking as its first minute.
+5. The Registry **sends the file to the Action Officer** with the marking instruction.
+Uploading from a file page (*Upload to this file*) still files straight into that file. Letters not yet filed appear in the Inward Mail Register as *Not filed yet*. Each letter has its own page (`#/letter?id=…`) with the document, the next step and its movement.
+
+### Correspondence (Registry)
+Title *Correspondence*, sub-title *View movement of letters and files from marking and action officers*. Two main tabs – **To Marking Officer** and **To Action Officer** – each with **All**, **Sent** and **Received** and a line saying what that selection holds. Received from the Marking Officer leads to *File this letter*; received from an Action Officer leads to *File away*. The officers' own drafts (memos, circulars) are still recorded from Upload › From Officers.
+
+### Notifications
+The pop-up stays, and each notification has the action it asks for – *File this letter*, *Mark this letter*, *Send to Action Officer*, *File away*, *Mark file*, *Act on it*, *Review* – beside *Open file* / *Open document*, plus a tick to mark it read or unread without closing the pop-up.
+
 ### Sizing
 On desktop (1200px and wider) the whole interface is drawn at 80% (`html { zoom }`), so a browser at 100% shows the compact layout, with five file cards across on Registries & Files. The Font size preference multiplies on top. Full-height pieces divide `100vh` by the zoom, and menus convert screen pixels with `uiZ()`. The values are recorded in the *EDRMS Glass* design system.
 
