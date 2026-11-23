@@ -343,7 +343,7 @@ function render() {
   if (!location.hash || location.hash.startsWith('#/')) { const e = encodeRoute(location.hash || '#/'); if (e !== location.hash) { history.replaceState(null, '', e); } }
   if (parts[0] !== 'file') ui.curFile = null; // entering a file again starts on the folio table
   let view, nav = 'dashboard', after = null;
-  curNav = { files: 'files', file: 'files', routing: 'routing', queue: 'queue', upload: 'upload', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical', records: 'records' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
+  curNav = { files: 'files', file: 'files', routing: 'queue', queue: 'queue', upload: 'upload', bringup: 'bringup', settings: 'settings', guide: 'settings', inward: 'inward', outward: 'outward', access: 'access', physical: 'physical', census: 'physical', records: 'records' }[parts[0]] || (parts.length ? 'more' : 'dashboard');
   switch (parts[0]) {
     case 'files': if (role() !== 'registry') { history.replaceState(null, '', encodeRoute('#/queue')); view = viewQueue(q); nav = 'queue'; break; } view = viewFiles(q); nav = 'files'; break;
     case 'file': {
@@ -355,7 +355,7 @@ function render() {
       if (target) after = () => scrollToPage(target, true);
       break;
     }
-    case 'routing': view = viewRouting(q); nav = 'routing'; break;
+    case 'routing': view = viewRouting(q); nav = 'queue'; break;
     case 'queue': view = viewQueue(q); nav = 'queue'; break;
     case 'upload': view = viewUpload(q); nav = 'upload'; break;
     case 'ai': view = viewAI(); nav = 'ai'; after = () => $('#aip-q')?.focus(); break;
@@ -460,7 +460,6 @@ function navItems() {
   /* Registries & Files is the Registry's page; Marking and Action Officers work from My Queue */
   return [['dashboard', '#/', 'Overview', 0, 'grid'], ['upload', '#/upload', 'Upload Document', 0, 'upload'], ...(reg ? [['files', '#/files', 'Registries & Files', 0, 'folders']] : []),
     ['queue', '#/queue', 'My Queue', myQueue().length + notesForMe().length, 'listChecks'],
-    ['routing', '#/routing', 'File Movement', 0, 'route'],
     ['incoming', '#/incoming', 'Incoming for me', typeof incomingForMe === 'function' ? incomingForMe().filter(x => !x.seen).length : 0, 'inboxIn'],
     reg ? ['bringup', '#/bringup', 'Bring Up Diary', bringupsDue().length, 'calendar'] : ['request', '', 'Request file', 0, 'filePlus'],
     ['settings', '#/settings', 'Settings', 0, 'settings']];
