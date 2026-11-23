@@ -2629,3 +2629,8 @@ html { zoom: var(--z); }
 
 /* Upload: the short how-it-works line sits under the upload area */
 .up-body > .up-lead { order: 99; }
+/* Upload: Add Document, its hint, the drop area and the helper line are centred */
+.up-body > .up-drop { justify-items: center; text-align: center; }
+.up-body > .up-drop .dropzone { width: 100%; }
+.up-body > .up-lead { justify-content: center; text-align: center; }
+.up-body > .up-lead span { flex: 0 1 auto; }
