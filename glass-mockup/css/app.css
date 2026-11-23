@@ -2552,3 +2552,51 @@ html { zoom: var(--z); }
 .lt-filed-note { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
 .lt-filed-note svg { width: 16px; height: 16px; flex: none; color: #00625f; }
 .lt-notes .note-item { margin-bottom: 8px; }
+
+/* Notification pop-up */
+.modal.notif-modal { width: min(760px, calc(100vw / var(--z, 1) - 32px)); max-width: 760px; }
+.nm { display: grid; gap: 16px; }
+.nm-row { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(14,21,37,.08); }
+.nm-row > div { flex: 1; min-width: 0; }
+.nm-row b { display: block; font-size: 16px; color: var(--ink); }
+.nm-row small { color: var(--ink-3); font-size: 13.5px; }
+.nm-ic { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(0,127,123,.1); color: #00625f; }
+.nm-ic svg { width: 22px; height: 22px; }
+.nm-card { padding: 20px 22px; border-radius: 18px; background: rgba(14,21,37,.04); }
+.nm-card h3 { margin: 0 0 10px; font-size: 26px; font-weight: 700; color: var(--ink); }
+.nm-card p { margin: 0 0 8px; font-size: 15px; color: var(--ink); }
+.nm-at { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--ink-3); font-size: 13.5px; }
+.nm-at svg { width: 15px; height: 15px; }
+.nm-f { flex-wrap: wrap; gap: 8px; }
+.nm-f .left { margin-right: auto; }
+[data-theme="dark"] .nm-card { background: rgba(255,255,255,.06); }
+[data-theme="dark"] .nm-ic { background: rgba(143,227,218,.12); color: #8fe3da; }
+[data-theme="dark"] .nm-row { border-color: rgba(255,255,255,.1); }
+.notif-card .n-view { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-size: 13px; font-weight: 600; color: #00625f; }
+.notif-card .n-view svg { width: 14px; height: 14px; }
+[data-theme="dark"] .notif-card .n-view { color: #8fe3da; }
+/* Upload › From Outside */
+.ext-top { display: grid; gap: 14px; padding: 22px 24px; margin-bottom: 18px; }
+.ext-row { display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap; }
+.switch-row { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15.5px; color: var(--ink); }
+.switch-row .sw { position: relative; width: 46px; height: 26px; border-radius: 999px; background: rgba(14,21,37,.2); transition: background .2s; flex: none; }
+.switch-row .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s; }
+.switch-row input:checked + .sw { background: var(--primary, #007F7B); }
+.switch-row input:checked + .sw::after { left: 23px; }
+.switch-row input:focus-visible + .sw { outline: 3px solid var(--primary, #007F7B); outline-offset: 2px; }
+.ext-link { display: flex; align-items: stretch; flex: 1 1 460px; min-width: 0; border-radius: 999px; overflow: hidden; border: 1px solid rgba(14,21,37,.14); background: rgba(255,255,255,.85); }
+.ext-link > span { display: grid; place-items: center; padding: 0 16px; font-size: 14px; color: var(--ink-2); border-right: 1px solid rgba(14,21,37,.12); white-space: nowrap; }
+.ext-link .input { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 14px; }
+.ext-link .btn { height: 44px; border-radius: 0; border: 0; border-left: 1px solid rgba(14,21,37,.12); }
+.ext-as { flex: 0 1 560px; }
+.ext-list { padding: 22px 24px; }
+.ext-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.ext-bar .ct-seg { flex-wrap: wrap; }
+.ext-q { margin-left: auto; flex: 0 1 340px; }
+[data-theme="dark"] .ext-link { background: rgba(8,30,29,.6); border-color: rgba(255,255,255,.14); }
+@media (max-width: 760px) { .ext-q { margin-left: 0; flex: 1 1 100%; } .ext-top, .ext-list { padding: 16px; } }
+.upload-wrap > .up-card.ext-top, .upload-wrap > .up-card.ext-list { min-height: 0; display: grid; width: 100%; max-width: none; align-content: start; margin: 0; }
+.ext-top .ext-link { flex: 1 1 460px; height: 46px; }
+.ext-as { max-width: 620px; }
+.upload-wrap:has(.ext-top) { max-width: none; }
+.nm-f .btn { height: 40px; padding: 0 14px !important; font-size: 14px; gap: 6px; } .nm-f .btn svg { width: 16px; height: 16px; } .modal.notif-modal { width: min(820px, calc(100vw / var(--z, 1) - 32px)); max-width: 820px; }

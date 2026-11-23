@@ -283,11 +283,14 @@ Uploading from a file page (*Upload to this file*) still files straight into tha
 ### File Movement
 My Queue › File Movement is the file movement register: one row each time a whole file leaves the Registry for an Action Officer, with the columns **Date, Reference, Subject, Action Officer, RM, Receiving Officer, Date, Returned**. RM is the Registry officer who released the file. Action Officers see the rows for files sent to them. Files are sent with *Send to Action Officer* on the file (the Marking Officer no longer receives files).
 
+### Upload › From Outside
+A fifth Upload tab for the Registry, as in the live system: switch *Accept submissions from outside* on or off, copy the submission link, and set the name senders see (*Shown as*). Submissions are listed with **All, New, Received, To register, Registered, Returned** and a search. *Accept* takes one into the EDRMS, *Register* records it as a new letter in the Inward Register and asks which Marking Officer to send it to, and *Return* sends it back with a reason.
+
 ### Correspondence (Registry)
 Title *Correspondence*, sub-title *View movement of letters and files from marking and action officers*. Two main tabs – **To Marking Officer** (letters or documents, each tagged Letter or Document) and **To Action Officer** (whole files) – each with **All**, **Sent** and **Received** and a line saying what that selection holds. Received from the Marking Officer leads to *File this letter*; received from an Action Officer leads to *File away*. The officers' own drafts (memos, circulars) are still recorded from Upload › From Officers.
 
 ### Notifications
-The pop-up stays, and each notification has the action it asks for – *File this letter*, *Mark this letter*, *Send to Action Officer*, *File away*, *Mark file*, *Act on it*, *Review* – beside *Open file* / *Open document*, plus a tick to mark it read or unread without closing the pop-up.
+Clicking a notification opens a **Notification pop-up** (as in the live system): who it is from, a short heading, the file, document or letter it is about, when it was delivered, and its buttons – *Mark as unread*, *Open file* / *Open document* / *Open letter*, and the action it asks for. The side panel lists them, and each notification has the action it asks for – *File this letter*, *Mark this letter*, *Send to Action Officer*, *File away*, *Mark file*, *Act on it*, *Review* – beside *Open file* / *Open document*, plus a tick to mark it read or unread without closing the pop-up.
 
 ### Sizing
 On desktop (1200px and wider) the whole interface is drawn at 80% (`html { zoom }`), so a browser at 100% shows the compact layout, with five file cards across on Registries & Files. The Font size preference multiplies on top. Full-height pieces divide `100vh` by the zoom, and menus convert screen pixels with `uiZ()`. The values are recorded in the *EDRMS Glass* design system.

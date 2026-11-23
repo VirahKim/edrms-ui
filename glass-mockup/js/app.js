@@ -40,6 +40,7 @@ const ICONS = {
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
   play: '<polygon points="6 3 20 12 6 21 6 3"/>',
   layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
@@ -60,6 +61,7 @@ const ICONS = {
   penLine: '<path d="M14.5 4.5a2.1 2.1 0 0 1 3 3L9 16l-4 1 1-4Z"/><path d="m13 6 3 3"/><path d="M4 21c2-1.5 3.5-1.5 5 0s3 1.5 4.5 0 3-1.5 4.5 0"/>',
   pen: '<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>',
   stamp: '<path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
@@ -450,11 +452,7 @@ function notifCard(n) {
     <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc((n.letterId && typeof getLetter === 'function' && getLetter(n.letterId)?.title) || f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><button type="button" class="n-read" data-act="notifRead" data-id="${n.id}" aria-label="${n.read ? 'Mark as unread' : 'Mark as read'}" title="${n.read ? 'Mark as unread' : 'Mark as read'}">${ic(n.read ? 'mail' : 'check')}</button></div>
     <p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
-    <div class="nfoot"><span class="ago">${ago(n.at)}</span>${(() => {
-      const act = typeof notifAction === 'function' ? notifAction(n) : '';
-      if (!f.id) return act ? `<span class="n-go">${act}</span>` : '';
-      const d = (n.docId && f.docs.find(x => x.id === n.docId)) || [...f.docs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-      return `<span class="n-go">${act}<button type="button" class="btn btn-light btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}" aria-label="Open file ${esc(f.name)}">${ic('folder')} Open file</button>${d ? `<button type="button" class="btn ${act ? 'btn-light' : 'btn-primary'} btn-xs" data-act="notifGo" data-id="${n.id}" data-to="#/file/${f.id}/doc/${d.id}" aria-label="Open document ${esc(d.title)}">${ic('file')} Open document</button>` : ''}</span>`; })()}</div></div>`;
+    <div class="nfoot"><span class="ago">${ago(n.at)}</span><span class="n-view">View ${ic('chevR')}</span></div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
@@ -1708,8 +1706,8 @@ function viewUpload(q) {
   const s2 = u.step !== 1;
   return head(`${plural(S.files.length, 'File')} · ${plural(total, 'Document')}${S.drafts.length ? ` · <a style="color:#fff;text-decoration:underline" href="#" data-act="openDrafts">${plural(S.drafts.length, 'draft')}</a>` : ''}`) + `
     <div class="upload-wrap">
-      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
-      ${u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
+      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers'], ['outside', 'globe', 'From Outside']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
+      ${u.tab === 'outside' && typeof outsideView === 'function' ? outsideView() : u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
         <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on ${s2 ? 'done' : ''}"><i>${s2 ? ic('check') : '1'}</i>${{ email: 'Find Emails' }[u.tab] || 'Upload'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
         ${step}
         <div class="up-foot">${foot}</div>
@@ -2404,7 +2402,7 @@ const ACT = {
     menu.addEventListener('click', e => { const it = e.target.closest('[data-proxy]'); if (!it) return; const target = box.children[+it.dataset.proxy]; menu.remove(); el.setAttribute('aria-expanded', 'false'); target?.click(); });
     setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('#icon-menu') && !e.target.closest('.ph-more')) { $('#icon-menu')?.remove(); el.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', off); } }), 0);
     menu.querySelector('button')?.focus(); },
-  openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } },
+  openNotif: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); if (typeof notifModal === 'function') notifModal(n); else { closeModal(); go(n.href || (n.fileId ? `#/file/${n.fileId}` : '#/queue')); } } },
   notifGo: el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = true; save(); } closeModal(); go(el.dataset.to); },
   seeMinute: el => { ui.hlMin = `${el.dataset.doc}:${el.dataset.n}`; go(`#/file/${el.dataset.file}/letter/${el.dataset.doc}`);
     setTimeout(() => { const m = document.querySelector('.note-item.hl'); if (m) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 80); },
@@ -2825,6 +2823,7 @@ function refocus(id, pos) { const i = $('#' + id); if (i) { i.focus(); i.setSele
 document.addEventListener('input', e => {
   const t = e.target, k = t.dataset.input;
   if (tfInput(t)) return;
+  if (k === 'extQuery') { ui.extQ = t.value; const p = t.selectionStart; render(); refocus('ext-q', p); }
   if (k === 'filesQuery') { ui.files.q = t.value; const p = t.selectionStart; render(); refocus('files-q', p); }
   if (k === 'dashQ') { ui.dash.q = t.value; const p = t.selectionStart; $('#route-panel').innerHTML = routePanel(); refocus('dash-q', p); }
   if (k === 'guideQ') { ui.guideQ = t.value; const p = t.selectionStart; render(); refocus('guide-q', p); }
@@ -2880,6 +2879,8 @@ document.addEventListener('change', e => {
   if (k === 'recReason') ui.rec.reason = t.value;
   if (k === 'recYear') { ui.rec.year = +t.value; render(); }
   if (k === 'recReg') { ui.rec.reg = t.value; render(); }
+  if (k === 'extOn') { S.outside.on = t.checked; save(); render(); toast(t.checked ? 'Accepting submissions from outside' : 'The link is switched off'); }
+  if (k === 'extAs') { S.outside.shownAs = t.value; save(); toast('Saved'); }
   if (k === 'letterFilePick') { ui.lfFile = t.value; const h = t.parentElement.querySelector('.hint'), ff = getFile(t.value); if (h) h.textContent = ff ? `It will be folio ${nextFolio(ff)} in ${ff.name}.` : 'Only files that are in the Registry are listed.'; }
   if (k === 'cnCovers') ui.census.covers = t.value;
   if (k === 'pickUpload') { ui.upload.files = [...t.files].map(asUpload); ui.upload.err = ''; render(); }
