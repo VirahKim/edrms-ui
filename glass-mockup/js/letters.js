@@ -355,21 +355,16 @@ function notifModal(n) {
   const opens = [l ? btn(letterOpen(l), `View ${letterKind(l).toLowerCase()}`, 'eye', !act) : '',
     f && !f.virtual ? btn(`#/file/${f.id}`, 'View file', 'folder', !act && !doc) : '',
     f && !f.virtual && doc ? btn(docHref, 'View document', 'eye', !act) : '',
-    !f && !l && n.href ? btn(n.href, 'Open', 'arrowR', !act) : ''].join('');
+    !f && !l && n.href && !act ? btn(n.href, 'Open', 'arrowR', true) : ''].join('');
   const prev = docHref ? docPreview(f && !f.virtual ? f : null, doc, l, docHref) : '';
-  const track = l || (f && !f.virtual) ? moveTrack(l ? null : f, l) : '';
-  const actLabel = act ? act.replace(/<[^>]+>/g, '').trim() : '';
   modal(`${mHead('bell', 'Notification')}
     <div class="modal-b nm">
       <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}${p.title ? ' – ' + esc(p.title) : ''}</small></div><span class="chip t-green">Delivered</span></div>
-      <div class="nm-card"><h3>${esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
+      <div class="nm-body ${prev ? '' : 'no-prev'}"><div class="nm-card"><h3>${esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
         ${l ? `<p><b>${letterKind(l)}:</b> ${esc(l.title)} <span class="muted">(${letterNo(l)})</span></p>` : ''}
         ${f && !f.virtual ? `<p><b>File:</b> ${esc(f.name)} <span class="muted mono">${esc(f.ref)}</span></p>` : ''}
         ${doc && f && !f.virtual ? `<p><b>Document:</b> Folio ${esc(doc.folio)} – ${esc(doc.title)}</p>` : ''}
-        <p>${esc(n.text)}</p></div>
-      ${prev || track ? `<div class="nm-grid ${prev ? '' : 'no-prev'}">${prev}<div class="nm-how">
-        ${track ? `<h4>Where it is</h4>${track}` : ''}
-        <h4>What to do</h4><ol class="nm-steps">${prev ? `<li><b>View it.</b> Press <em>View document</em> to read every page.</li>` : ''}${actLabel ? `<li><b>Move it on.</b> Press <em>${esc(actLabel)}</em>.</li>` : `<li>Nothing for you to do now. You can follow it here.</li>`}</ol></div></div>` : ''}
+        <p>${esc(n.text)}</p></div>${prev}</div>
       <p class="nm-at">${ic('clock')} Delivered ${fmtDT(n.at)}</p>
     </div>
     <div class="modal-f nm-f"><button type="button" class="btn btn-light left" data-act="notifUnread" data-id="${n.id}">${ic('mail')} Mark as unread</button>${opens}${act.replace(/btn-xs/g, '')}</div>`, 'notif-modal');

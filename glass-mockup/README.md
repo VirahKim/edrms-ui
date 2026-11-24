@@ -346,8 +346,8 @@ Links use plain names (`#files`, `#file-f1`, `#routing-returned`) so they work e
 
 Everything you do is saved in your browser only. Use **Settings → Reset demo data** to start again.
 
-### Notification pop-up: view the document and see how it moves
-Every notification about a file or letter now shows a small picture of the document – press it (or *View document*) to read every page. Next to it, **Where it is** shows the journey (Registry → Marking Officer → Registry → Action Officer → Registry) with the current step marked *Now* and the officers' names, and **What to do** says in two short steps how to view it and how to move it on (the button that does it is in the footer). The From SAGAS pop-up shows the document the same way, with the steps View → Stamp and sign → Receive → Register.
+### Notification pop-up: subject, short message and a small view of the document
+Every notification about a file or letter now shows a small picture of the document – press it (or *View document*) to read every page. Next to it, the subject and a short message sit beside it, and the actions (View file, View document and the next step, such as Send to Action Officer) are in the footer. The From SAGAS pop-up shows the document the same way, with the steps View → Stamp and sign → Receive → Register.
 
 ### Plain language
 Correspondence tabs are *Received*, *Marking Officer* and *Action Officer*. Tab subtitles, notification headings (*Please mark this*, *Please act on this*, *Marked and back with you*, *Back in the Registry*…) and notification messages use short, everyday wording.

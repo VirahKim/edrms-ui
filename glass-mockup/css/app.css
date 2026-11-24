@@ -2726,3 +2726,10 @@ html { zoom: var(--z); }
 }
 .nm-prev-page { display: block; } .nm-prev-page > .page { display: block; width: 100%; pointer-events: none; box-shadow: 0 6px 18px rgba(4,48,46,.18); border-radius: 6px; } .nm-prev-page > img { display: block; width: 100%; aspect-ratio: 210 / 297; object-fit: cover; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(4,48,46,.18); } .nm-prev-page .anno, .nm-prev-page .landing-veil { display: none; }
 .page, .page .folio-box { color: #1b1b1b; } .page .content .muted { color: #555; } .page.attachment .ext { color: #0b4a63; }
+/* Notification pop-up: subject and brief info, with a small view of the document beside it */
+.modal.notif-modal { width: min(820px, calc(100vw / var(--z, 1) - 32px)); max-width: 820px; }
+.nm-body { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 18px; align-items: start; }
+.nm-body.no-prev { grid-template-columns: 1fr; }
+.nm-body > .nm-card { height: 100%; box-sizing: border-box; }
+.nm-body .nm-prev-cta { height: 30px; padding: 0 10px; font-size: 12.5px; bottom: 10px; }
+@media (max-width: 640px) { .nm-body { grid-template-columns: 1fr; } .nm-body .nm-prev { width: 140px; justify-self: center; } }
