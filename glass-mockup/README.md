@@ -351,3 +351,6 @@ Every notification about a file or letter now shows a small picture of the docum
 
 ### Plain language
 Correspondence tabs are *Received*, *Marking Officer* and *Action Officer*. Tab subtitles, notification headings (*Please mark this*, *Please act on this*, *Marked and back with you*, *Back in the Registry*…) and notification messages use short, everyday wording.
+
+### Letters show the real document
+The letter page always shows the page at full width (it had collapsed to nothing for the Marking Officer). Letters that came in as a scanned PDF – the seeded letters and anything registered from SAGAS – show the real scanned pages from `sample-documents/pages/`, with comments and sticky notes on top as before; the pages move with the letter when it is filed.

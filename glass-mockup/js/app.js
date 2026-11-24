@@ -816,7 +816,7 @@ function folioBar(f, d) {
     </div></div>`;
 }
 function pageHTML(f, d) {
-  return `<article class="page ${d.kind === 'attachment' ? 'attachment' : ''}" data-f="${f.id}" data-d="${d.id}">
+  return `<article class="page ${d.kind === 'attachment' ? 'attachment' : ''} ${d.imgs && d.imgs.length ? 'has-img' : ''}" data-f="${f.id}" data-d="${d.id}">
     <div class="folio-box"><b>Folio ${esc(d.folio)}</b>${d.ref17 ? 'Ref: Folio 17' : esc(d.edms)}</div>
     <div class="content">${docContent(f, d)}</div>
     <div class="anno" id="anno-${d.id}">${annoHTML(f, d)}</div>
@@ -1030,6 +1030,7 @@ function docCtx(f, d) {
   };
 }
 function docContent(f, d) {
+  if (d.imgs && d.imgs.length) return `<div class="doc-imgs">${d.imgs.map((src, i) => `<img src="${src}" alt="Page ${i + 1} of ${esc(d.title)}" draggable="false">`).join('')}</div>`;
   if (d.kind === 'attachment') return `<div><span class="ext">${esc(d.mime || 'PDF')}</span><h2>${esc(d.title)}</h2><p class="muted">${plural(d.pages, 'page')} · ${fmtSize(d.sizeKB || 200)} · from ${esc(d.from)}<br>Received ${fmtLong(d.date)}</p></div>`;
   if (d.kind === 'response') return tplHTML(d.template || 'letter', docCtx(f, d));
   if (d.kind === 'memo') return tplHTML('memo', docCtx(f, d));

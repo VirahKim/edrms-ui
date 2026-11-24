@@ -2733,3 +2733,12 @@ html { zoom: var(--z); }
 .nm-body > .nm-card { height: 100%; box-sizing: border-box; }
 .nm-body .nm-prev-cta { height: 30px; padding: 0 10px; font-size: 12.5px; bottom: 10px; }
 @media (max-width: 640px) { .nm-body { grid-template-columns: 1fr; } .nm-body .nm-prev { width: 140px; justify-self: center; } }
+/* Letter page: the page always fills its column, and real scanned pages show as images */
+.lt-pages .page { width: 100%; max-width: 820px; }
+.page.has-img { aspect-ratio: auto; }
+.page.has-img .content { padding: 0; }
+.doc-imgs { display: grid; gap: 0; }
+.doc-imgs img { display: block; width: 100%; height: auto; border-radius: 6px; user-select: none; -webkit-user-drag: none; }
+.doc-imgs img + img { border-top: 1px dashed rgba(0,0,0,.18); border-radius: 0 0 6px 6px; }
+.page.has-img .folio-box { opacity: .92; }
+.page.has-img .folio-box { top: 1.4cqw; right: 1.4cqw; padding: .5cqw 1.1cqw; font-size: 1.25cqw; } .page.has-img .folio-box b { font-size: 1.5cqw; }

@@ -22,6 +22,7 @@ const letterKind = l => l.kind || (/report|quotation|invoice|returns|minutes|mem
 function letterDoc(l) {
   if (!l.doc) l.doc = { id: 'd' + l.id, folio: '—', title: l.title, kind: 'letter', mime: 'PDF', from: l.from, date: l.received, edms: `IN/26/${String(l.serial).padStart(3, '0')}`, pages: l.pages, sizeKB: 240,
     minutes: [], stickies: [], comments: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM, senderRef: l.senderRef, confidentiality: l.conf };
+  if (l.fileName && /\.pdf$/i.test(l.fileName) && typeof extPages === 'function') l.doc.imgs = extPages({ files: [l.fileName] });
   return l.doc;
 }
 const LETTER_FILES = {};
@@ -38,11 +39,11 @@ function ensureLetters() {
   if (S.letters) return;
   const L = (id, serial, title, from, ref, d, stage, extra = {}) => ({ id, serial, title, from, senderRef: ref, received: daysAgo(d, 9, 5), pages: 2, conf: 'Internal', stage, uploadedBy: 'john', movements: [], ...extra });
   S.letters = [
-    L('L1', 31, 'Quotation for Vaccine Carriers', 'Kenya Medical Supplies Authority', 'KEMSA/PROC/2026/118', 0, 'registry'),
-    L('L2', 30, 'Request for Cold Chain Equipment', 'Kiambu County Department of Health', 'KBU/CDH/VOL.4/77', 1, 'marking',
-      { movements: [{ date: daysAgo(1, 10, 40), from: 'john', to: 'vera' }] }),
-    L('L3', 29, 'Invitation – Health Sector Working Group', 'Council of Governors', 'COG/HLTH/2026/52', 3, 'marked',
-      { movements: [{ date: daysAgo(3, 10), from: 'john', to: 'vera' }, { date: daysAgo(2, 15, 20), from: 'vera', to: 'registry' }],
+    L('L1', 31, 'Quotation for Vaccine Carriers', 'Afya Bora Medical Supplies Ltd', 'ABMS/Q/2026/1184', 0, 'registry', { fileName: '02-Afya-Bora-Quotation-Vaccine-Carriers.pdf', pages: 1 }),
+    L('L2', 30, 'Request for Cold Chain Equipment', 'Kilima County Department of Health', 'KCDH/CC/2026/041', 1, 'marking', { fileName: '01-Kilima-County-Cold-Chain-Request.pdf', pages: 1,
+      movements: [{ date: daysAgo(1, 10, 40), from: 'john', to: 'vera' }] }),
+    L('L3', 29, 'Invitation – Health Sector Working Group', 'Health Sector Partners Forum', 'HSPF/SEC/2026/52', 3, 'marked',
+      { fileName: '08-Health-Sector-Forum-Invitation.pdf', pages: 1, movements: [{ date: daysAgo(3, 10), from: 'john', to: 'vera' }, { date: daysAgo(2, 15, 20), from: 'vera', to: 'registry' }],
         marking: { to: 'virah', ins: 'Attend and brief the PS on vaccine financing.', by: 'vera', at: daysAgo(2, 15, 18) } }),
     L('L4', 28, 'Polio Outbreak Response Update', 'World Health Organization', 'WHO/KEN/EPI/2026/19', 4, 'marked',
       { movements: [{ date: daysAgo(4, 11), from: 'john', to: 'vera' }, { date: daysAgo(0, 9, 30), from: 'vera', to: 'registry' }],
@@ -56,6 +57,12 @@ function ensureLetters() {
   save();
 }
 ensureLetters();
+/* Seeded letters use the sample documents, so officers see the real pages */
+if (S.letters && !S.lettersSampleDocs) {
+  const SD = { L1: ['02-Afya-Bora-Quotation-Vaccine-Carriers.pdf', 'Afya Bora Medical Supplies Ltd', 'ABMS/Q/2026/1184'], L2: ['01-Kilima-County-Cold-Chain-Request.pdf', 'Kilima County Department of Health', 'KCDH/CC/2026/041'], L3: ['08-Health-Sector-Forum-Invitation.pdf', 'Health Sector Partners Forum', 'HSPF/SEC/2026/52'] };
+  S.letters.forEach(l => { const d = SD[l.id]; if (d && !l.fileName) { l.fileName = d[0]; l.from = d[1]; l.senderRef = d[2]; l.pages = 1; if (l.doc) { l.doc.from = d[1]; l.doc.senderRef = d[2]; l.doc.pages = 1; } } });
+  S.lettersSampleDocs = true; save();
+}
 /* Only letters go to the Marking Officer: files that were with her go back to the Registry */
 (function onlyLettersToMarking() {
   if (S.lettersOnlyToMarking) return;
@@ -249,7 +256,7 @@ Object.assign(ACT, {
       minutes: [], stickies: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM,
       uploadedBy: l.uploadedBy, senderRef: l.senderRef, serial: l.serial, confidentiality: l.conf, restricted: [], crossRefs: [], enclosures: [] };
     const ld = letterDoc(l);   // what was written on the letter before filing comes with it
-    d.minutes = ld.minutes.map(m => ({ ...m })); d.stickies = ld.stickies.map(x => ({ ...x })); d.comments = (ld.comments || []).map(c => ({ ...c })); d.signed = ld.signed;
+    d.minutes = ld.minutes.map(m => ({ ...m })); d.stickies = ld.stickies.map(x => ({ ...x })); d.comments = (ld.comments || []).map(c => ({ ...c })); d.signed = ld.signed; if (ld.imgs) d.imgs = [...ld.imgs];
     f.docs.push(d);
     addMinute(f, d, `${person(l.marking.to).title} – ${l.marking.ins}`, l.marking.by, { ink: 'red' });
     f.markedTo = l.marking.to; f.instruction = l.marking.ins; f.updated = now();
