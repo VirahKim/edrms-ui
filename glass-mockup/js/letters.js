@@ -396,16 +396,16 @@ function extReadModal(x, showErr) {
         <div><dt>For</dt><dd>${esc(person(x.forWho).name)}</dd></div><div><dt>Status</dt><dd><span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span></dd></div></dl>
       ${x.note ? `<p><b>Message:</b> ${esc(x.note)}</p>` : ''}${x.returnNote ? `<div class="instruction sent-back">${ic('undo')}<div><b>Returned</b> – ${esc(x.returnNote)}</div></div>` : ''}
       <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF</small></div></div>`).join('')}</div>
-      ${x.stamped ? `<div class="ext-stamped">${ic('stamp')}<span><b>Stamped received</b><small>${fmtDT(x.stamped)}</small></span></div>` : ''}
+      ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${x.marks.page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
       ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot proceed without a stamp. Stamp the document, then receive it.</p>` : ''}
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}" aria-pressed="${!!x.stamped}">${ic('stamp')} ${x.stamped ? 'Remove stamp' : 'Stamp'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}">${ic('stamp')} ${x.stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
 }
 Object.assign(ACT, {
   extTab: (el, e) => { e?.preventDefault(); ui.extTab = el.dataset.k; render(); },
   extRead: (el, e) => { e?.preventDefault(); extReadModal(S.outside.items.find(x => x.id === el.dataset.id)); },
   extCopy: () => { const i = $('#ext-link'); i.select(); try { navigator.clipboard?.writeText(i.value).catch(() => {}); } catch (e) {} toast('Link copied'); },
-  extStamp: el => { const x = S.outside.items.find(y => y.id === el.dataset.id); x.stamped = x.stamped ? null : new Date().toISOString(); save(); extReadModal(x); toast(x.stamped ? 'Stamped received' : 'Stamp removed'); },
+  extStamp: el => stampEditor(S.outside.items.find(y => y.id === el.dataset.id)),
   extAccept: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     if (!x.stamped) { const e = $('#ext-err'); if (e) { e.hidden = false; e.focus?.(); } else extReadModal(x, true); return; }
     x.status = 'received'; save(); closeModal(); render(); toast(`${x.ref} received into the EDRMS. Register it next.`); },
@@ -440,3 +440,88 @@ function viewIncoming() {
       : `<div class="empty">${ic('checkCircle')}<div>Nothing has been sent to you from outside.</div></div>`}</section>`;
 }
 ACT.incOpen = el => { const x = S.outside.items.find(y => y.id === el.dataset.id); if (!x) return; x.seen = true; save(); render(); extReadModal(x); };
+
+/* ---------- Stamp and sign: see the document, place the stamp and signature, resize, then confirm ---------- */
+const SAMPLE_PAGES = { '03-Mwangaza-Hospital-Quarterly-Report': 2, '05-Pamoja-Health-Workers-Union-Meeting-Request': 2, '06-Kilima-County-Measles-Campaign-Plan': 2, '09-Mwangaza-Hospital-Staff-Establishment-Returns': 2 };
+function extPages(x) { const b = (x.files[0] || '').replace(/\.pdf$/i, ''); return Array.from({ length: SAMPLE_PAGES[b] || 1 }, (_, i) => `sample-documents/pages/${b}-${i + 1}.jpg`); }
+const STP_DEFAULT = () => ({ stamp: { on: true, x: 60, y: 70, w: 28 }, sign: { on: true, x: 8, y: 76, w: 32 } });
+let stpN = 0;
+function stampSVG(date) {
+  const n = ++stpN, d = fmtDate(date || new Date().toISOString()).toUpperCase();
+  return `<svg viewBox="0 0 200 200" class="stp-svg" aria-hidden="true"><defs><path id="stp-top${n}" d="M 30 100 A 70 70 0 0 1 170 100"/><path id="stp-bot${n}" d="M 22 100 A 78 78 0 0 0 178 100"/></defs>
+    <g fill="none" stroke="#b8323a"><circle cx="100" cy="100" r="96" stroke-width="5"/><circle cx="100" cy="100" r="88" stroke-width="2"/><circle cx="100" cy="100" r="56" stroke-width="2"/></g>
+    <g fill="#b8323a" font-family="Urbanist, sans-serif" font-weight="800" text-anchor="middle">
+      <text font-size="15" letter-spacing="2"><textPath href="#stp-top${n}" startOffset="50%">MINISTRY OF HEALTH</textPath></text>
+      <text font-size="11.5" letter-spacing="1.2" dominant-baseline="hanging"><textPath href="#stp-bot${n}" startOffset="50%">STATE DEPT. FOR MEDICAL SERVICES</textPath></text>
+      <text x="100" y="88" font-size="17" letter-spacing="1.5">RECEIVED</text><text x="100" y="110" font-size="13">${esc(d)}</text><text x="100" y="128" font-size="11">★ REGISTRY ★</text></g></svg>`;
+}
+function signSVG(p) {
+  return `<svg viewBox="0 0 260 110" class="stp-svg" aria-hidden="true"><text x="130" y="58" text-anchor="middle" font-family="'Mrs Saint Delafield','Homemade Apple',cursive" font-size="54" fill="#1d3a8a">${esc(p.name.split(' ')[0])} ${esc((p.name.split(' ').pop() || '')[0] || '')}.</text>
+    <line x1="20" y1="72" x2="240" y2="72" stroke="#1d3a8a" stroke-width="1.5"/><text x="130" y="90" text-anchor="middle" font-family="Urbanist, sans-serif" font-weight="700" font-size="14" fill="#1b1b1b">${esc(p.name)}</text>
+    <text x="130" y="106" text-anchor="middle" font-family="Urbanist, sans-serif" font-size="11.5" fill="#444">${esc(p.title)}</text></svg>`;
+}
+const stpMark = (k, it, date, signer, edit) => it.on ? `<div class="stp-item stp-${k}" data-k="${k}" style="left:${it.x}%;top:${it.y}%;width:${it.w}%" ${edit ? `tabindex="0" role="group" aria-label="${k === 'stamp' ? 'Stamp' : 'Signature'}. Drag to move, drag the corner to resize. Arrow keys move it, plus and minus resize it."` : ''}>${k === 'stamp' ? stampSVG(date) : signSVG(signer)}${edit ? '<span class="stp-h" aria-hidden="true"></span>' : ''}</div>` : '';
+function stampedThumb(x) { const m = x.marks; return `<span class="stp-thumb"><img src="${extPages(x)[m.page]}" alt="">${stpMark('stamp', m.stamp, x.stamped, person(m.by))}${stpMark('sign', m.sign, x.stamped, person(m.by))}</span>`; }
+function stampEditor(x) {
+  const pages = extPages(x), st = ui.stp && ui.stp.id === x.id ? ui.stp : (ui.stp = { id: x.id, page: x.marks?.page || 0, sel: 'stamp', ...(x.marks ? JSON.parse(JSON.stringify({ stamp: x.marks.stamp, sign: x.marks.sign })) : STP_DEFAULT()) });
+  const me_ = me(), now = new Date().toISOString();
+  const tool = (k, label, icon) => { const it = st[k]; return `<div class="stp-tool ${st.sel === k && it.on ? 'on' : ''}">
+      <label class="switch-row"><input type="checkbox" class="sr" data-stp-on="${k}" ${it.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><span class="stp-tl">${ic(icon)} <b>${label}</b></span></label>
+      <label class="stp-size"><span>Size</span><input type="range" min="${k === 'stamp' ? 14 : 16}" max="${k === 'stamp' ? 48 : 60}" step="1" value="${it.w}" data-stp-size="${k}" ${it.on ? '' : 'disabled'} aria-label="${label} size"><output>${Math.round(it.w)}%</output></label></div>`; };
+  modal(`${mHead('stamp', 'Stamp and sign', `${esc(x.subject)} · ${esc(x.ref)}`)}
+    <div class="modal-b stp">
+      <div class="stp-doc">
+        ${pages.length > 1 ? `<div class="ct-seg stp-pages" role="tablist" aria-label="Page">${pages.map((_, i) => `<a href="#" role="tab" class="${st.page === i ? 'on' : ''}" aria-selected="${st.page === i}" data-stp-page="${i}">Page ${i + 1}</a>`).join('')}</div>` : ''}
+        <div class="stp-page" id="stp-page"><img src="${pages[st.page]}" alt="Page ${st.page + 1} of ${esc(x.files[0])}" draggable="false">${stpMark('stamp', st.stamp, now, me_, true)}${stpMark('sign', st.sign, now, me_, true)}</div>
+      </div>
+      <aside class="stp-tools">
+        <p class="stp-hint">${ic('info')}<span>Drag the stamp and signature to where they go on the page. Drag the corner, or use Size, to resize.</span></p>
+        ${tool('stamp', 'Received stamp', 'stamp')}${tool('sign', `Signature · ${esc(me_.name)}`, 'pen')}
+        <button class="btn btn-light btn-sm" data-stp-reset>${ic('refresh')} Reset positions</button>
+        <p class="form-err" id="stp-err" role="alert" hidden>You cannot proceed without a stamp. Switch the stamp on and place it on the page.</p>
+      </aside>
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="stpCancel" data-id="${x.id}">Cancel</button><button class="btn btn-primary" data-act="stpConfirm" data-id="${x.id}">${ic('check')} Confirm stamped copy</button></div>`, 'xwide stamp-modal', '.stp-item');
+  const root = $('#overlay .stp'), pg = $('#stp-page');
+  const redraw = () => stampEditor(x);
+  const apply = k => { const el = pg.querySelector(`.stp-item[data-k="${k}"]`), it = st[k]; if (!el) return; el.style.left = it.x + '%'; el.style.top = it.y + '%'; el.style.width = it.w + '%'; const r = root.querySelector(`[data-stp-size="${k}"]`); if (r) { r.value = it.w; r.nextElementSibling.textContent = Math.round(it.w) + '%'; } };
+  const clamp = k => { const it = st[k], el = pg.querySelector(`.stp-item[data-k="${k}"]`); const hPct = el ? el.offsetHeight / pg.offsetHeight * 100 : 10; it.w = Math.max(10, Math.min(65, it.w)); it.x = Math.max(0, Math.min(100 - it.w, it.x)); it.y = Math.max(0, Math.min(100 - hPct, it.y)); };
+  const select = k => { st.sel = k; root.querySelectorAll('.stp-tool').forEach((t, i) => t.classList.toggle('on', ['stamp', 'sign'][i] === k && st[k].on)); pg.querySelectorAll('.stp-item').forEach(e => e.classList.toggle('sel', e.dataset.k === k)); };
+  select(st.sel);
+  pg.querySelectorAll('.stp-item').forEach(el => {
+    const k = el.dataset.k;
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault(); select(k); el.focus({ preventScroll: true });
+      const box = pg.getBoundingClientRect(), it = st[k], sx = e.clientX, sy = e.clientY, o = { ...it }, resize = e.target.classList.contains('stp-h');
+      el.setPointerCapture(e.pointerId); el.classList.add('moving');
+      const mv = ev => { const dx = (ev.clientX - sx) / box.width * 100, dy = (ev.clientY - sy) / box.height * 100;
+        if (resize) it.w = o.w + dx; else { it.x = o.x + dx; it.y = o.y + dy; } clamp(k); apply(k); };
+      const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); el.classList.remove('moving'); };
+      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    });
+    el.addEventListener('focus', () => select(k));
+    el.addEventListener('keydown', e => { const it = st[k], s = e.shiftKey ? 5 : 1;
+      const m = { ArrowLeft: () => it.x -= s, ArrowRight: () => it.x += s, ArrowUp: () => it.y -= s, ArrowDown: () => it.y += s, '+': () => it.w += s, '=': () => it.w += s, '-': () => it.w -= s }[e.key];
+      if (m) { e.preventDefault(); m(); clamp(k); apply(k); } });
+  });
+  root.querySelectorAll('[data-stp-size]').forEach(r => r.addEventListener('input', () => { const k = r.dataset.stpSize; st[k].w = +r.value; select(k); clamp(k); apply(k); }));
+  root.querySelectorAll('[data-stp-on]').forEach(c => c.addEventListener('change', () => { const k = c.dataset.stpOn; st[k].on = c.checked; st.sel = k; redraw(); }));
+  root.querySelectorAll('[data-stp-page]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); st.page = +a.dataset.stpPage; redraw(); }));
+  root.querySelector('[data-stp-reset]').addEventListener('click', () => { const d = STP_DEFAULT(); ['stamp', 'sign'].forEach(k => Object.assign(st[k], { x: d[k].x, y: d[k].y, w: d[k].w })); redraw(); });
+  const img = pg.querySelector('img'); if (!img.complete) img.addEventListener('load', () => ['stamp', 'sign'].forEach(k => { clamp(k); apply(k); }), { once: true });
+}
+function stampedCopyModal(x) {
+  const m = x.marks, pages = extPages(x);
+  modal(`${mHead('stamp', 'Stamped copy', `${esc(x.subject)} · ${esc(x.ref)}`)}
+    <div class="modal-b"><div class="stp-view">${pages.map((src, i) => `<div class="stp-page"><img src="${src}" alt="Page ${i + 1}">${i === m.page ? stpMark('stamp', m.stamp, x.stamped, person(m.by)) + stpMark('sign', m.sign, x.stamped, person(m.by)) : ''}</div>`).join('')}</div></div>
+    <div class="modal-f"><button class="btn btn-light" data-act="stpBack" data-id="${x.id}">${ic('arrowL')} Back</button></div>`, 'wide stamp-modal');
+}
+Object.assign(ACT, {
+  stpCancel: el => { ui.stp = null; extReadModal(S.outside.items.find(y => y.id === el.dataset.id)); },
+  stpConfirm: el => { const x = S.outside.items.find(y => y.id === el.dataset.id), st = ui.stp;
+    if (!st || !st.stamp.on) { const e = $('#stp-err'); if (e) e.hidden = false; return; }
+    x.marks = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign }, by: meId() }; x.stamped = new Date().toISOString(); ui.stp = null; save();
+    extReadModal(x); toast(st.sign.on ? 'Stamped and signed. You can receive it now.' : 'Stamped. You can receive it now.'); },
+  stpView: el => stampedCopyModal(S.outside.items.find(y => y.id === el.dataset.id)),
+  stpBack: el => extReadModal(S.outside.items.find(y => y.id === el.dataset.id)),
+});
