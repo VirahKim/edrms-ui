@@ -95,7 +95,7 @@ function viewLetterItem(q) {
       <button class="btn btn-primary" data-act="letterFile" data-id="${l.id}">${ic('archive')} File this ${letterKind(l).toLowerCase()}</button>`;
   } else if (r === 'registry' && l.stage === 'filed') act = `<h3>Next: send it to the Action Officer</h3><p class="muted">Filed as folio ${esc(l.folio)} in ${f ? esc(f.name) : 'the file'}. It was marked to ${esc(person(mk.to).name)}; choose the Action Officer the whole file goes to.</p>
       <div class="lt-btns"><button class="btn btn-primary" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in file</a>` : ''}</div>`;
-  else if (l.stage === 'action') act = `<h3>Sent to the Action Officer</h3><p class="muted">The file is with ${esc(person(l.actionTo || mk.to).name)}. Follow it on Correspondence › To Action Officer.</p>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in ${esc(f.name)}</a>` : ''}`;
+  else if (l.stage === 'action') act = `<h3>Sent to the Action Officer</h3><p class="muted">The file is with ${esc(person(l.actionTo || mk.to).name)}. Follow it on Correspondence › Action Officer.</p>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in ${esc(f.name)}</a>` : ''}`;
   else act = `<h3>${esc(stLabel)}</h3><p class="muted">${l.stage === 'marking' ? `Waiting for ${esc(person(l.withUser || 'vera').name)} to mark it.` : 'Nothing for you to do on this letter right now.'}</p>`;
   const who = id => id === 'registry' ? 'Registry' : person(id).name;
   return pageHead({ crumbs: [[r === 'registry' ? 'Correspondence' : 'My Queue', r === 'registry' ? '#/correspondence' : '#/queue'], [l.title]], back, title: esc(l.title),
@@ -129,17 +129,17 @@ function letterNotesPanel(l) {
     <button class="btn btn-light btn-sm" data-act="letterComment" data-id="${l.id}" style="margin-top:8px">${ic('send')} Post comment</button>`}</section>`;
 }
 /* ---------- Correspondence (Registry): movement to and from the officers ---------- */
-const CORR_TABS = { received: 'Received', marking: 'To Marking Officer', action: 'To Action Officer' };
+const CORR_TABS = { received: 'Received', marking: 'Marking Officer', action: 'Action Officer' };
 const CORR_SUB = {
   marking: {
-    all: 'Every letter or document sent to the Marking Officer, and what has come back.',
-    sent: 'Letters and documents sent to the Marking Officer that are waiting to be marked.',
-    received: 'Letters and documents the Marking Officer has marked and sent back. Next: file each one, then send the file to the Action Officer.',
+    all: 'All letters sent for marking, and the ones that came back.',
+    sent: 'Letters waiting to be marked.',
+    received: 'Marked letters that came back to you. Next: file each one, then send the file to the Action Officer.',
   },
   action: {
-    all: 'Every file sent to Action Officers – the whole file moves – and what has come back.',
-    sent: 'Files sent to Action Officers that they are still working on.',
-    received: 'Files Action Officers have finished and sent back to the Registry. Next: dispatch the reply or file it away.',
+    all: 'All files sent to Action Officers, and the ones that came back.',
+    sent: 'Files the Action Officers are still working on.',
+    received: 'Finished files that came back to you. Next: send out the reply or file it away.',
   },
 };
 const isActionOfficer = id => PEOPLE[id] && PEOPLE[id].role === 'action';
@@ -317,19 +317,48 @@ function notifAction(n) {
 });
 
 /* ---------- Notification pop-up: the message and the actions it asks for ---------- */
-const NOTIF_HEAD = { 'For marking': 'Sent to you for marking', 'For action': 'Sent to you for action', 'Sent back': 'Sent back to you', Marked: 'Marked and sent back',
-  Returned: 'Returned to the Registry', Done: 'Finished by the officer', Delegated: 'Delegated', Requested: 'A request is waiting', Approved: 'Request approved', Declined: 'Request declined',
-  Approval: 'Approval needed', 'Bring up': 'Bring-up due', Correspondence: 'New correspondence' };
+const NOTIF_HEAD = { 'For marking': 'Please mark this', 'For action': 'Please act on this', 'Sent back': 'Sent back to you', Marked: 'Marked and back with you',
+  Returned: 'Back in the Registry', Done: 'Work finished', Delegated: 'Passed to another officer', Requested: 'A request is waiting', Approved: 'Request approved', Declined: 'Request declined',
+  Approval: 'Approval needed', 'Bring up': 'Due today', Correspondence: 'New letter' };
+/* Plain wording for the seeded notifications (applied once to saved data) */
+const NOTIF_PLAIN = { n1: 'A file was sent to you to act on.', n2: 'A file was sent to you to act on.', n3: 'A file was sent to you to mark.', n4: 'The Action Officer sent the file back.',
+  n16: 'The Action Officer sent the file back with a signed reply. Send out the reply or file it away.', n17: 'ACME Company Ltd is marked for Virah Creates. Send it to her next.',
+  n12: 'Q4 Documents came back to you to mark again: mark it to one officer only.', n13: 'Virah Creates finished the file you marked and sent back a signed reply.',
+  n20: 'A new letter from Erickson Maluki is waiting to be recorded.', n9: 'Mercy Achieng sent Q2 Invoices back to the Registry.' };
+if (!S.plainText1) { (S.notifications || []).forEach(n => { if (NOTIF_PLAIN[n.id]) n.text = NOTIF_PLAIN[n.id]; }); S.plainText1 = true; save(); }
+/* Where a file or letter is in its journey, and where it goes next */
+function moveTrack(f, l) {
+  const steps = [['Registry', 'inboxIn'], ['Marking Officer', 'pen'], ['Registry', 'archive'], ['Action Officer', 'user'], ['Registry', 'checkCircle']];
+  const at = l ? ({ registry: 0, marking: 1, marked: 2, filed: 2, action: 3 })[l.stage] : ({ registry: 0, marking: 1, returned_marking: 2, action: 3, delegated: 3, returned_action: 4, filed: 4 })[f?.stage];
+  if (at === undefined) return '';
+  const who = i => { const id = i === 1 ? (l ? (l.movements || []).filter(m => isMarkingOfficer(m.to)).pop()?.to || l.withUser : (f.movements || []).filter(m => isMarkingOfficer(m.to)).pop()?.to || (f.stage === 'marking' ? f.withUser : null)) : i === 3 ? (l ? l.actionTo : f.markedTo || (['action', 'delegated'].includes(f.stage) ? f.withUser : null)) : null; return id && PEOPLE[id] ? person(id).name : ''; };
+  const sub = ['Received', 'Marks it', 'Files it', 'Acts on it', 'Files it away'];
+  return `<ol class="nm-track" aria-label="How it moves">${steps.map(([lbl, icn], i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}" ${i === at ? 'aria-current="step"' : ''}><span class="dot">${ic(i < at ? 'check' : icn)}</span><b>${lbl}</b><small>${i === at ? 'Now' : esc(who(i) || sub[i])}</small></li>`).join('')}</ol>`;
+}
+/* A small picture of the document, click to view it */
+function docPreview(f, d, l, href) {
+  let page = '';
+  if (l && !l.fileId && l.fileName && typeof extPages === 'function' && /\.pdf$/i.test(l.fileName)) page = `<img src="${extPages({ files: [l.fileName] })[0]}" alt="">`;
+  else if (l) { const ff = l.fileId && getFile(l.fileId), dd = ff && getDoc(ff, l.docId); page = ff && dd ? pageHTML(ff, dd) : pageHTML(letterFile(l), letterDoc(l)); }
+  else if (f && d) page = pageHTML(f, d);
+  if (!page) return '';
+  return `<button type="button" class="nm-prev" data-act="notifGo" data-to="${href}" aria-label="View the document"><span class="nm-prev-page" aria-hidden="true">${page}</span><span class="nm-prev-cta">${ic('eye')} View document</span></button>`;
+}
 function notifModal(n) {
   const f = n.fileId && getFile(n.fileId), l = n.letterId && getLetter(n.letterId), p = person(n.from);
   const subject = (l && l.title) || (f && f.name) || (/corr/.test(n.href || '') ? 'Correspondence' : 'EDRMS');
   const doc = f && ((n.docId && f.docs.find(x => x.id === n.docId)) || [...f.docs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]);
-  const act = notifAction(n);
+  let act = notifAction(n);
+  if (/>\s*(?:<svg[\s\S]*?<\/svg>)?\s*Open (letter|document)\s*</.test(act)) act = '';
   const btn = (to, label, icon, primary) => `<button type="button" class="btn ${primary ? 'btn-primary' : 'btn-light'}" data-act="notifGo" data-id="${n.id}" data-to="${to}">${ic(icon)} ${label}</button>`;
-  const opens = [l && !l.fileId ? btn(letterOpen(l), `Open ${letterKind(l).toLowerCase()}`, 'mail', !act) : '',
-    f && !f.virtual ? btn(`#/file/${f.id}`, 'Open file', 'folder', !act && !doc) : '',
-    f && !f.virtual && doc ? btn(`#/file/${f.id}/doc/${doc.id}`, 'Open document', 'file', !act) : '',
+  const docHref = l ? letterOpen(l) : f && !f.virtual && doc ? `#/file/${f.id}/doc/${doc.id}` : '';
+  const opens = [l ? btn(letterOpen(l), `View ${letterKind(l).toLowerCase()}`, 'eye', !act) : '',
+    f && !f.virtual ? btn(`#/file/${f.id}`, 'View file', 'folder', !act && !doc) : '',
+    f && !f.virtual && doc ? btn(docHref, 'View document', 'eye', !act) : '',
     !f && !l && n.href ? btn(n.href, 'Open', 'arrowR', !act) : ''].join('');
+  const prev = docHref ? docPreview(f && !f.virtual ? f : null, doc, l, docHref) : '';
+  const track = l || (f && !f.virtual) ? moveTrack(l ? null : f, l) : '';
+  const actLabel = act ? act.replace(/<[^>]+>/g, '').trim() : '';
   modal(`${mHead('bell', 'Notification')}
     <div class="modal-b nm">
       <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}${p.title ? ' – ' + esc(p.title) : ''}</small></div><span class="chip t-green">Delivered</span></div>
@@ -337,8 +366,10 @@ function notifModal(n) {
         ${l ? `<p><b>${letterKind(l)}:</b> ${esc(l.title)} <span class="muted">(${letterNo(l)})</span></p>` : ''}
         ${f && !f.virtual ? `<p><b>File:</b> ${esc(f.name)} <span class="muted mono">${esc(f.ref)}</span></p>` : ''}
         ${doc && f && !f.virtual ? `<p><b>Document:</b> Folio ${esc(doc.folio)} – ${esc(doc.title)}</p>` : ''}
-        <p>${esc(n.text)}</p>
-        ${act ? '<p class="muted">Use the button below to do it now, or open it first.</p>' : ''}</div>
+        <p>${esc(n.text)}</p></div>
+      ${prev || track ? `<div class="nm-grid ${prev ? '' : 'no-prev'}">${prev}<div class="nm-how">
+        ${track ? `<h4>Where it is</h4>${track}` : ''}
+        <h4>What to do</h4><ol class="nm-steps">${prev ? `<li><b>View it.</b> Press <em>View document</em> to read every page.</li>` : ''}${actLabel ? `<li><b>Move it on.</b> Press <em>${esc(actLabel)}</em>.</li>` : `<li>Nothing for you to do now. You can follow it here.</li>`}</ol></div></div>` : ''}
       <p class="nm-at">${ic('clock')} Delivered ${fmtDT(n.at)}</p>
     </div>
     <div class="modal-f nm-f"><button type="button" class="btn btn-light left" data-act="notifUnread" data-id="${n.id}">${ic('mail')} Mark as unread</button>${opens}${act.replace(/btn-xs/g, '')}</div>`, 'notif-modal');
@@ -379,7 +410,7 @@ function outsideView() {
       <div class="ext-row"><label class="switch-row"><input type="checkbox" class="sr" data-change="extOn" ${O.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><b>Accept submissions from SAGAS</b></label>
         <div class="ext-link"><span>Link</span><input class="input mono" id="ext-link" value="${link}" readonly aria-label="Submission link" ${O.on ? '' : 'disabled'}><button class="btn btn-light btn-sm" data-act="extCopy" ${O.on ? '' : 'disabled'}>${ic('copy')} Copy</button></div></div>
       <div class="ext-link ext-as"><span>Shown as</span><input class="input" id="ext-as" value="${esc(O.shownAs)}" data-change="extAs" aria-label="Name shown to people sending documents"></div>
-      <p class="muted" style="margin:0">SAGAS use this link to send letters and documents. Read each one, stamp it and receive it into the EDRMS, then register it – it joins the Inward Register and goes to a Marking Officer like any other letter.</p>
+      <p class="muted" style="margin:0">SAGAS send letters and documents through this link. For each one: view it, stamp and sign it, receive it, then register it. It then goes to a Marking Officer like any other letter.</p>
     </section>
     <section class="up-card glass ext-list">
       <div class="ext-bar"><div class="ct-seg" role="tablist" aria-label="Submissions">${EXT_TABS.map(([k, l]) => `<a role="tab" href="#" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="extTab" data-k="${k}">${l} <span class="n">${O.items.filter(x => k === 'all' || x.status === k).length}</span></a>`).join('')}</div>
@@ -395,7 +426,9 @@ function extReadModal(x, showErr) {
       <dl class="lt-facts"><div><dt>Organisation</dt><dd>${esc(x.org)}</dd></div><div><dt>Sent by</dt><dd>${esc(x.person)}<small class="sub">${esc(x.email)}</small></dd></div>
         <div><dt>For</dt><dd>${esc(person(x.forWho).name)}</dd></div><div><dt>Status</dt><dd><span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span></dd></div></dl>
       ${x.note ? `<p><b>Message:</b> ${esc(x.note)}</p>` : ''}${x.returnNote ? `<div class="instruction sent-back">${ic('undo')}<div><b>Returned</b> – ${esc(x.returnNote)}</div></div>` : ''}
-      <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF</small></div></div>`).join('')}</div>
+      <div class="ext-doc"><button type="button" class="nm-prev" data-act="stpView" data-id="${x.id}" aria-label="View the document"><img src="${extPages(x)[x.marks ? x.marks.page : 0]}" alt="">${x.marks ? stpMark('stamp', x.marks.stamp, x.stamped, person(x.marks.by)) + stpMark('sign', x.marks.sign, x.stamped, person(x.marks.by)) : ''}<span class="nm-prev-cta">${ic('eye')} View document</span></button>
+        <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF · ${plural(extPages(x).length, 'page')}</small></div></div>`).join('')}
+        ${role() === 'registry' && ['new', 'received', 'toregister'].includes(x.status) ? `<ol class="nm-steps"><li><b>View</b> it – press the page to read it.</li><li class="${x.stamped ? 'ok' : ''}"><b>Stamp and sign</b> it.</li><li class="${x.status !== 'new' ? 'ok' : ''}"><b>Receive</b> it into the EDRMS.</li><li><b>Register</b> it, then send it to a Marking Officer.</li></ol>` : ''}</div></div>
       ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${x.marks.page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
       ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot proceed without a stamp. Stamp the document, then receive it.</p>` : ''}
     </div>
@@ -512,8 +545,8 @@ function stampEditor(x) {
 }
 function stampedCopyModal(x) {
   const m = x.marks, pages = extPages(x);
-  modal(`${mHead('stamp', 'Stamped copy', `${esc(x.subject)} · ${esc(x.ref)}`)}
-    <div class="modal-b"><div class="stp-view">${pages.map((src, i) => `<div class="stp-page"><img src="${src}" alt="Page ${i + 1}">${i === m.page ? stpMark('stamp', m.stamp, x.stamped, person(m.by)) + stpMark('sign', m.sign, x.stamped, person(m.by)) : ''}</div>`).join('')}</div></div>
+  modal(`${mHead(m ? 'stamp' : 'file', m ? 'Stamped copy' : 'Document', `${esc(x.subject)} · ${esc(x.ref)} · ${plural(pages.length, 'page')}`)}
+    <div class="modal-b"><div class="stp-view">${pages.map((src, i) => `<div class="stp-page"><img src="${src}" alt="Page ${i + 1}">${m && i === m.page ? stpMark('stamp', m.stamp, x.stamped, person(m.by)) + stpMark('sign', m.sign, x.stamped, person(m.by)) : ''}</div>`).join('')}</div></div>
     <div class="modal-f"><button class="btn btn-light" data-act="stpBack" data-id="${x.id}">${ic('arrowL')} Back</button></div>`, 'wide stamp-modal');
 }
 Object.assign(ACT, {

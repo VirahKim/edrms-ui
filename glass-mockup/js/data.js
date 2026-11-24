@@ -378,8 +378,8 @@ function seedState() {
     drafts: [],
     notifications: [
       // Action Officer (Virah)
-      { id: 'n1', to: 'virah', kind: 'For action', text: 'File forwarded to you.', from: 'henry', fileId: 'f4', at: daysAgo(6, 2, 21), read: false },
-      { id: 'n2', to: 'virah', kind: 'For action', text: 'File forwarded to you.', from: 'henry', fileId: 'f1', at: daysAgo(13, 10, 32), read: false },
+      { id: 'n1', to: 'virah', kind: 'For action', text: 'A file was sent to you to act on.', from: 'henry', fileId: 'f4', at: daysAgo(6, 2, 21), read: false },
+      { id: 'n2', to: 'virah', kind: 'For action', text: 'A file was sent to you to act on.', from: 'henry', fileId: 'f1', at: daysAgo(13, 10, 32), read: false },
       { id: 'n6', to: 'virah', kind: 'Sent back', text: 'EDRMS Documents was sent back to you: your response is not signed. Please sign it and send it back.', from: 'john', fileId: 'f4', at: daysAgo(0, 12, 5), read: false },
       { id: 'n7', to: 'virah', kind: 'Approved', text: 'Your request for “Senate of Kenya” was approved for 7 days.', from: 'john', fileId: 'f6', href: '#/requestfiles', at: daysAgo(0, 10, 2), read: false },
       { id: 'n8', to: 'virah', kind: 'Declined', text: 'Your request for “2026 Contracts” was declined: confidential HR file.', from: 'rachael', fileId: 'f8', href: '#/requestfiles', at: daysAgo(2, 9, 40), read: false },
@@ -387,19 +387,19 @@ function seedState() {
       { id: 'n10', to: 'virah', kind: 'Returned', text: '“Correspondence” was returned to you: add the reference number before it is recorded.', from: 'john', fileId: null, href: '#/mycorrespondence', at: daysAgo(1, 14, 20), read: false },
       { id: 'n11', to: 'virah', kind: 'Bring up', text: 'Bring-up due: vendor reply on the training schedule.', from: 'john', fileId: 'f4', at: daysAgo(0, 8, 0), read: true },
       // Marking Officer (Vera)
-      { id: 'n3', to: 'vera', kind: 'For marking', text: 'File sent to you for marking.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 12), read: false },
+      { id: 'n3', to: 'vera', kind: 'For marking', text: 'A file was sent to you to mark.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 12), read: false },
       { id: 'n12', to: 'vera', kind: 'Sent back', text: 'Q4 Documents was sent back to you for re-marking: please mark to one officer only.', from: 'john', fileId: 'f9', at: daysAgo(0, 8, 30), read: false },
       { id: 'n13', to: 'vera', kind: 'Done', text: 'Virah Creates finished the file you marked and returned it with a signed reply.', from: 'virah', fileId: 'f14', at: daysAgo(0, 10, 15), read: false },
       { id: 'n14', to: 'vera', kind: 'Approval', text: 'Approval needed: ICT Handover Report – file closing request.', from: 'john', fileId: 'f10', href: '#/queue?tab=approvals', at: daysAgo(1, 14), read: false },
       { id: 'n15', to: 'vera', kind: 'Bring up', text: 'Bring-up due today: confirm attendance before the Senate hearing.', from: 'john', fileId: 'f6', at: daysAgo(0, 9, 0), read: true },
       // Registry (John)
-      { id: 'n4', to: 'registry', kind: 'Returned', text: 'File returned from action.', from: 'otieno', fileId: 'f3', at: daysAgo(4, 5, 56), read: false },
+      { id: 'n4', to: 'registry', kind: 'Returned', text: 'The Action Officer sent the file back.', from: 'otieno', fileId: 'f3', at: daysAgo(4, 5, 56), read: false },
       { id: 'n16', to: 'registry', kind: 'Returned', text: 'File returned from action with a signed reply – ready to dispatch or file away.', from: 'virah', fileId: 'f14', at: daysAgo(0, 10, 15), read: false },
-      { id: 'n17', to: 'registry', kind: 'Marked', text: 'ACME Company Ltd was marked to Virah Creates – send it on.', from: 'vera', fileId: 'f7', at: daysAgo(0, 11, 40), read: false },
+      { id: 'n17', to: 'registry', kind: 'Marked', text: 'ACME Company Ltd is marked for Virah Creates. Send it to her next.', from: 'vera', fileId: 'f7', at: daysAgo(0, 11, 40), read: false },
       { id: 'n5', to: 'registry', kind: 'Requested', text: 'Virah Creates requested a file: MOH/ADM/1/1/200/1.', from: 'virah', fileId: 'f4', href: '#/queue?tab=approvals', at: daysAgo(1, 15), read: false },
       { id: 'n18', to: 'registry', kind: 'Requested', text: 'Brian Otieno asked for access to Senate of Kenya.', from: 'otieno', fileId: 'f6', href: '#/access', at: daysAgo(0, 8), read: false },
       { id: 'n19', to: 'registry', kind: 'Delegated', text: 'Virah Creates delegated Q2 Invoices to Mercy Achieng.', from: 'virah', fileId: 'f11', at: daysAgo(1, 10), read: true },
-      { id: 'n20', to: 'registry', kind: 'Correspondence', text: 'New letter from Erickson Maluki waiting to be recorded.', from: 'erickson', fileId: null, href: '#/correspondence', at: daysAgo(0, 6, 50), read: false },
+      { id: 'n20', to: 'registry', kind: 'Correspondence', text: 'A new letter from Erickson Maluki is waiting to be recorded.', from: 'erickson', fileId: null, href: '#/correspondence', at: daysAgo(0, 6, 50), read: false },
     ],
     seq: 100,
   };

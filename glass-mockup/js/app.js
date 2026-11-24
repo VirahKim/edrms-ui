@@ -2588,7 +2588,7 @@ const ACT = {
     f.stage = isMark ? 'marking' : 'action'; f.withUser = to; f.sentBy = meId(); f.delegatedBy = null;
     if (isMark) { f.markedTo = null; f.instruction = null; }
     move(f, meId(), to);
-    notify(to, isMark ? 'File sent to you for marking.' : 'File forwarded to you.', meId(), f.id);
+    notify(to, isMark ? 'A file was sent to you to mark.' : 'A file was sent to you to act on.', meId(), f.id);
     save(); closeModal(); render(); toast(isMark ? 'File sent to the Marking Officer.' : `Sent to ${person(to).name}`);
   },
   sendOutside: el => { const f = getFile(el.dataset.f || el.dataset.id); sendOutsideModal(f, el.dataset.d); },
