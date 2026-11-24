@@ -1713,7 +1713,7 @@ function viewUpload(q) {
   const s2 = u.step !== 1;
   return head(`${plural(S.files.length, 'File')} · ${plural(total, 'Document')}${S.drafts.length ? ` · <a style="color:#fff;text-decoration:underline" href="#" data-act="openDrafts">${plural(S.drafts.length, 'draft')}</a>` : ''}`) + `
     <div class="upload-wrap">
-      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers'], ['outside', 'globe', 'From Outside']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
+      <div class="up-tabs" role="tablist">${[['single', 'file', 'Single Document'], ['bulk', 'layers', 'Bulk Upload'], ['email', 'mail', 'Import from Email'], ...(role() === 'registry' ? [['officers', 'users', 'From Officers'], ['outside', 'globe', 'From SAGAS']] : [])].map(([k, i, l]) => `<button class="${u.tab === k ? 'on' : ''}" data-act="upTab" data-k="${k}" ${s2 ? 'disabled' : ''}>${ic(i)} <span>${l}</span></button>`).join('')}</div>
       ${u.tab === 'outside' && typeof outsideView === 'function' ? outsideView() : u.tab === 'officers' && typeof corrLists === 'function' ? `<section class="up-card glass up-officers"><div class="uo-h"><h2>Correspondence from officers</h2><p class="muted">Letters, memos, circulars and notices officers have started. Record each in the Inward Register and file it, then send it on.</p></div>${corrLists()}</section>` : `<section class="up-card glass">
         <div class="stepper"><span class="bar" style="width:${s2 ? 'calc(100% - 140px)' : '0'}"></span><div class="s on ${s2 ? 'done' : ''}"><i>${s2 ? ic('check') : '1'}</i>${{ email: 'Find Emails' }[u.tab] || 'Upload'}</div><div class="s ${s2 ? 'on' : ''}"><i>2</i>Details</div></div>
         ${step}
@@ -2887,7 +2887,7 @@ document.addEventListener('change', e => {
   if (k === 'recReason') ui.rec.reason = t.value;
   if (k === 'recYear') { ui.rec.year = +t.value; render(); }
   if (k === 'recReg') { ui.rec.reg = t.value; render(); }
-  if (k === 'extOn') { S.outside.on = t.checked; save(); render(); toast(t.checked ? 'Accepting submissions from outside' : 'The link is switched off'); }
+  if (k === 'extOn') { S.outside.on = t.checked; save(); render(); toast(t.checked ? 'Accepting submissions from SAGAS' : 'The link is switched off'); }
   if (k === 'extAs') { S.outside.shownAs = t.value; save(); toast('Saved'); }
   if (k === 'letterFilePick') { ui.lfFile = t.value; const h = t.parentElement.querySelector('.hint'), ff = getFile(t.value); if (h) h.textContent = ff ? `It will be folio ${nextFolio(ff)} in ${ff.name}.` : 'Only files that are in the Registry are listed.'; }
   if (k === 'cnCovers') ui.census.covers = t.value;

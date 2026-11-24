@@ -345,7 +345,7 @@ function notifModal(n) {
 }
 ACT.notifUnread = el => { const n = S.notifications.find(x => x.id === el.dataset.id); if (n) { n.read = false; save(); } closeModal(); render(); toast('Marked as unread'); };
 
-/* ---------- Upload › From Outside: documents sent in by people outside the organisation ---------- */
+/* ---------- Upload › From SAGAS: documents sent in by SAGAS (semi-autonomous government agencies) and others outside the ministry ---------- */
 const EXT_STATUS = { new: ['New', 't-blue'], received: ['Received', 't-teal'], toregister: ['Being registered', 't-amber'], registered: ['Registered', 't-green'], returned: ['Returned', 't-red'] };
 function ensureOutside() {
   if (S.outside) return;
@@ -353,32 +353,33 @@ function ensureOutside() {
     on: true, shownAs: 'Ministry of Health – State Department for Medical Services', token: 'eb2e1ffba1e8434c831effc7e074c013',
     items: [
       { id: 'x4', ref: 'EXT-2026-000004', at: daysAgo(0, 8, 12), org: 'Afya Bora Medical Supplies Ltd', person: 'Joseph Mutua', email: 'sales@afyabora.example', subject: 'Quotation for Vaccine Carriers and Cold Boxes', files: ['02-Afya-Bora-Quotation-Vaccine-Carriers.pdf'], forWho: 'john', status: 'new', note: 'Please find our quotation as requested.' },
-      { id: 'x3', ref: 'EXT-2026-000003', at: daysAgo(0, 4, 51), org: 'Kilima County Department of Health', person: 'Dr. Amina Wekesa', email: 'health@kilima.example', subject: 'Measles–Rubella Campaign Micro-plan', files: ['06-Kilima-County-Measles-Campaign-Plan.pdf'], forWho: 'henry', status: 'toregister' },
-      { id: 'x2', ref: 'EXT-2026-000002', at: daysAgo(2, 16, 12), org: 'Mwangaza Teaching and Referral Hospital', person: 'Dr. Peter Kiprono', email: 'ceo@mwangaza-hospital.example', subject: 'Quarterly Service Delivery Report', files: ['03-Mwangaza-Hospital-Quarterly-Report.pdf'], forWho: 'john', status: 'received' },
-      { id: 'x1', ref: 'EXT-2026-000001', at: daysAgo(2, 8, 29), org: 'Pamoja Health Workers Association', person: 'Grace Achieng Otieno', email: 'info@pamoja-hwa.example', subject: 'Request for a Consultative Meeting', files: ['05-Pamoja-Health-Workers-Union-Meeting-Request.pdf'], forWho: 'john', status: 'registered', letterId: null },
+      { id: 'x3', ref: 'EXT-2026-000003', at: daysAgo(0, 4, 51), org: 'Kilima County Department of Health', person: 'Dr. Amina Wekesa', email: 'health@kilima.example', subject: 'Measles–Rubella Campaign Micro-plan', files: ['06-Kilima-County-Measles-Campaign-Plan.pdf'], forWho: 'henry', status: 'toregister', stamped: daysAgo(0, 5, 10) },
+      { id: 'x2', ref: 'EXT-2026-000002', at: daysAgo(2, 16, 12), org: 'Mwangaza Teaching and Referral Hospital', person: 'Dr. Peter Kiprono', email: 'ceo@mwangaza-hospital.example', subject: 'Quarterly Service Delivery Report', files: ['03-Mwangaza-Hospital-Quarterly-Report.pdf'], forWho: 'john', status: 'received', stamped: daysAgo(2, 16, 40) },
+      { id: 'x1', ref: 'EXT-2026-000001', at: daysAgo(2, 8, 29), org: 'Pamoja Health Workers Association', person: 'Grace Achieng Otieno', email: 'info@pamoja-hwa.example', subject: 'Request for a Consultative Meeting', files: ['05-Pamoja-Health-Workers-Union-Meeting-Request.pdf'], forWho: 'john', status: 'registered', letterId: null, stamped: daysAgo(2, 9, 0) },
       { id: 'x0', ref: 'EXT-2026-000000', at: daysAgo(4, 11, 2), org: 'Health Sector Partners Forum', person: 'Ruth Wanjiru', email: 'secretariat@hspf.example', subject: 'Invitation (unsigned copy)', files: ['08-Health-Sector-Forum-Invitation.pdf'], forWho: 'john', status: 'returned', returnNote: 'The copy is not signed. Please send a signed copy.' },
     ],
   };
   save();
 }
 ensureOutside();
+if (S.outside && !S.outside.stampMig) { S.outside.items.forEach(x => { if (x.status !== 'new' && x.status !== 'returned' && !x.stamped) x.stamped = x.at; }); S.outside.stampMig = true; save(); }
 const EXT_TABS = [['all', 'All'], ['new', 'New'], ['received', 'Received'], ['toregister', 'To register'], ['registered', 'Registered'], ['returned', 'Returned']];
 function outsideView() {
   const O = S.outside, tab = ui.extTab || 'all', q = (ui.extQ || '').toLowerCase();
   const list = O.items.filter(x => (tab === 'all' || x.status === tab) && (!q || [x.ref, x.org, x.person, x.subject].join(' ').toLowerCase().includes(q)));
   const link = `https://edrms.qbits.africa/external/${O.token}`;
   const btns = x => ({
-    new: `<button class="btn btn-primary btn-xs" data-act="extAccept" data-id="${x.id}">${ic('check')} Accept</button><button class="btn btn-light btn-xs" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button>`,
+    new: `<button class="btn btn-primary btn-xs" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button><button class="btn btn-light btn-xs" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button>`,
     received: `<button class="btn btn-primary btn-xs" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button><button class="btn btn-light btn-xs" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button>`,
     toregister: `<button class="btn btn-primary btn-xs" data-act="extRegister" data-id="${x.id}">${ic('archive')} Finish registering</button>`,
     registered: x.letterId && getLetter(x.letterId) ? `<a class="btn btn-light btn-xs" href="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</a>` : `<span class="muted">In the Inward Register</span>`,
     returned: `<span class="muted" title="${esc(x.returnNote || '')}">Returned to sender</span>`,
   })[x.status];
   return `<section class="up-card glass ext-top">
-      <div class="ext-row"><label class="switch-row"><input type="checkbox" class="sr" data-change="extOn" ${O.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><b>Accept submissions from outside</b></label>
+      <div class="ext-row"><label class="switch-row"><input type="checkbox" class="sr" data-change="extOn" ${O.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><b>Accept submissions from SAGAS</b></label>
         <div class="ext-link"><span>Link</span><input class="input mono" id="ext-link" value="${link}" readonly aria-label="Submission link" ${O.on ? '' : 'disabled'}><button class="btn btn-light btn-sm" data-act="extCopy" ${O.on ? '' : 'disabled'}>${ic('copy')} Copy</button></div></div>
       <div class="ext-link ext-as"><span>Shown as</span><input class="input" id="ext-as" value="${esc(O.shownAs)}" data-change="extAs" aria-label="Name shown to people sending documents"></div>
-      <p class="muted" style="margin:0">People outside the organisation use this link to send letters and documents. Read each one, accept it into the EDRMS, then register it – it joins the Inward Register and goes to a Marking Officer like any other letter.</p>
+      <p class="muted" style="margin:0">SAGAS use this link to send letters and documents. Read each one, stamp it and receive it into the EDRMS, then register it – it joins the Inward Register and goes to a Marking Officer like any other letter.</p>
     </section>
     <section class="up-card glass ext-list">
       <div class="ext-bar"><div class="ct-seg" role="tablist" aria-label="Submissions">${EXT_TABS.map(([k, l]) => `<a role="tab" href="#" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="extTab" data-k="${k}">${l} <span class="n">${O.items.filter(x => k === 'all' || x.status === k).length}</span></a>`).join('')}</div>
@@ -388,21 +389,26 @@ function outsideView() {
           <td>${esc(person(x.forWho).name)}</td><td><span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span></td><td><div class="row-btns">${btns(x)}</div></td></tr>`), 'Nothing here.')}</div>
     </section>`;
 }
-function extReadModal(x) {
+function extReadModal(x, showErr) {
   modal(`${mHead('globe', esc(x.subject), `${esc(x.ref)} · sent ${fmtDT(x.at)}`)}
     <div class="modal-b">
       <dl class="lt-facts"><div><dt>Organisation</dt><dd>${esc(x.org)}</dd></div><div><dt>Sent by</dt><dd>${esc(x.person)}<small class="sub">${esc(x.email)}</small></dd></div>
         <div><dt>For</dt><dd>${esc(person(x.forWho).name)}</dd></div><div><dt>Status</dt><dd><span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span></dd></div></dl>
       ${x.note ? `<p><b>Message:</b> ${esc(x.note)}</p>` : ''}${x.returnNote ? `<div class="instruction sent-back">${ic('undo')}<div><b>Returned</b> – ${esc(x.returnNote)}</div></div>` : ''}
       <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF</small></div></div>`).join('')}</div>
+      ${x.stamped ? `<div class="ext-stamped">${ic('stamp')}<span><b>Stamped received</b><small>${fmtDT(x.stamped)}</small></span></div>` : ''}
+      ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot proceed without a stamp. Stamp the document, then receive it.</p>` : ''}
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Accept</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}" aria-pressed="${!!x.stamped}">${ic('stamp')} ${x.stamped ? 'Remove stamp' : 'Stamp'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
 }
 Object.assign(ACT, {
   extTab: (el, e) => { e?.preventDefault(); ui.extTab = el.dataset.k; render(); },
   extRead: (el, e) => { e?.preventDefault(); extReadModal(S.outside.items.find(x => x.id === el.dataset.id)); },
   extCopy: () => { const i = $('#ext-link'); i.select(); try { navigator.clipboard?.writeText(i.value).catch(() => {}); } catch (e) {} toast('Link copied'); },
-  extAccept: el => { const x = S.outside.items.find(y => y.id === el.dataset.id); x.status = 'received'; save(); closeModal(); render(); toast(`${x.ref} accepted into the EDRMS. Register it next.`); },
+  extStamp: el => { const x = S.outside.items.find(y => y.id === el.dataset.id); x.stamped = x.stamped ? null : new Date().toISOString(); save(); extReadModal(x); toast(x.stamped ? 'Stamped received' : 'Stamp removed'); },
+  extAccept: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
+    if (!x.stamped) { const e = $('#ext-err'); if (e) { e.hidden = false; e.focus?.(); } else extReadModal(x, true); return; }
+    x.status = 'received'; save(); closeModal(); render(); toast(`${x.ref} received into the EDRMS. Register it next.`); },
   extReturn: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     modal(`${mHead('undo', 'Return to sender', esc(x.subject))}<div class="modal-b"><div class="field"><label for="ext-why">Reason <span class="req">*</span></label><textarea class="textarea" id="ext-why" placeholder="e.g. The copy is not signed. Please send a signed copy."></textarea></div></div>
       <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="extReturnOk" data-id="${x.id}">${ic('undo')} Return</button></div>`, '', '#ext-why'); },

@@ -2634,3 +2634,10 @@ html { zoom: var(--z); }
 .up-body > .up-drop .dropzone { width: 100%; }
 .up-body > .up-lead { justify-content: center; text-align: center; }
 .up-body > .up-lead span { flex: 0 1 auto; }
+/* From SAGAS: stamped-received note in the submission pop-up */
+.ext-stamped { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; border: 1.5px dashed #b8323a; color: #8f1f26; background: rgba(184,50,58,.06); }
+.ext-stamped svg { width: 20px; height: 20px; flex: none; }
+.ext-stamped span { display: grid; }
+.ext-stamped small { color: var(--ink-2); font-weight: 500; }
+[data-theme="dark"] .ext-stamped { color: #ffb3b8; border-color: #ff8a92; background: rgba(255,138,146,.08); }
+.lt-facts dd small.sub { display: block; }
