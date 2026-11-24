@@ -1649,7 +1649,7 @@ html:not([data-theme="dark"]) :is(.tbl a, .tbl a b, .notif-card .from, .notif-ca
   .dash2.dash-stack { grid-template-columns: 360px minmax(0, 1fr); grid-template-areas: "side tiles" "main main"; align-items: start; }
   .dash-stack > .tiles { grid-area: tiles; }
   .dash-stack > .dash-left { grid-area: side; display: flex; flex-direction: column; gap: 22px; }
-  .dash-stack > .dash-left > .ai-sugg { order: -1; }
+  .dash-stack > .dash-left > .ai-sugg { order: 0; }
   .dash-stack > .dash-main { grid-area: main; }
   .dash-stack > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -2454,7 +2454,7 @@ html { zoom: var(--z); }
   .ph-icons > .ph-more { display: grid !important; }
 }
 
-/* Overview: Recent Notifications under AI Suggestions on desktop; straight after the tiles on smaller screens */
+/* Overview: Recent Notifications first, AI Suggestions below them, on every screen */
 .dash-notif .np-list { display: grid; gap: 10px; }
 .dash-notif .np-list .notif-card { margin: 0; }
 @media (max-width: 1199px) {
