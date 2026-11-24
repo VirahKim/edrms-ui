@@ -22,9 +22,12 @@ const letterKind = l => l.kind || (/report|quotation|invoice|returns|minutes|mem
 function letterDoc(l) {
   if (!l.doc) l.doc = { id: 'd' + l.id, folio: '—', title: l.title, kind: 'letter', mime: 'PDF', from: l.from, date: l.received, edms: `IN/26/${String(l.serial).padStart(3, '0')}`, pages: l.pages, sizeKB: 240,
     minutes: [], stickies: [], comments: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM, senderRef: l.senderRef, confidentiality: l.conf };
-  if (l.fileName && /\.pdf$/i.test(l.fileName) && typeof extPages === 'function') l.doc.imgs = extPages({ files: [l.fileName] });
+  if (isSampleDoc(l.fileName)) l.doc.imgs = extPages({ files: [l.fileName] }); else delete l.doc.imgs;
   return l.doc;
 }
+/* The sample PDFs that have page images in sample-documents/pages */
+const SAMPLE_DOCS = ["01-Kilima-County-Cold-Chain-Request", "02-Afya-Bora-Quotation-Vaccine-Carriers", "03-Mwangaza-Hospital-Quarterly-Report", "04-Internal-Memo-ICT-System-Maintenance", "05-Pamoja-Health-Workers-Union-Meeting-Request", "06-Kilima-County-Measles-Campaign-Plan", "07-Afya-Bora-Invoice-INV-2026-0937", "08-Health-Sector-Forum-Invitation", "09-Mwangaza-Hospital-Staff-Establishment-Returns"];
+const isSampleDoc = n => !!n && SAMPLE_DOCS.includes(String(n).replace(/\.pdf$/i, ''));
 const LETTER_FILES = {};
 function letterFile(l) {
   if (!l) return undefined;
@@ -345,7 +348,7 @@ function moveTrack(f, l) {
 /* A small picture of the document, click to view it */
 function docPreview(f, d, l, href) {
   let page = '';
-  if (l && !l.fileId && l.fileName && typeof extPages === 'function' && /\.pdf$/i.test(l.fileName)) page = `<img src="${extPages({ files: [l.fileName] })[0]}" alt="">`;
+  if (l && !l.fileId && isSampleDoc(l.fileName)) page = `<img src="${extPages({ files: [l.fileName] })[0]}" alt="">`;
   else if (l) { const ff = l.fileId && getFile(l.fileId), dd = ff && getDoc(ff, l.docId); page = ff && dd ? pageHTML(ff, dd) : pageHTML(letterFile(l), letterDoc(l)); }
   else if (f && d) page = pageHTML(f, d);
   if (!page) return '';
