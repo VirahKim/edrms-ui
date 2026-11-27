@@ -464,7 +464,7 @@ function notifCard(n) {
     <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc((n.letterId && typeof getLetter === 'function' && getLetter(n.letterId)?.title) || f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><button type="button" class="n-read" data-act="notifRead" data-id="${n.id}" aria-label="${n.read ? 'Mark as unread' : 'Mark as read'}" title="${n.read ? 'Mark as unread' : 'Mark as read'}">${ic(n.read ? 'mail' : 'check')}</button></div>
     <p>${esc(n.text)}</p>
     <div class="from">from ${esc(p.name)}</div>
-    <div class="nfoot"><span class="ago">${ago(n.at)}</span>${notifCardAct(n)}<span class="n-view">View ${ic('chevR')}</span></div></div>`;
+    <div class="nfoot"><span class="ago">${ago(n.at)}</span><span class="n-view">View ${ic('chevR')}</span></div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
