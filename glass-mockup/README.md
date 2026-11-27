@@ -368,3 +368,9 @@ The letter page always shows the page at full width (it had collapsed to nothing
 - **Lifecycle:** files are Active, Semi-active or **Dormant** (closed or no activity for a year); filter and Reports show all three.
 - **Access requests** show the service-charter answer-by date (2 working days) and Overdue.
 - The Marking Officer's Overview no longer repeats an empty "Files to mark" panel.
+
+### Designer wording fixes (from the notification wording review)
+- Notification pop-ups for letters from SAGAS read "Letter for you from [organisation]" (or "Returned to [organisation]"), show the document, and offer **Open Incoming for me**; plain "Open" buttons name where they go.
+- Returning a SAGAS letter tells the officer it was for, with the reason.
+- Approvals use short type names (Open a file, Close a file, Dispose of a file, HR document, Memo, Approve an upload); decisions notify as "Approved: …" or "Changes needed: … [role] said: …".
+- Sharing notifies "[role] shared “[title]” with you."; stamp errors read "You cannot continue without a stamp…".

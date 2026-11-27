@@ -373,7 +373,8 @@ function docPreview(f, d, l, href) {
 }
 function notifModal(n) {
   const f = n.fileId && getFile(n.fileId), l = n.letterId && getLetter(n.letterId), p = person(n.from);
-  const subject = (l && l.title) || (f && f.name) || (/corr/.test(n.href || '') ? 'Correspondence' : 'EDRMS');
+  const xs = n.extId && S.outside?.items.find(y => y.id === n.extId);
+  const subject = (l && l.title) || (f && f.name) || (xs && xs.subject) || (/corr/.test(n.href || '') ? 'Correspondence' : 'Notification');
   const doc = f && ((n.docId && f.docs.find(x => x.id === n.docId)) || [...f.docs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]);
   let act = notifAction(n);
   if (/>\s*(?:<svg[\s\S]*?<\/svg>)?\s*Open (letter|document)\s*</.test(act)) act = '';
@@ -382,14 +383,14 @@ function notifModal(n) {
   const opens = [l ? btn(letterOpen(l), `View ${letterKind(l).toLowerCase()}`, 'eye', !act) : '',
     f && !f.virtual ? btn(`#/file/${f.id}`, 'View file', 'folder', !act && !doc) : '',
     f && !f.virtual && doc ? btn(docHref, 'View document', 'eye', !act) : '',
-    !f && !l && n.href && !act ? btn(n.href, 'Open', 'arrowR', true) : ''].join('');
+    !f && !l && n.href && !act ? btn(n.href, ({ '#/incoming': 'Open Incoming for me', '#/queue': 'Open My Queue', '#/bringup': 'Open the Bring Up Diary', '#/correspondence': 'Open Correspondence', '#/access': 'Open Access Requests' })[n.href.split('?')[0]] || 'Open', 'arrowR', true) : ''].join('');
   const prev = docHref ? docPreview(f && !f.virtual ? f : null, doc, l, docHref) : '';
   const xi = n.extId && S.outside?.items.find(y => y.id === n.extId);
   const prevX = !prev && xi ? `<button type="button" class="nm-prev" data-act="stpView" data-id="${xi.id}" aria-label="View the document"><span class="nm-prev-page" aria-hidden="true"><img src="${extPages(xi)[0]}" alt=""></span><span class="nm-prev-cta">${ic('eye')} View document</span></button>` : '';
   modal(`${mHead('bell', 'Notification')}
     <div class="modal-b nm">
-      <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}</small></div><span class="chip t-green">Delivered</span></div>
-      <div class="nm-body ${prev || prevX ? '' : 'no-prev'}"><div class="nm-card"><h3>${esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
+      <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(xs ? 'Letter from ' + xs.org : n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}</small></div><span class="chip t-green">Delivered</span></div>
+      <div class="nm-body ${prev || prevX ? '' : 'no-prev'}"><div class="nm-card"><h3>${xi ? esc(n.kind === 'Returned' ? `Returned to ${xi.org}` : `Letter for you from ${xi.org}`) : esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
         ${l ? `<p><b>${letterKind(l)}:</b> ${esc(l.title)} <span class="muted">(${letterNo(l)})</span></p>` : ''}
         ${f && !f.virtual ? `<p><b>File:</b> ${esc(f.name)} <span class="muted mono">${esc(f.ref)}</span></p>` : ''}
         ${doc && f && !f.virtual ? `<p><b>Document:</b> Folio ${esc(doc.folio)} – ${esc(doc.title)}</p>` : ''}
@@ -454,7 +455,7 @@ function extReadModal(x, showErr) {
         <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF · ${plural(extPages(x).length, 'page')}</small></div></div>`).join('')}
         ${role() === 'registry' && ['new', 'received', 'toregister'].includes(x.status) ? `<ol class="nm-steps"><li><b>View</b> it – press the page to read it.</li><li class="${x.stamped ? 'ok' : ''}"><b>Stamp and sign</b> it.</li><li class="${x.status !== 'new' ? 'ok' : ''}"><b>Receive</b> it into the EDRMS.</li><li><b>Register</b> it, then send it to a Marking Officer.</li></ol>` : ''}</div></div>
       ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${normMarks(x.marks).page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
-      ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot proceed without a stamp. Stamp the document, then receive it.</p>` : ''}
+      ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot continue without a stamp. Stamp the letter, then receive it.</p>` : ''}
     </div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}">${ic('stamp')} ${x.stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
 }
@@ -472,7 +473,8 @@ Object.assign(ACT, {
   extReturn: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     modal(`${mHead('undo', 'Return to sender', esc(x.subject))}<div class="modal-b"><div class="field"><label for="ext-why">Reason <span class="req">*</span></label><textarea class="textarea" id="ext-why" placeholder="e.g. The copy is not signed. Please send a signed copy."></textarea></div></div>
       <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="extReturnOk" data-id="${x.id}">${ic('undo')} Return</button></div>`, '', '#ext-why'); },
-  extReturnOk: el => { const why = need('ext-why', 'Reason'); if (!why) return; const x = S.outside.items.find(y => y.id === el.dataset.id); x.status = 'returned'; x.returnNote = why; save(); closeModal(); render(); toast(`Returned to ${x.person}`); },
+  extReturnOk: el => { const why = need('ext-why', 'Reason'); if (!why) return; const x = S.outside.items.find(y => y.id === el.dataset.id); x.status = 'returned'; x.returnNote = why;
+    if (x.forWho && PEOPLE[x.forWho]) S.notifications.unshift({ id: nid('n'), to: x.forWho, kind: 'Returned', extId: x.id, from: meId(), href: '#/incoming', at: new Date().toISOString(), read: false, text: `The Registry returned “${x.subject}” (${x.ref}) to ${x.org} because: ${why}` }); save(); closeModal(); render(); toast(`Returned to ${x.person}`); },
   extRegister: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     modal(`${mHead('archive', 'Register this letter', `${esc(x.org)} · ${esc(x.ref)}`)}
       <div class="modal-b">
@@ -593,7 +595,7 @@ function stampEditorT(T) {
         ${tool('stamp', 'Stamp', 'stamp', esc(st.stamp.label || stampLabelFor(meId())).replace(/^./, c => c) + ' · ' + fmtDate(st.stamp.at || now))}
         ${tool('sign', 'Your signature', 'pen', `Added automatically · ${esc(meP.fullName || meP.name)}`)}
         <button class="btn btn-light btn-sm" data-stp-reset>${ic('refresh')} Reset positions</button>
-        <p class="form-err" id="stp-err" role="alert" hidden>You cannot continue without a stamp. Switch the stamp on and place it on the page.</p>
+        <p class="form-err" id="stp-err" role="alert" hidden>You cannot continue without a stamp. Switch on Stamp and place it on the page.</p>
       </aside>
     </div>
     <div class="modal-f"><button class="btn btn-light" data-act="stpCancel">Cancel</button><button class="btn btn-primary" data-act="stpConfirm">${ic('check')} Confirm stamped copy</button></div>`, 'xwide stamp-modal', '.stp-item');

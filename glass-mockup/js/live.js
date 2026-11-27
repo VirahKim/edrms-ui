@@ -42,6 +42,10 @@ function ensureLive() {
 }
 ensureLive();
 
+/* Short, plain names for approval types (the full type stays in the record) */
+const AP_LABEL = { 'Records - File opening request': 'Open a file', 'Records - File closing request': 'Close a file', 'Records - File disposal request': 'Dispose of a file',
+  'Document (EDMS) - HR Document': 'HR document', 'Document (EDMS) - Memo': 'Memo', 'Document Upload Approval': 'Approve an upload' };
+const apLabel = a => AP_LABEL[a.type] || a.type.replace(/^Document \(EDMS\) - /, '');
 /* The kinds offered under "What are you writing?" in the live Start new correspondence */
 const CORR_KINDS = [
   ['letter', 'Official Letter', "A letter to a person or an office, in the ministry's letterhead."],
@@ -84,8 +88,8 @@ function viewApprovals() {
   const mine = all.filter(a => a.status === 'open');
   const done = all.filter(a => a.status !== 'open');
   const due = a => new Date(a.due) < new Date() && a.status === 'open';
-  const rows = list => list.map(a => `<tr><td><b>${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td>
-      <td>${esc(a.type)}</td>
+  const rows = list => list.map(a => `<tr><td><b>${esc(apLabel(a))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td>
+      <td>${esc(apLabel(a))}</td>
       <td data-v="${a.status === 'open' ? 'In Progress' : a.status === 'approved' ? 'Approved' : 'Rejected'}"><span class="chip ${a.status === 'open' ? 't-blue' : a.status === 'approved' ? 't-green' : 't-red'}">${a.status === 'open' ? 'In Progress' : a.status === 'approved' ? 'Approved' : 'Rejected'}</span></td>
       <td><div class="ap-prog"><span style="width:${Math.round((a.done + (a.status === 'open' ? 0 : 1)) / a.steps * 100)}%"></span></div><small class="sub">${a.status === 'open' ? `${a.steps - a.done} pending / ${a.steps}` : `${a.steps} / ${a.steps} done`}</small></td>
       <td data-d="${a.due}">${fmtDay(a.due)}${due(a) ? ' <span class="chip t-red">Overdue</span>' : ''}</td>
@@ -105,7 +109,7 @@ function viewApprovals() {
 function approvalsTable() {
   const mine = S.approvals.filter(a => a.approver === role() && a.status === 'open');
   const due = a => new Date(a.due) < new Date();
-  const rows = mine.map(a => `<tr><td><b>${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td><td>${esc(a.type)}</td>
+  const rows = mine.map(a => `<tr><td><b>${esc(apLabel(a))} #${a.no}</b><small class="sub">${esc(a.title)}</small></td><td>${esc(apLabel(a))}</td>
     <td><div class="ap-prog"><span style="width:${Math.round(a.done / a.steps * 100)}%"></span></div><small class="sub">${a.steps - a.done} pending / ${a.steps}</small></td>
     <td data-d="${a.due}">${fmtDay(a.due)}${due(a) ? ' <span class="chip t-red">Overdue</span>' : ''}</td><td data-d="${a.at}">${fmtDay(a.at)}</td><td>${esc(person(a.by).name)}</td>
     <td><button class="btn btn-primary btn-xs" data-act="apReview" data-id="${a.id}">${ic('eye')} Review</button></td></tr>`);
@@ -114,7 +118,7 @@ function approvalsTable() {
 }
 function apModal(a) {
   const f = a.fileId && getFile(a.fileId);
-  modal(`${mHead('listChecks', `${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}`, esc(a.type))}
+  modal(`${mHead('listChecks', `${esc(apLabel(a))} #${a.no}`, esc(a.type))}
     <div class="modal-b">
       <dl class="ap-facts"><dt>Subject</dt><dd>${esc(a.title)}</dd><dt>Started by</dt><dd>${esc(person(a.by).name)}</dd>
         <dt>Started</dt><dd>${fmtDT(a.at)}</dd><dt>Due</dt><dd>${fmtDT(a.due)}</dd>${f ? `<dt>File</dt><dd><a href="#/file/${f.id}" data-act="close">${esc(f.name)}</a> <span class="mono">${esc(f.ref)}</span></dd>` : ''}
@@ -502,8 +506,8 @@ Object.assign(ACT, {
     const a = S.approvals.find(x => x.id === el.dataset.id), note = ($('#ap-note')?.value || '').trim(), k = el.dataset.k;
     if (k === 'rejected' && !note) { const e = $('#ap-err'); e.textContent = 'Write why you are rejecting it, so the officer knows what to change.'; e.hidden = false; $('#ap-note').focus(); return; }
     Object.assign(a, { status: k, decidedBy: meId(), decidedAt: new Date().toISOString(), note });
-    notify(a.by, `${a.type.replace(/^Document \(EDMS\) - /, '')} #${a.no} was ${k}.`, meId(), a.fileId || null);
-    save(); closeModal(); render(); toast(`${a.type.replace(/^Document \(EDMS\) - /, '')} #${a.no} ${k}`);
+    notify(a.by, k === 'approved' ? `Approved: ${apLabel(a)} #${a.no}, “${a.title}”.` : `Changes needed: ${apLabel(a)} #${a.no}, “${a.title}”. ${person(meId()).name} said: “${note}”`, meId(), a.fileId || null);
+    save(); closeModal(); render(); toast(k === 'approved' ? `${apLabel(a)} #${a.no} approved.` : `${apLabel(a)} #${a.no} sent back with your comment.`);
   },
   chatOpen: el => { ui.chat.id = el.dataset.id || null; if (location.hash !== '#messages' && !location.hash.startsWith('#messages')) go('#/messages'); else render(); setTimeout(() => $('#chat-in')?.focus(), 0); },
   chatNew: () => chatNewModal(),
@@ -585,7 +589,7 @@ Object.assign(ACT, {
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="fmDeleteSave" data-id="${f.id}">${ic('trash')} Delete file</button></div>`)),
   fmDeleteSave: el => { const f = getFile(el.dataset.id); S.files = S.files.filter(x => x.id !== f.id); save(); closeModal(); go('#/files'); toast(`${f.name} deleted`); },
   shCopy: () => { const i = $('#sh-l'); i.select(); try { navigator.clipboard?.writeText(i.value); } catch (e) {} toast('Link copied'); },
-  shSend: () => { const to = $('#sh-p').value; if (!to) { $('#sh-p').focus(); return; } notify(to, `Shared with you: ${$('#overlay .modal-h p, #overlay .mh-sub')?.textContent || 'a document'}`, meId(), null); closeModal(); toast(`Shared with ${person(to).name}`); },
+  shSend: () => { const to = $('#sh-p').value; if (!to) { $('#sh-p').focus(); return; } notify(to, `${person(meId()).name} shared “${$('#overlay .modal-h p, #overlay .mh-sub')?.textContent || 'a document'}” with you.`, meId(), null); closeModal(); toast(`Shared with ${person(to).name}`); },
   starFolio: (el, e) => { e.stopPropagation(); const d = getFile(el.dataset.f).docs.find(x => x.id === el.dataset.d); d.starred = !d.starred; save(); render(); },
   starOnly: () => { ui.fStarOnly = !ui.fStarOnly; render(); },
   bkClear: el => { ui.fsel[el.dataset.id] = []; render(); },
