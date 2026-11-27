@@ -2815,3 +2815,6 @@ html { zoom: var(--z); }
 .ai-mark path, .ai-mark circle { stroke: #fff; }
 .ai-sugg-logo .ai-mark { width: 34px; height: 24px; display: block; }
 .ai-open-logo .ai-mark { width: 22px; height: 15px; display: block; }
+/* Notification pop-up: no "View document" label on the letter picture (it still opens when pressed) */
+.nm-body .nm-prev-cta { display: none; }
+.nm-body .nm-prev:hover .nm-prev-page { box-shadow: 0 0 0 3px rgba(0,127,123,.45); border-radius: 6px; }
