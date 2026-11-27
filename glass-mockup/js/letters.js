@@ -55,7 +55,7 @@ function ensureLetters() {
   const add = n => { if (!S.notifications.some(x => x.id === n.id)) S.notifications.unshift({ read: false, fileId: null, ...n }); };
   add({ id: 'nl2', to: 'vera', kind: 'For marking', text: 'A new letter was sent to you for marking: Request for Cold Chain Equipment.', from: 'john', letterId: 'L2', href: '#/letter?id=L2', at: daysAgo(1, 10, 40) });
   add({ id: 'nl3', to: 'registry', kind: 'Marked', text: 'Invitation – Health Sector Working Group was marked to Virah Creates. File it, then send it on.', from: 'vera', letterId: 'L3', href: '#/letter?id=L3', at: daysAgo(2, 15, 20) });
-  add({ id: 'nl4', to: 'registry', kind: 'Marked', text: 'Polio Outbreak Response Update was marked to Brian Otieno. File it, then send it on.', from: 'vera', letterId: 'L4', href: '#/letter?id=L4', at: daysAgo(0, 9, 30) });
+  add({ id: 'nl4', to: 'registry', kind: 'Marked', text: 'Polio Outbreak Response Update has been marked to the Head, Public Communication. File it, then send the file on.', from: 'vera', letterId: 'L4', href: '#/letter?id=L4', at: daysAgo(0, 9, 30) });
   S.notifications.sort((a, b) => b.at.localeCompare(a.at));
   save();
 }
@@ -351,8 +351,8 @@ const NOTIF_HEAD = { 'For marking': 'Please mark this', 'For action': 'Please ac
 const NOTIF_PLAIN = { n1: 'A file was sent to you to act on.', n2: 'A file was sent to you to act on.', n3: 'A file was sent to you to mark.', n4: 'The Action Officer sent the file back.',
   n16: 'The Action Officer sent the file back with a signed reply. Send out the reply or file it away.', n17: 'ACME Company Ltd is marked for the Head, National Vaccination Services. Send the file there next.',
   n12: 'Q4 Documents came back to you to mark again: mark it to one officer only.', n13: 'The Head, National Vaccination Services finished the file you marked and sent back a signed reply.',
-  n20: 'A new letter from the Head, ICT is waiting to be recorded.', n9: 'The Head, Supply Chain Management sent Q2 Invoices back to the Registry.' };
-if (!S.plainText2) { (S.notifications || []).forEach(n => { if (NOTIF_PLAIN[n.id]) n.text = NOTIF_PLAIN[n.id]; }); S.plainText2 = true; save(); }
+  n20: 'A new letter from the Head, ICT is waiting to be recorded.', n9: 'The Head, Supply Chain Management sent Q2 Invoices back to the Registry.', nl4: 'Polio Outbreak Response Update has been marked to the Head, Public Communication. File it, then send the file on.' };
+if (!S.plainText3) { (S.notifications || []).forEach(n => { if (NOTIF_PLAIN[n.id]) n.text = NOTIF_PLAIN[n.id]; }); S.plainText3 = true; save(); }
 /* Where a file or letter is in its journey, and where it goes next */
 function moveTrack(f, l) {
   const steps = [['Registry', 'inboxIn'], ['Marking Officer', 'pen'], ['Registry', 'archive'], ['Action Officer', 'user'], ['Registry', 'checkCircle']];

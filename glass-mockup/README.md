@@ -377,3 +377,6 @@ The letter page always shows the page at full width (it had collapsed to nothing
 
 ### Removed: Physical File Movement and the Landing Queue
 My Queue › File Movement now shows only the electronic register (no Physical File Movement Register tab), and the Overview no longer has a Physical Files tile. The Landing Queue tab, the Landing Queue button on Registries & Files and its AI suggestion are gone; old links to `#/queue?tab=landing` open My Queue. Paper files are still tracked on the Registry's **Physical Files** page in the side navigation.
+
+### Registry Overview
+Nine tiles: Upload Document, **Correspondence** (new, with the count of letters waiting), Registries and Files, My Tasks, File Movement, Outward Register, Inward Register, Files Requested, Bring Up Diary. The "File movements" panel under the tiles is removed (File Movement is still a tile and a My Queue tab).

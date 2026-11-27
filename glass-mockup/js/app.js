@@ -575,6 +575,7 @@ function tiles() {
   const notes = notesForMe().length;
   if (r === 'registry') return [
     tile('upload', 'Upload Document', 'Add a file, letter or document', '#/upload'),
+    tile('penLine', 'Correspondence', 'Letters to and from officers', '#/correspondence', typeof lettersWaiting === 'function' ? lettersWaiting() : 0),
     tile('folders', 'Registries and Files', 'View all registries and files', '#/files'),
     tile('listChecks', 'My Tasks', 'View all my tasks', '#/queue', myQueue().length),
     tile('swap', 'File Movement', 'Track files', '#/routing'),
@@ -662,7 +663,7 @@ function viewDashboard() {
     <div class="dash-left" role="region" aria-label="Notifications and AI suggestions">
       <section class="notif-panel card dash-notif" aria-label="Recent notifications"><div class="np-h"><h2>Recent Notifications</h2><button class="link-btn" data-act="openNotifs">View all</button></div>
         <div class="np-list">${notes.length ? notes.map(notifCard).join('') : '<p class="muted">You are all caught up.</p>'}</div></section>${aiCard()}</div>
-    <div class="dash-main">${r === 'registry' ? movementsPanel() : roleFilesPanel()}</div>
+    <div class="dash-main">${r === 'registry' ? '' : roleFilesPanel()}</div>
   </div>`;
 }
 function movementsPanel() {
