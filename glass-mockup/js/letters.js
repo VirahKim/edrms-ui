@@ -83,7 +83,8 @@ function letterCtx(l) {
   return { ref: l.senderRef, date: l.received, to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM.slice(0, 3),
     signer: { name: 'Authorised Officer', title: 'For: ' + l.from }, signed: false, org: l.from };
 }
-const inRegistryFiles = () => S.files.filter(f => !f.draft && ['registry', 'filed'].includes(f.stage) && f.state !== 'Disposed');
+/* Any open file can take the letter – also one that is with an Action Officer at the moment */
+const inRegistryFiles = () => S.files.filter(f => !f.draft && f.state !== 'Disposed' && f.state !== 'Closed');
 function viewLetterItem(q) {
   const l = getLetter(q.id);
   const r = role(), back = r === 'registry' ? ['Back to Correspondence', '#/correspondence'] : ['Back to My Queue', '#/queue'];
@@ -91,8 +92,10 @@ function viewLetterItem(q) {
   const [stLabel, stTone] = LETTER_STAGE[l.stage];
   const f = getFile(l.fileId), mk = l.marking;
   let act = '';
-  if (r === 'registry' && l.stage === 'registry') act = `<h3>Next: send it to a Marking Officer</h3><p class="muted">Choose who marks it. They read it, say what should be done and by whom, and send it back to you.</p>
-      <button class="btn btn-primary" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button>`;
+  if (r === 'registry' && l.stage === 'registry') { const stamped = normMarks(letterDoc(l).marks)?.stamp.on;
+    act = `<h3>Next: stamp it and send it to a Marking Officer</h3><p class="muted">Stamp the letter first. Then choose who marks it: they say what should be done and by whom, and send it back to you.</p>
+      <p class="lt-stamp-state ${stamped ? 'ok' : ''}">${ic(stamped ? 'checkCircle' : 'stamp')} ${stamped ? 'Stamped' : 'Not stamped yet'}</p>
+      <div class="row-btns"><button class="btn ${stamped ? 'btn-light' : 'btn-primary'}" data-act="letterStamp" data-id="${l.id}">${ic('stamp')} ${stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn ${stamped ? 'btn-primary' : 'btn-outline'}" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button></div>`; }
   else if (r === 'marking' && l.stage === 'marking') act = `<h3>Mark this ${letterKind(l).toLowerCase()}</h3><p class="muted">Say who should act on it and what they should do. It goes back to the Registry to be filed and sent on.</p>
       <div class="field"><label for="lm-to">Action Officer</label><select class="select" id="lm-to">${peopleOpts(p => p.role === 'action', 'virah')}</select></div>
       <div class="field"><label for="lm-ins">Instruction <span class="req">*</span></label><textarea class="textarea" id="lm-ins" placeholder="e.g. Head NVS – please prepare a response by Friday"></textarea></div>
@@ -100,8 +103,9 @@ function viewLetterItem(q) {
   else if (r === 'registry' && l.stage === 'marked') {
     const files = inRegistryFiles();
     act = `<h3>Next: file this ${letterKind(l).toLowerCase()}</h3><p class="muted">Choose the file it belongs in. It becomes the next folio there, with the marking as its first minute.</p>
-      <div class="field"><label for="lf-file">File <span class="req">*</span></label><select class="select" id="lf-file" data-change="letterFilePick"><option value="">Search or select file…</option>${files.map(ff => `<option value="${ff.id}" ${ui.lfFile === ff.id ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}</option>`).join('')}</select>
-        <span class="hint">${ui.lfFile && getFile(ui.lfFile) ? `It will be folio ${nextFolio(getFile(ui.lfFile))} in ${esc(getFile(ui.lfFile).name)}.` : 'Only files that are in the Registry are listed.'}</span></div>
+      <div class="field"><label for="lf-file">File <span class="req">*</span></label><select class="select" id="lf-file" data-change="letterFilePick"><option value="">Search or select file…</option>${files.map(ff => `<option value="${ff.id}" ${ui.lfFile === ff.id ? 'selected' : ''}>${esc(ff.name)} — ${esc(ff.ref)}${['action', 'delegated'].includes(ff.stage) && ff.withUser ? ` (now with the ${esc(person(ff.withUser).name)})` : ''}</option>`).join('')}</select>
+      ${(() => { const ff = getFile(ui.lfFile); return ff && ['action', 'delegated', 'marking'].includes(ff.stage) ? `<span class="hint">${ic('info')} This file is with the ${esc(person(ff.withUser).name)} at the moment. The letter is still filed in it as the next folio, and they are told.</span>` : ''; })()}
+        <span class="hint">${ui.lfFile && getFile(ui.lfFile) ? `It will be folio ${nextFolio(getFile(ui.lfFile))} in ${esc(getFile(ui.lfFile).name)}.` : 'Every open file is listed, including files that are with an Action Officer.'}</span></div>
       <button class="btn btn-primary" data-act="letterFile" data-id="${l.id}">${ic('archive')} File this ${letterKind(l).toLowerCase()}</button>`;
   } else if (r === 'registry' && l.stage === 'filed') act = `<h3>Next: send it to the Action Officer</h3><p class="muted">Filed as folio ${esc(l.folio)} in ${f ? esc(f.name) : 'the file'}. It was marked to ${esc(person(mk.to).name)}; choose the Action Officer the whole file goes to.</p>
       <div class="lt-btns"><button class="btn btn-primary" data-act="letterSendAction" data-id="${l.id}">${ic('send')} Send to Action Officer</button>${f ? `<a class="btn btn-light" href="#/file/${f.id}/doc/${l.docId}">${ic('folder')} Open in file</a>` : ''}</div>`;
@@ -200,7 +204,7 @@ function viewCorrMovement(q) {
   const rows = list.map(x => `<tr data-s="${esc(x.sub)}"><td data-v="${x.kind}"><span class="lt-kind ${x.kind === 'File' ? '' : 'is-letter'}" title="${x.kind}">${ic(x.kind === 'Letter' ? 'mail' : x.kind === 'Document' ? 'file' : 'folder')}</span><a href="${x.href}"><b>${esc(x.title)}</b></a>${isM ? ` <span class="chip t-neutral lt-kchip">${x.kind}</span>` : ''}<small class="sub mono">${esc(x.sub)}</small></td>
       <td>${esc(x.from)}</td><td data-v="${x.status[0]}"><span class="chip ${x.status[1]}">${x.status[0]}</span>${x.withName ? `<small class="sub">${isM ? 'Marking Officer' : 'Officer'}: ${esc(x.withName)}</small>` : ''}</td><td data-d="${x.sent || ''}">${x.sent ? fmtDT(x.sent) : '—'}</td><td data-d="${x.back || ''}">${x.back ? fmtDT(x.back) : '—'}</td>
       <td>${isM ? esc(x.to) : `<span class="lt-ins">${esc(x.to)}</span>`}</td><td><div class="row-btns">${x.btn}</div></td></tr>`);
-  const showLabel = { all: 'All', sent: 'Sent', received: 'Received' };
+  const showLabel = { all: 'All', sent: 'Sent', received: 'Returned' };
   return head + `
     <section class="panel glass ct-panel">
       <div class="ct-seg" role="tablist" aria-label="${CORR_TABS[main]}">${['all', 'sent', 'received'].map(s => `<a role="tab" class="${s === show ? 'on' : ''}" aria-selected="${s === show}" href="#/correspondence?tab=${main}${s === 'all' ? '' : s}">${showLabel[s]} <span class="n">${count(s)}</span></a>`).join('')}</div>
@@ -222,7 +226,16 @@ function lettersToMarkPanel() {
 
 Object.assign(ACT, {
   letterFilePick: el => { ui.lfFile = el.value; render(); },
-  letterSendMark: el => letterSendModal((el.dataset.ids || el.dataset.id).split(','), 'marking'),
+  letterSendMark: el => { const ids = (el.dataset.ids || el.dataset.id).split(',');
+    /* A letter must carry the Registry stamp before it goes for marking */
+    const bare = ids.map(getLetter).filter(l => l && !normMarks(letterDoc(l).marks)?.stamp.on);
+    if (bare.length) {
+      if (ids.length === 1) { const l = bare[0]; modal(`${mHead('stamp', 'Stamp the letter first', esc(l.title))}<div class="modal-b"><p class="form-err" role="alert" style="margin:0">You cannot send this letter until it is stamped.</p><p style="margin:0">Open the stamp and signature tool, place the Registry stamp on the letter, then send it to a Marking Officer.</p></div>
+        <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="letterStamp" data-id="${l.id}" data-then="send">${ic('stamp')} Stamp and sign now</button></div>`); }
+      else toast(`Stamp each letter before you send it. Not stamped yet: ${bare.map(l => letterNo(l)).join(', ')}.`);
+      return; }
+    letterSendModal(ids, 'marking'); },
+  letterStamp: el => { const l = getLetter(el.dataset.id); letterDoc(l); stampEditorDoc(letterFile(l), l.doc, el.dataset.then === 'send' ? () => setTimeout(() => letterSendModal([l.id], 'marking'), 60) : null); },
   letterSendConfirm: el => {
     const ids = el.dataset.ids.split(','), to = val('ls-to'), note = val('ls-note'), mk = el.dataset.to === 'marking';
     if (!to) { const e = $('#ls-err'); e.textContent = `Choose the ${mk ? 'Marking' : 'Action'} Officer.`; e.hidden = false; return; }
@@ -247,8 +260,11 @@ Object.assign(ACT, {
     const l = getLetter(el.dataset.id), ins = need('lm-ins', 'Instruction'); if (!l || !ins) return;
     const to = val('lm-to');
     l.marking = { to, ins, by: meId(), at: now() }; l.stage = 'marked'; l.movements.push({ date: now(), from: meId(), to: 'registry' });
-    notifyL('registry', 'Marked', `${l.title} was marked to ${person(to).name}. File it, then send it on.`, l);
-    save(); go('#/queue'); toast('Marked and sent back to the Registry');
+    /* The Marking Officer's signature goes on automatically when they mark */
+    const ld = letterDoc(l), mm = normMarks(ld.marks) || { page: 0, stamp: { on: false, x: 0, y: 0, w: 28 }, sign: { on: false } };
+    if (!mm.sign.on || mm.sign.by !== meId()) { mm.sign = { on: true, x: 8, y: 80, w: 30, by: meId(), at: now() }; ld.marks = mm; }
+    notifyL('registry', 'Marked', `${l.title} has been marked to the ${person(to).name}. File it, then send the file on.`, l);
+    save(); go('#/queue'); toast('Marked, signed and sent back to the Registry.');
   },
   letterFile: el => {
     const l = getLetter(el.dataset.id), f = getFile(val('lf-file'));
@@ -259,13 +275,14 @@ Object.assign(ACT, {
       minutes: [], stickies: [], signed: false, status: 'filed', to: 'The Principal Secretary, State Department for Medical Services', subject: l.title.toUpperCase(), body: LOREM,
       uploadedBy: l.uploadedBy, senderRef: l.senderRef, serial: l.serial, confidentiality: l.conf, restricted: [], crossRefs: [], enclosures: [] };
     const ld = letterDoc(l);   // what was written on the letter before filing comes with it
-    d.minutes = ld.minutes.map(m => ({ ...m })); d.stickies = ld.stickies.map(x => ({ ...x })); d.comments = (ld.comments || []).map(c => ({ ...c })); d.signed = ld.signed; if (ld.imgs) d.imgs = [...ld.imgs];
+    d.minutes = ld.minutes.map(m => ({ ...m })); d.stickies = ld.stickies.map(x => ({ ...x })); d.comments = (ld.comments || []).map(c => ({ ...c })); d.signed = ld.signed; if (ld.imgs) d.imgs = [...ld.imgs]; if (ld.marks) d.marks = JSON.parse(JSON.stringify(ld.marks)); if (l.xrefsTyped) d.xrefsTyped = l.xrefsTyped.map(x => ({ ...x })); if (l.enclosures?.length) d.enclosures = l.enclosures.map(e => ({ description: e, quantity: '', kept_at: '' }));
     f.docs.push(d);
     addMinute(f, d, `${person(l.marking.to).title} – ${l.marking.ins}`, l.marking.by, { ink: 'red' });
     f.markedTo = l.marking.to; f.instruction = l.marking.ins; f.updated = now();
     Object.assign(l, { stage: 'filed', fileId: f.id, docId: d.id, folio });
     l.movements.push({ date: now(), from: 'registry', to: 'registry', note: `Filed as folio ${folio} in ${f.name}` });
-    ui.lfFile = ''; save(); render(); toast(`Filed as folio ${folio} in ${f.name}`);
+    if (['action', 'delegated', 'marking'].includes(f.stage) && f.withUser && PEOPLE[f.withUser]) S.notifications.unshift({ id: nid('n'), to: f.withUser, kind: 'For action', text: `A new letter, “${l.title}”, was filed in ${f.name} as folio ${folio} while the file is with you.`, from: meId(), fileId: f.id, docId: d.id, at: now(), read: false });
+    ui.lfFile = ''; save(); render(); toast(`Filed as folio ${folio} in ${f.name}.`);
   },
   letterSendAction: el => letterSendModal([el.dataset.id], 'action'),
   letterComment: el => { const l = getLetter(el.dataset.id), t = val('lt-lcm'); if (!l) return; if (!t) { toast('Write a comment first.'); $('#lt-lcm')?.focus(); return; }
@@ -332,10 +349,10 @@ const NOTIF_HEAD = { 'For marking': 'Please mark this', 'For action': 'Please ac
   Approval: 'Approval needed', 'Bring up': 'Due today', Correspondence: 'New letter' };
 /* Plain wording for the seeded notifications (applied once to saved data) */
 const NOTIF_PLAIN = { n1: 'A file was sent to you to act on.', n2: 'A file was sent to you to act on.', n3: 'A file was sent to you to mark.', n4: 'The Action Officer sent the file back.',
-  n16: 'The Action Officer sent the file back with a signed reply. Send out the reply or file it away.', n17: 'ACME Company Ltd is marked for Virah Creates. Send it to her next.',
-  n12: 'Q4 Documents came back to you to mark again: mark it to one officer only.', n13: 'Virah Creates finished the file you marked and sent back a signed reply.',
-  n20: 'A new letter from Erickson Maluki is waiting to be recorded.', n9: 'Mercy Achieng sent Q2 Invoices back to the Registry.' };
-if (!S.plainText1) { (S.notifications || []).forEach(n => { if (NOTIF_PLAIN[n.id]) n.text = NOTIF_PLAIN[n.id]; }); S.plainText1 = true; save(); }
+  n16: 'The Action Officer sent the file back with a signed reply. Send out the reply or file it away.', n17: 'ACME Company Ltd is marked for the Head, National Vaccination Services. Send the file there next.',
+  n12: 'Q4 Documents came back to you to mark again: mark it to one officer only.', n13: 'The Head, National Vaccination Services finished the file you marked and sent back a signed reply.',
+  n20: 'A new letter from the Head, ICT is waiting to be recorded.', n9: 'The Head, Supply Chain Management sent Q2 Invoices back to the Registry.' };
+if (!S.plainText2) { (S.notifications || []).forEach(n => { if (NOTIF_PLAIN[n.id]) n.text = NOTIF_PLAIN[n.id]; }); S.plainText2 = true; save(); }
 /* Where a file or letter is in its journey, and where it goes next */
 function moveTrack(f, l) {
   const steps = [['Registry', 'inboxIn'], ['Marking Officer', 'pen'], ['Registry', 'archive'], ['Action Officer', 'user'], ['Registry', 'checkCircle']];
@@ -367,14 +384,16 @@ function notifModal(n) {
     f && !f.virtual && doc ? btn(docHref, 'View document', 'eye', !act) : '',
     !f && !l && n.href && !act ? btn(n.href, 'Open', 'arrowR', true) : ''].join('');
   const prev = docHref ? docPreview(f && !f.virtual ? f : null, doc, l, docHref) : '';
+  const xi = n.extId && S.outside?.items.find(y => y.id === n.extId);
+  const prevX = !prev && xi ? `<button type="button" class="nm-prev" data-act="stpView" data-id="${xi.id}" aria-label="View the document"><span class="nm-prev-page" aria-hidden="true"><img src="${extPages(xi)[0]}" alt=""></span><span class="nm-prev-cta">${ic('eye')} View document</span></button>` : '';
   modal(`${mHead('bell', 'Notification')}
     <div class="modal-b nm">
-      <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}${p.title ? ' – ' + esc(p.title) : ''}</small></div><span class="chip t-green">Delivered</span></div>
-      <div class="nm-body ${prev ? '' : 'no-prev'}"><div class="nm-card"><h3>${esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
+      <div class="nm-row"><span class="nm-ic">${ic(l ? 'mail' : f ? 'folder' : 'bell')}</span><div><b>${esc(n.kind || 'Notification')}: ${esc(subject)}</b><small>In the EDRMS · from ${esc(p.name)}</small></div><span class="chip t-green">Delivered</span></div>
+      <div class="nm-body ${prev || prevX ? '' : 'no-prev'}"><div class="nm-card"><h3>${esc(NOTIF_HEAD[n.kind] || n.kind || 'Notification')}</h3>
         ${l ? `<p><b>${letterKind(l)}:</b> ${esc(l.title)} <span class="muted">(${letterNo(l)})</span></p>` : ''}
         ${f && !f.virtual ? `<p><b>File:</b> ${esc(f.name)} <span class="muted mono">${esc(f.ref)}</span></p>` : ''}
         ${doc && f && !f.virtual ? `<p><b>Document:</b> Folio ${esc(doc.folio)} – ${esc(doc.title)}</p>` : ''}
-        <p>${esc(n.text)}</p></div>${prev}</div>
+        <p>${esc(n.text)}</p></div>${prev || prevX}</div>
       <p class="nm-at">${ic('clock')} Delivered ${fmtDT(n.at)}</p>
     </div>
     <div class="modal-f nm-f"><button type="button" class="btn btn-light left" data-act="notifUnread" data-id="${n.id}">${ic('mail')} Mark as unread</button>${opens}${act.replace(/btn-xs/g, '')}</div>`, 'notif-modal');
@@ -431,10 +450,10 @@ function extReadModal(x, showErr) {
       <dl class="lt-facts"><div><dt>Organisation</dt><dd>${esc(x.org)}</dd></div><div><dt>Sent by</dt><dd>${esc(x.person)}<small class="sub">${esc(x.email)}</small></dd></div>
         <div><dt>For</dt><dd>${esc(person(x.forWho).name)}</dd></div><div><dt>Status</dt><dd><span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span></dd></div></dl>
       ${x.note ? `<p><b>Message:</b> ${esc(x.note)}</p>` : ''}${x.returnNote ? `<div class="instruction sent-back">${ic('undo')}<div><b>Returned</b> – ${esc(x.returnNote)}</div></div>` : ''}
-      <div class="ext-doc"><button type="button" class="nm-prev" data-act="stpView" data-id="${x.id}" aria-label="View the document"><img src="${extPages(x)[x.marks ? x.marks.page : 0]}" alt="">${x.marks ? stpMark('stamp', x.marks.stamp, x.stamped, person(x.marks.by)) + stpMark('sign', x.marks.sign, x.stamped, person(x.marks.by)) : ''}<span class="nm-prev-cta">${ic('eye')} View document</span></button>
+      <div class="ext-doc"><button type="button" class="nm-prev" data-act="stpView" data-id="${x.id}" aria-label="View the document"><img src="${extPages(x)[x.marks ? x.marks.page : 0]}" alt="">${x.marks ? marksOverlay(x.marks, 1, normMarks(x.marks).page) : ''}<span class="nm-prev-cta">${ic('eye')} View document</span></button>
         <div class="field"><span class="label">Attached</span>${x.files.map(fn => `<div class="file-chosen">${ic('file')}<div><b>${esc(fn)}</b><br><small class="muted">PDF · ${plural(extPages(x).length, 'page')}</small></div></div>`).join('')}
         ${role() === 'registry' && ['new', 'received', 'toregister'].includes(x.status) ? `<ol class="nm-steps"><li><b>View</b> it – press the page to read it.</li><li class="${x.stamped ? 'ok' : ''}"><b>Stamp and sign</b> it.</li><li class="${x.status !== 'new' ? 'ok' : ''}"><b>Receive</b> it into the EDRMS.</li><li><b>Register</b> it, then send it to a Marking Officer.</li></ol>` : ''}</div></div>
-      ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${x.marks.page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
+      ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${normMarks(x.marks).page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
       ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot proceed without a stamp. Stamp the document, then receive it.</p>` : ''}
     </div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}">${ic('stamp')} ${x.stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
@@ -446,17 +465,40 @@ Object.assign(ACT, {
   extStamp: el => stampEditor(S.outside.items.find(y => y.id === el.dataset.id)),
   extAccept: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     if (!x.stamped) { const e = $('#ext-err'); if (e) { e.hidden = false; e.focus?.(); } else extReadModal(x, true); return; }
-    x.status = 'received'; save(); closeModal(); render(); toast(`${x.ref} received into the EDRMS. Register it next.`); },
+    x.status = 'received';
+    if (x.forWho && PEOPLE[x.forWho]) S.notifications.unshift({ id: nid('n'), to: x.forWho, kind: 'Correspondence', extId: x.id, from: meId(), href: '#/incoming', at: new Date().toISOString(), read: false,
+      text: `${x.org} sent you “${x.subject}” (${x.ref}). The Registry has received it and will register it and send it on to you. You can follow it under Incoming for me.` });
+    save(); closeModal(); render(); toast(`${x.ref} has been received. Register it next.`); },
   extReturn: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
     modal(`${mHead('undo', 'Return to sender', esc(x.subject))}<div class="modal-b"><div class="field"><label for="ext-why">Reason <span class="req">*</span></label><textarea class="textarea" id="ext-why" placeholder="e.g. The copy is not signed. Please send a signed copy."></textarea></div></div>
       <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="extReturnOk" data-id="${x.id}">${ic('undo')} Return</button></div>`, '', '#ext-why'); },
   extReturnOk: el => { const why = need('ext-why', 'Reason'); if (!why) return; const x = S.outside.items.find(y => y.id === el.dataset.id); x.status = 'returned'; x.returnNote = why; save(); closeModal(); render(); toast(`Returned to ${x.person}`); },
   extRegister: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
+    modal(`${mHead('archive', 'Register this letter', `${esc(x.org)} · ${esc(x.ref)}`)}
+      <div class="modal-b">
+        <p class="muted" style="margin:0">Check the details, then register it. It is added to the Inward Register and you choose the Marking Officer next.</p>
+        <div class="two"><div class="field"><label for="xr-from">Received from</label><input class="input auto-val" id="xr-from" value="${esc(x.org)}" readonly aria-readonly="true"></div>
+          <div class="field"><label for="xr-ref">Reference number ${ic('lock')}</label><input class="input auto-val" id="xr-ref" value="${esc(x.ref)}" readonly aria-readonly="true" aria-describedby="xr-ref-h"><span class="hint" id="xr-ref-h">Set when the SAGA sent it. It cannot be changed.</span></div></div>
+        <div class="field"><label for="xr-subj">Subject <span class="req">*</span></label><input class="input" id="xr-subj" value="${esc(x.subject)}"></div>
+        <div class="two"><div class="field"><label for="xr-date">Date received</label><input class="input auto-val" id="xr-date" value="${fmtDT(x.at)}" readonly aria-readonly="true"></div>
+          <div class="field"><label for="xr-conf">Confidentiality</label><select class="select" id="xr-conf">${CONF_LEVELS.map(c => `<option ${c === 'Internal' ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
+        <div class="field"><label for="xr-enc">Enclosures <span class="muted" style="font-weight:500">(optional)</span></label><input class="input" id="xr-enc" placeholder="e.g. Annual report – 2 copies"></div>
+        <div class="two"><div class="field"><label for="xr-xref">Cross-reference <span class="muted" style="font-weight:500">(optional)</span></label><input class="input" id="xr-xref" placeholder="Type a reference, e.g. MOH/ADM/1/23"></div>
+          <div class="field"><label for="xr-xnote">Note on the cross-reference</label><input class="input" id="xr-xnote" placeholder="e.g. Earlier request on the same matter"></div></div>
+        <p class="form-err" id="xr-err" role="alert" hidden></p>
+      </div>
+      <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="extRegisterOk" data-id="${x.id}">${ic('archive')} Register and choose the Marking Officer</button></div>`, '', '#xr-subj'); },
+  extRegisterOk: el => { const x = S.outside.items.find(y => y.id === el.dataset.id);
+    const subj = val('xr-subj').trim(); if (!subj) { const e = $('#xr-err'); e.textContent = 'Enter the subject.'; e.hidden = false; return; }
+    x.subject = subj;
     const serial = Math.max(0, ...(S.letters || []).map(l => l.serial), S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length) + 1;
-    const l = { id: nid('L'), serial, title: x.subject, from: x.org, senderRef: x.ref, received: x.at, pages: 2, conf: 'Internal', stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.files[0] };
+    const xr = val('xr-xref').trim(), enc = val('xr-enc').trim();
+    const l = { id: nid('L'), serial, title: x.subject, from: x.org, senderRef: x.ref, received: x.at, pages: extPages(x).length, conf: val('xr-conf') || 'Internal', stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.files[0], fromSaga: x.id, forWho: x.forWho,
+      xrefsTyped: xr ? [{ ref: xr, note: val('xr-xnote').trim() }] : [], enclosures: enc ? [enc] : [] };
+    letterDoc(l); if (x.marks) l.doc.marks = JSON.parse(JSON.stringify(x.marks));
     S.letters = [l, ...(S.letters || [])]; x.status = 'registered'; x.letterId = l.id;
     if (!S.senders.some(s => s.name.toLowerCase() === x.org.toLowerCase())) S.senders.push({ id: nid('ms'), name: x.org, as: 'sender', on: true });
-    save(); closeModal(); go(letterOpen(l)); setTimeout(() => letterSendModal([l.id], 'marking'), 60); toast(`Registered as ${letterNo(l)}. Choose the Marking Officer.`); },
+    save(); closeModal(); go(letterOpen(l)); setTimeout(() => letterSendModal([l.id], 'marking'), 60); toast(`Registered as ${letterNo(l)}. Now choose the Marking Officer.`); },
 });
 
 /* ---------- Incoming for me: correspondence from outside sent to the signed-in officer ---------- */
@@ -470,58 +512,93 @@ Object.assign(ACT, {
 const incomingForMe = () => S.outside.items.filter(x => x.forWho === meId()).sort((a, b) => b.at.localeCompare(a.at));
 function viewIncoming() {
   const list = incomingForMe();
-  return pageHead({ crumbs: [['Incoming for me']], title: 'Incoming for Me', sub: 'Correspondence from outside the organisation that was sent to you. Open one to read it; the Registry registers it and routes it to you.' }) + `
+  return pageHead({ crumbs: [['Incoming for me']], title: 'Incoming for Me', sub: 'Letters from SAGAS that are addressed to you. Open one to read it; the Registry registers it and routes it to you.' }) + `
     <section class="panel glass inc-list">${list.length ? list.map(x => `<div class="inc-row${x.seen ? '' : ' unseen'}">
       <div class="inc-main"><b>${esc(x.subject)}</b><small>From <b>${esc(x.org)}</b> · ${esc(x.ref)} · sent ${fmtDT(x.at)}</small></div>
       <span class="chip ${EXT_STATUS[x.status][1]}">${EXT_STATUS[x.status][0]}</span>
       <button class="btn btn-outline btn-sm" data-act="incOpen" data-id="${x.id}">${ic('eye')} Open</button></div>`).join('')
-      : `<div class="empty">${ic('checkCircle')}<div>Nothing has been sent to you from outside.</div></div>`}</section>`;
+      : `<div class="empty">${ic('checkCircle')}<div>No letters from SAGAS are addressed to you yet.</div></div>`}</section>`;
 }
 ACT.incOpen = el => { const x = S.outside.items.find(y => y.id === el.dataset.id); if (!x) return; x.seen = true; save(); render(); extReadModal(x); };
 
-/* ---------- Stamp and sign: see the document, place the stamp and signature, resize, then confirm ---------- */
+/* ---------- Stamp and sign: see the document, place the stamp and signature (each moves on its own), resize, then confirm ----------
+   Works on a SAGAS submission (x.marks) and on any letter or document (d.marks). The signature is always the signed-in officer's own. */
 const SAMPLE_PAGES = { '03-Mwangaza-Hospital-Quarterly-Report': 2, '05-Pamoja-Health-Workers-Union-Meeting-Request': 2, '06-Kilima-County-Measles-Campaign-Plan': 2, '09-Mwangaza-Hospital-Staff-Establishment-Returns': 2 };
 function extPages(x) { const b = (x.files[0] || '').replace(/\.pdf$/i, ''); return Array.from({ length: SAMPLE_PAGES[b] || 1 }, (_, i) => `sample-documents/pages/${b}-${i + 1}.jpg`); }
 const STP_DEFAULT = () => ({ stamp: { on: true, x: 60, y: 70, w: 28 }, sign: { on: true, x: 8, y: 76, w: 32 } });
+const stampLabelFor = id => PEOPLE[id]?.role === 'registry' ? 'REGISTRY' : (PEOPLE[id]?.title || 'REGISTRY').toUpperCase();
+/* Old marks (one 'by' for both) become per-item marks */
+function normMarks(m, at) {
+  if (!m) return null;
+  const by = m.by || 'john';
+  const it = (o, k) => o ? { ...o, by: o.by || by, at: o.at || at || new Date().toISOString(), ...(k === 'stamp' ? { label: o.label || stampLabelFor(o.by || by) } : {}) } : { on: false, x: 0, y: 0, w: 28 };
+  return { page: m.page || 0, stamp: it(m.stamp, 'stamp'), sign: it(m.sign, 'sign') };
+}
 let stpN = 0;
-function stampSVG(date) {
-  const n = ++stpN, d = fmtDate(date || new Date().toISOString()).toUpperCase();
+function stampSVG(date, label) {
+  const n = ++stpN, d = fmtDate(date || new Date().toISOString()).toUpperCase(), lab = label || 'REGISTRY', small = lab.length > 18;
   return `<svg viewBox="0 0 200 200" class="stp-svg" aria-hidden="true"><defs><path id="stp-top${n}" d="M 30 100 A 70 70 0 0 1 170 100"/><path id="stp-bot${n}" d="M 22 100 A 78 78 0 0 0 178 100"/></defs>
     <g fill="none" stroke="#b8323a"><circle cx="100" cy="100" r="96" stroke-width="5"/><circle cx="100" cy="100" r="88" stroke-width="2"/><circle cx="100" cy="100" r="56" stroke-width="2"/></g>
     <g fill="#b8323a" font-family="Urbanist, sans-serif" font-weight="800" text-anchor="middle">
       <text font-size="15" letter-spacing="2"><textPath href="#stp-top${n}" startOffset="50%">MINISTRY OF HEALTH</textPath></text>
       <text font-size="11.5" letter-spacing="1.2" dominant-baseline="hanging"><textPath href="#stp-bot${n}" startOffset="50%">STATE DEPT. FOR MEDICAL SERVICES</textPath></text>
-      <text x="100" y="88" font-size="17" letter-spacing="1.5">RECEIVED</text><text x="100" y="110" font-size="13">${esc(d)}</text><text x="100" y="128" font-size="11">★ REGISTRY ★</text></g></svg>`;
+      <text x="100" y="88" font-size="17" letter-spacing="1.5">RECEIVED</text><text x="100" y="110" font-size="13">${esc(d)}</text><text x="100" y="128" font-size="${small ? 7.5 : 10.5}">★ ${esc(lab)} ★</text></g></svg>`;
 }
 function signSVG(p) {
-  return `<svg viewBox="0 0 260 110" class="stp-svg" aria-hidden="true"><text x="130" y="58" text-anchor="middle" font-family="'Mrs Saint Delafield','Homemade Apple',cursive" font-size="54" fill="#1d3a8a">${esc(p.name.split(' ')[0])} ${esc((p.name.split(' ').pop() || '')[0] || '')}.</text>
-    <line x1="20" y1="72" x2="240" y2="72" stroke="#1d3a8a" stroke-width="1.5"/><text x="130" y="90" text-anchor="middle" font-family="Urbanist, sans-serif" font-weight="700" font-size="14" fill="#1b1b1b">${esc(p.name)}</text>
-    <text x="130" y="106" text-anchor="middle" font-family="Urbanist, sans-serif" font-size="11.5" fill="#444">${esc(p.title)}</text></svg>`;
+  const full = p.fullName || PEOPLE[p.id]?.name || p.name || '', parts = full.split(' ');
+  return `<svg viewBox="0 0 260 110" class="stp-svg" aria-hidden="true"><text x="130" y="58" text-anchor="middle" font-family="'Mrs Saint Delafield','Homemade Apple',cursive" font-size="54" fill="#1d3a8a">${esc(parts[0])} ${esc((parts[parts.length - 1] || '')[0] || '')}.</text>
+    <line x1="20" y1="72" x2="240" y2="72" stroke="#1d3a8a" stroke-width="1.5"/><text x="130" y="90" text-anchor="middle" font-family="Urbanist, sans-serif" font-weight="700" font-size="14" fill="#1b1b1b">${esc(full)}</text>
+    <text x="130" y="106" text-anchor="middle" font-family="Urbanist, sans-serif" font-size="11.5" fill="#444">${esc(PEOPLE[p.id]?.title || p.title || '')}</text></svg>`;
 }
-const stpMark = (k, it, date, signer, edit) => it.on ? `<div class="stp-item stp-${k}" data-k="${k}" style="left:${it.x}%;top:${it.y}%;width:${it.w}%" ${edit ? `tabindex="0" role="group" aria-label="${k === 'stamp' ? 'Stamp' : 'Signature'}. Drag to move, drag the corner to resize. Arrow keys move it, plus and minus resize it."` : ''}>${k === 'stamp' ? stampSVG(date) : signSVG(signer)}${edit ? '<span class="stp-h" aria-hidden="true"></span>' : ''}</div>` : '';
-function stampedThumb(x) { const m = x.marks; return `<span class="stp-thumb"><img src="${extPages(x)[m.page]}" alt="">${stpMark('stamp', m.stamp, x.stamped, person(m.by))}${stpMark('sign', m.sign, x.stamped, person(m.by))}</span>`; }
-function stampEditor(x) {
-  const pages = extPages(x), st = ui.stp && ui.stp.id === x.id ? ui.stp : (ui.stp = { id: x.id, page: x.marks?.page || 0, sel: 'stamp', ...(x.marks ? JSON.parse(JSON.stringify({ stamp: x.marks.stamp, sign: x.marks.sign })) : STP_DEFAULT()) });
-  const me_ = me(), now = new Date().toISOString();
-  const tool = (k, label, icon) => { const it = st[k]; return `<div class="stp-tool ${st.sel === k && it.on ? 'on' : ''}">
-      <label class="switch-row"><input type="checkbox" class="sr" data-stp-on="${k}" ${it.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><span class="stp-tl">${ic(icon)} <b>${label}</b></span></label>
+/* One mark (stamp or signature) placed on a page. yOf maps the mark's top onto a page stack. */
+function stpMark(k, it, edit, yOf) {
+  if (!it || !it.on) return '';
+  const top = yOf ? yOf(it.y) : it.y;
+  const label = k === 'stamp' ? 'Stamp' : 'Signature';
+  return `<div class="stp-item stp-${k}" data-k="${k}" style="left:${it.x}%;top:${top}%;width:${it.w}%" ${edit ? `tabindex="0" role="group" aria-label="${label}. Drag to move it, or drag the corner to resize it. Arrow keys move it; plus and minus resize it."` : ''}>${k === 'stamp' ? stampSVG(it.at, it.label) : signSVG(person(it.by))}${edit ? '<span class="stp-h" aria-hidden="true"></span>' : ''}</div>`;
+}
+/* Marks drawn on top of a finished page (or a stack of scanned pages) */
+function marksOverlay(m, nPages, onlyPage) {
+  m = normMarks(m); if (!m) return '';
+  if (onlyPage !== undefined && onlyPage !== m.page) return '';
+  const yOf = nPages > 1 && onlyPage === undefined ? y => (m.page + y / 100) / nPages * 100 : null;
+  const w = it => yOf ? { ...it, w: it.w, x: it.x } : it;
+  return `<div class="stp-layer" aria-hidden="true">${stpMark('stamp', w(m.stamp), false, yOf)}${stpMark('sign', w(m.sign), false, yOf)}</div>`;
+}
+function stampedThumb(x) { return `<span class="stp-thumb"><img src="${extPages(x)[normMarks(x.marks).page]}" alt="">${marksOverlay(x.marks, 1, normMarks(x.marks).page)}</span>`; }
+
+/* The editor itself. T = { key, title, sub, pages: [html], marks, onConfirm(marks), onCancel() } */
+let STP_T = null;
+function stampEditorT(T) {
+  STP_T = T;
+  const pages = T.pages, now = new Date().toISOString(), meP = person(meId());
+  if (!ui.stp || ui.stp.key !== T.key) {
+    const m = normMarks(T.marks), d = STP_DEFAULT();
+    ui.stp = { key: T.key, page: m ? m.page : 0, sel: 'stamp',
+      stamp: m && m.stamp.on ? { ...m.stamp } : { ...d.stamp, by: meId(), at: now, label: stampLabelFor(meId()) },
+      sign: m && m.sign.on ? { ...m.sign, by: meId(), at: now } : { ...d.sign, by: meId(), at: now } };
+  }
+  const st = ui.stp;
+  const tool = (k, label, icon, sub) => { const it = st[k]; return `<div class="stp-tool ${st.sel === k && it.on ? 'on' : ''}">
+      <label class="switch-row"><input type="checkbox" class="sr" data-stp-on="${k}" ${it.on ? 'checked' : ''}><span class="sw" aria-hidden="true"></span><span class="stp-tl">${ic(icon)} <span><b>${label}</b><small>${sub}</small></span></span></label>
       <label class="stp-size"><span>Size</span><input type="range" min="${k === 'stamp' ? 14 : 16}" max="${k === 'stamp' ? 48 : 60}" step="1" value="${it.w}" data-stp-size="${k}" ${it.on ? '' : 'disabled'} aria-label="${label} size"><output>${Math.round(it.w)}%</output></label></div>`; };
-  modal(`${mHead('stamp', 'Stamp and sign', `${esc(x.subject)} · ${esc(x.ref)}`)}
+  modal(`${mHead('stamp', 'Stamp and sign', T.sub)}
     <div class="modal-b stp">
       <div class="stp-doc">
         ${pages.length > 1 ? `<div class="ct-seg stp-pages" role="tablist" aria-label="Page">${pages.map((_, i) => `<a href="#" role="tab" class="${st.page === i ? 'on' : ''}" aria-selected="${st.page === i}" data-stp-page="${i}">Page ${i + 1}</a>`).join('')}</div>` : ''}
-        <div class="stp-page" id="stp-page"><img src="${pages[st.page]}" alt="Page ${st.page + 1} of ${esc(x.files[0])}" draggable="false">${stpMark('stamp', st.stamp, now, me_, true)}${stpMark('sign', st.sign, now, me_, true)}</div>
+        <div class="stp-page" id="stp-page">${pages[st.page]}${stpMark('stamp', st.stamp, true)}${stpMark('sign', st.sign, true)}</div>
       </div>
       <aside class="stp-tools">
-        <p class="stp-hint">${ic('info')}<span>Drag the stamp and signature to where they go on the page. Drag the corner, or use Size, to resize.</span></p>
-        ${tool('stamp', 'Received stamp', 'stamp')}${tool('sign', `Signature · ${esc(me_.name)}`, 'pen')}
+        <p class="stp-hint">${ic('info')}<span>Drag the stamp and the signature separately to where each one goes. Drag a corner, or use Size, to resize.</span></p>
+        ${tool('stamp', 'Stamp', 'stamp', esc(st.stamp.label || stampLabelFor(meId())).replace(/^./, c => c) + ' · ' + fmtDate(st.stamp.at || now))}
+        ${tool('sign', 'Your signature', 'pen', `Added automatically · ${esc(meP.fullName || meP.name)}`)}
         <button class="btn btn-light btn-sm" data-stp-reset>${ic('refresh')} Reset positions</button>
-        <p class="form-err" id="stp-err" role="alert" hidden>You cannot proceed without a stamp. Switch the stamp on and place it on the page.</p>
+        <p class="form-err" id="stp-err" role="alert" hidden>You cannot continue without a stamp. Switch the stamp on and place it on the page.</p>
       </aside>
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="stpCancel" data-id="${x.id}">Cancel</button><button class="btn btn-primary" data-act="stpConfirm" data-id="${x.id}">${ic('check')} Confirm stamped copy</button></div>`, 'xwide stamp-modal', '.stp-item');
+    <div class="modal-f"><button class="btn btn-light" data-act="stpCancel">Cancel</button><button class="btn btn-primary" data-act="stpConfirm">${ic('check')} Confirm stamped copy</button></div>`, 'xwide stamp-modal', '.stp-item');
   const root = $('#overlay .stp'), pg = $('#stp-page');
-  const redraw = () => stampEditor(x);
+  const redraw = () => stampEditorT(T);
   const apply = k => { const el = pg.querySelector(`.stp-item[data-k="${k}"]`), it = st[k]; if (!el) return; el.style.left = it.x + '%'; el.style.top = it.y + '%'; el.style.width = it.w + '%'; const r = root.querySelector(`[data-stp-size="${k}"]`); if (r) { r.value = it.w; r.nextElementSibling.textContent = Math.round(it.w) + '%'; } };
   const clamp = k => { const it = st[k], el = pg.querySelector(`.stp-item[data-k="${k}"]`); const hPct = el ? el.offsetHeight / pg.offsetHeight * 100 : 10; it.w = Math.max(10, Math.min(65, it.w)); it.x = Math.max(0, Math.min(100 - it.w, it.x)); it.y = Math.max(0, Math.min(100 - hPct, it.y)); };
   const select = k => { st.sel = k; root.querySelectorAll('.stp-tool').forEach((t, i) => t.classList.toggle('on', ['stamp', 'sign'][i] === k && st[k].on)); pg.querySelectorAll('.stp-item').forEach(e => e.classList.toggle('sel', e.dataset.k === k)); };
@@ -529,7 +606,7 @@ function stampEditor(x) {
   pg.querySelectorAll('.stp-item').forEach(el => {
     const k = el.dataset.k;
     el.addEventListener('pointerdown', e => {
-      e.preventDefault(); select(k); el.focus({ preventScroll: true });
+      e.preventDefault(); e.stopPropagation(); select(k); el.focus({ preventScroll: true });
       const box = pg.getBoundingClientRect(), it = st[k], sx = e.clientX, sy = e.clientY, o = { ...it }, resize = e.target.classList.contains('stp-h');
       el.setPointerCapture(e.pointerId); el.classList.add('moving');
       const mv = ev => { const dx = (ev.clientX - sx) / box.width * 100, dy = (ev.clientY - sy) / box.height * 100;
@@ -546,20 +623,100 @@ function stampEditor(x) {
   root.querySelectorAll('[data-stp-on]').forEach(c => c.addEventListener('change', () => { const k = c.dataset.stpOn; st[k].on = c.checked; st.sel = k; redraw(); }));
   root.querySelectorAll('[data-stp-page]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); st.page = +a.dataset.stpPage; redraw(); }));
   root.querySelector('[data-stp-reset]').addEventListener('click', () => { const d = STP_DEFAULT(); ['stamp', 'sign'].forEach(k => Object.assign(st[k], { x: d[k].x, y: d[k].y, w: d[k].w })); redraw(); });
-  const img = pg.querySelector('img'); if (!img.complete) img.addEventListener('load', () => ['stamp', 'sign'].forEach(k => { clamp(k); apply(k); }), { once: true });
+  pg.querySelectorAll('img').forEach(img => { if (!img.complete) img.addEventListener('load', () => ['stamp', 'sign'].forEach(k => { clamp(k); apply(k); }), { once: true }); });
+}
+/* A SAGAS submission */
+function stampEditor(x) {
+  stampEditorT({ key: 'x:' + x.id, sub: `${esc(x.subject)} · ${esc(x.ref)}`, pages: extPages(x).map((src, i) => `<img src="${src}" alt="Page ${i + 1} of ${esc(x.files[0])}" draggable="false">`), marks: x.marks,
+    onConfirm: m => { x.marks = m; x.stamped = new Date().toISOString(); save(); extReadModal(x); toast(m.sign.on ? 'Stamped and signed. You can receive it now.' : 'Stamped. You can receive it now.'); },
+    onCancel: () => extReadModal(x) });
+}
+/* Any letter or document (also used by the Marking Officer) */
+function stampEditorDoc(f, d, after) {
+  const pages = d.imgs && d.imgs.length ? d.imgs.map((src, i) => `<img src="${src}" alt="Page ${i + 1} of ${esc(d.title)}" draggable="false">`) : [`<div class="page stp-genpage"><div class="content">${docContent(f, d)}</div></div>`];
+  stampEditorT({ key: 'd:' + d.id, sub: `${esc(d.title)}${d.folio && d.folio !== '—' ? ` · Folio ${esc(d.folio)}` : ''}`, pages, marks: d.marks,
+    onConfirm: m => { d.marks = m; save(); closeModal(); render(); toast(m.sign.on && m.stamp.on ? 'Stamped and signed.' : m.stamp.on ? 'Stamped.' : 'Signed.'); after && after(); },
+    onCancel: () => closeModal() });
 }
 function stampedCopyModal(x) {
-  const m = x.marks, pages = extPages(x);
+  const m = normMarks(x.marks, x.stamped), pages = extPages(x);
   modal(`${mHead(m ? 'stamp' : 'file', m ? 'Stamped copy' : 'Document', `${esc(x.subject)} · ${esc(x.ref)} · ${plural(pages.length, 'page')}`)}
-    <div class="modal-b"><div class="stp-view">${pages.map((src, i) => `<div class="stp-page"><img src="${src}" alt="Page ${i + 1}">${m && i === m.page ? stpMark('stamp', m.stamp, x.stamped, person(m.by)) + stpMark('sign', m.sign, x.stamped, person(m.by)) : ''}</div>`).join('')}</div></div>
+    <div class="modal-b"><div class="stp-view">${pages.map((src, i) => `<div class="stp-page"><img src="${src}" alt="Page ${i + 1}">${m ? marksOverlay(m, 1, i) : ''}</div>`).join('')}</div></div>
     <div class="modal-f"><button class="btn btn-light" data-act="stpBack" data-id="${x.id}">${ic('arrowL')} Back</button></div>`, 'wide stamp-modal');
 }
 Object.assign(ACT, {
-  stpCancel: el => { ui.stp = null; extReadModal(S.outside.items.find(y => y.id === el.dataset.id)); },
-  stpConfirm: el => { const x = S.outside.items.find(y => y.id === el.dataset.id), st = ui.stp;
+  stpCancel: () => { const T = STP_T; ui.stp = null; STP_T = null; T ? T.onCancel() : closeModal(); },
+  stpConfirm: () => { const st = ui.stp, T = STP_T;
     if (!st || !st.stamp.on) { const e = $('#stp-err'); if (e) e.hidden = false; return; }
-    x.marks = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign }, by: meId() }; x.stamped = new Date().toISOString(); ui.stp = null; save();
-    extReadModal(x); toast(st.sign.on ? 'Stamped and signed. You can receive it now.' : 'Stamped. You can receive it now.'); },
+    const m = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign, by: meId() } }; ui.stp = null; STP_T = null; T.onConfirm(m); },
   stpView: el => stampedCopyModal(S.outside.items.find(y => y.id === el.dataset.id)),
   stpBack: el => extReadModal(S.outside.items.find(y => y.id === el.dataset.id)),
 });
+
+/* ---------- Sound, reminders and "you have had this file" ---------- */
+let audioCtx = null;
+function chime(kind) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime, notes = kind === 'reminder' ? [659.3, 880, 659.3] : [784, 1046.5];
+    notes.forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + i * 0.16); g.gain.exponentialRampToValueAtTime(0.18, t + i * 0.16 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.16 + 0.32);
+      o.connect(g).connect(audioCtx.destination); o.start(t + i * 0.16); o.stop(t + i * 0.16 + 0.34); });
+  } catch (e) {}
+}
+const soundOn = () => S.sound !== false;
+/* Files an Action Officer has had for a while */
+const HOLD_DAYS = 3;
+function heldFiles() {
+  if (role() !== 'action') return [];
+  return S.files.filter(f => !f.draft && ['action', 'delegated'].includes(f.stage) && f.withUser === meId()).map(f => {
+    const m = [...f.movements].reverse().find(x => x.to === meId()); const since = m ? m.date : f.updated;
+    return { f, since, days: Math.max(0, Math.floor((Date.now() - new Date(since)) / 864e5)) };
+  }).filter(x => x.days >= HOLD_DAYS).sort((a, b) => b.days - a.days);
+}
+function reminderItems() {
+  const items = [], day = 864e5, today = new Date(); today.setHours(23, 59, 59, 999);
+  myBringups().filter(b => !b.done).forEach(b => { const d = new Date(b.date), f = getFile(b.fileId); if (!f) return;
+    const left = Math.ceil((d - Date.now()) / day);
+    if (d <= today) items.push({ tone: d < Date.now() - day ? 'late' : 'due', icon: 'calendar', head: d < Date.now() - day ? 'Bring-up overdue' : 'Bring-up due today', text: `${f.name}: ${b.note}`, href: `#/file/${f.id}` });
+    else if (left <= 5) items.push({ tone: 'soon', icon: 'clock', head: `Coming up in ${plural(left, 'day')}`, text: `${f.name}: ${b.note}`, href: `#/file/${f.id}` }); });
+  heldFiles().forEach(({ f, days }) => items.push({ tone: days > 7 ? 'late' : 'due', icon: 'folder', head: `You have had this file for ${plural(days, 'day')}`, text: `${f.name}. Please act on it or send it back to the Registry.`, href: `#/file/${f.id}` }));
+  if (role() === 'marking') { const n = lettersToMark().length; if (n) items.push({ tone: 'due', icon: 'pen', head: `${plural(n, 'letter')} waiting for you to mark`, text: 'The Registry sent them to you for marking.', href: '#/queue' }); }
+  return items;
+}
+function reminderPop() {
+  if (window.__noRem) return;
+  const items = reminderItems(); document.querySelector('.rem-pop')?.remove(); if (!items.length) return;
+  const el = document.createElement('section'); el.className = 'rem-pop glass'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Reminders');
+  el.innerHTML = `<div class="rem-h">${ic('bell')}<h2>Reminders</h2><span class="n">${items.length}</span><button class="icon-btn" data-rem-close aria-label="Close reminders">${ic('x')}</button></div>
+    <ul>${items.slice(0, 5).map(x => `<li class="rem-${x.tone}"><span class="ri">${ic(x.icon)}</span><span><b>${esc(x.head)}</b><small>${esc(x.text)}</small></span><a class="btn btn-light btn-xs" href="${x.href}" data-rem-go>Open</a></li>`).join('')}</ul>
+    <div class="rem-f"><label class="rem-snd"><input type="checkbox" data-rem-sound ${soundOn() ? 'checked' : ''}> Play a sound</label><button class="btn btn-light btn-xs" data-rem-close>Remind me later</button></div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target.closest('[data-rem-close]') || e.target.closest('[data-rem-go]')) el.remove(); });
+  el.querySelector('[data-rem-sound]').addEventListener('change', e => { S.sound = e.target.checked; save(); });
+  if (soundOn()) chime('reminder');
+}
+/* New notifications: sound and a short pop-up */
+function notifPing(n) {
+  if (soundOn()) chime();
+  document.querySelector('.n-ping')?.remove();
+  const el = document.createElement('div'); el.className = 'n-ping glass'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span class="ri">${ic('bell')}</span><span><b>New notification</b><small>${esc(n.text)}</small></span><button class="btn btn-primary btn-xs" data-np-open>View</button><button class="icon-btn" data-np-x aria-label="Dismiss">${ic('x')}</button>`;
+  document.body.appendChild(el);
+  el.querySelector('[data-np-open]').addEventListener('click', () => { el.remove(); notifModal(n); });
+  el.querySelector('[data-np-x]').addEventListener('click', () => el.remove());
+  setTimeout(() => el.remove(), 9000);
+}
+const _renderBase = render;
+render = function () {
+  const was = ui.signedAs;
+  _renderBase();
+  if (!S.session) { ui.signedAs = null; ui.knownN = null; document.querySelector('.rem-pop')?.remove(); return; }
+  const mine = myNotifs();
+  if (was !== S.session + (S.as || '')) { ui.signedAs = S.session + (S.as || ''); ui.knownN = new Set(mine.map(n => n.id)); setTimeout(reminderPop, 900); }
+  else if (ui.knownN) { const fresh = mine.filter(n => !ui.knownN.has(n.id) && !n.read); mine.forEach(n => ui.knownN.add(n.id)); if (fresh.length) notifPing(fresh[0]); }
+  /* An Action Officer is told how long they have had the file they are looking at */
+  const { parts } = parseHash();
+  if (parts[0] === 'file' && role() === 'action') { const h = heldFiles().find(x => x.f.id === parts[1]); const bar = document.querySelector('.action-bar');
+    if (h && bar && !document.querySelector('.held-note')) bar.insertAdjacentHTML('beforebegin', `<p class="held-note" role="status">${ic('clock')} You have had this file for <b>${plural(h.days, 'day')}</b> (since ${fmtDay(h.since)}). Please act on it or send it back to the Registry.</p>`); }
+};

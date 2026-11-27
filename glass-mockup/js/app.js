@@ -119,7 +119,7 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 const AV_COLORS = ['#007F7B', '#6d28d9', '#0f766e', '#b45309', '#c2410c', '#be185d', '#0369a1', '#3f6212']; // all at least 4.5:1 with white initials
 const avColor = s => AV_COLORS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_COLORS.length];
-const avatar = (pid, cls = '') => { const p = person(pid); return `<span class="av ${cls}" style="background:${avColor(p.name)}" title="${esc(p.name)}">${initials(p.name)}</span>`; };
+const avatar = (pid, cls = '') => { const p0 = person(pid), p = pid === meId() && PEOPLE[pid] ? PEOPLE[pid] : p0; return `<span class="av ${cls}" style="background:${avColor(p.name)}" title="${esc(p.name)}">${initials(p.name)}</span>`; };
 
 /* ---------- state ---------- */
 const KEY = 'qbits-edrms-glass-mock';
@@ -182,13 +182,15 @@ const ui = { navStack: [location.hash || "#/"],
 const role = () => S.session;
 /* page zoom (desktop sizing × font size): divide screen pixels by this before placing fixed menus */
 const uiZ = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-const meId = () => ACCOUNTS[S.session];
+const meId = () => (S.as && PEOPLE[S.as] && PEOPLE[S.as].role === S.session) ? S.as : ACCOUNTS[S.session];
 const me = () => PEOPLE[meId()];
 const inboxKey = () => role() === 'registry' ? 'registry' : meId();
+/* Other people are shown by their title (role), not their name. fullName keeps the name for signatures. */
 function person(id) {
   if (id === 'registry') return { id: 'registry', name: 'Registry', title: 'Main Registry' };
   if (id === 'public') return { id: 'public', name: 'Everyone', title: '' };
-  return PEOPLE[id] || { id, name: String(id), title: '' };
+  const p = PEOPLE[id]; if (!p) return { id, name: String(id), title: '' };
+  return { ...p, name: p.title || p.name, fullName: p.name };
 }
 const byName = n => Object.values(PEOPLE).find(p => p.name === n);
 const getFile = id => S.files.find(f => f.id === id) || (id && /^L\d/.test(id) && typeof letterFile === 'function' ? letterFile(getLetter(id)) : undefined);
@@ -196,10 +198,14 @@ const getDoc = (f, id) => f && f.docs.find(d => d.id === id);
 const liveDocs = f => f.docs.filter(d => d.status !== 'landing');
 const regName = id => (REGISTRIES.find(r => r.id === id) || {}).name || '—';
 const byFolio = (a, b) => a.folio.localeCompare(b.folio, undefined, { numeric: true });
-/* Records lifecycle: Active while in use; Semi-active once filed away, closed or untouched for 30 days (the Registry can change it) */
-const activity = f => f.activity || ((f.stage === 'filed' || f.state === 'Closed' || daysSince(f.updated) > 30) ? 'Semi-active' : 'Active');
-const actChip = (f, btn) => { const a = activity(f), cls = `chip act-tag ${a === 'Active' ? 't-green' : 't-sand'}`, inner = `<span class="dot"></span>${a}`;
-  return btn ? `<button type="button" class="${cls}" data-act="setActivity" data-id="${f.id}" title="Change to ${a === 'Active' ? 'Semi-active' : 'Active'}">${inner}</button>` : `<span class="${cls}">${inner}</span>`; };
+/* Records lifecycle: Active (in use) → Semi-active (filed or quiet for 30 days) → Dormant (closed, or no activity for a year) */
+const LIFE = ['Active', 'Semi-active', 'Dormant'];
+const activity = f => f.activity || (f.state === 'Closed' || daysSince(f.updated) > 365 ? 'Dormant' : (f.stage === 'filed' || daysSince(f.updated) > 30) ? 'Semi-active' : 'Active');
+const nextLife = a => LIFE[(LIFE.indexOf(a) + 1) % LIFE.length];
+/* Only the HR Registry sends letters outside the Ministry; the Central (Main) Registry does not */
+const canSendOutside = f => role() === 'registry' && f && f.registry === 'hr';
+const actChip = (f, btn) => { const a = activity(f), cls = `chip act-tag ${a === 'Active' ? 't-green' : a === 'Dormant' ? 't-grey' : 't-sand'}`, inner = `<span class="dot"></span>${a}`;
+  return btn ? `<button type="button" class="${cls}" data-act="setActivity" data-id="${f.id}" title="Change to ${nextLife(a)}">${inner}</button>` : `<span class="${cls}">${inner}</span>`; };
 const stageChip = st => { const s = STAGES[st]; return `<span class="chip t-${s.tone}"><span class="dot"></span>${s.short}</span>`; };
 const withLabel = f => f.withUser === 'registry' ? 'Registry Officer' : person(f.withUser).name;
 const fileSizeKB = f => f.docs.reduce((a, d) => a + (d.sizeKB || 200), 0);
@@ -446,13 +452,19 @@ function sidebar(active) {
 }
 const NOTIF_TONE = { 'Sent back': 't-red', Declined: 't-red', Approved: 't-green', Done: 't-green', Returned: 't-amber', 'Bring up': 't-amber', Approval: 't-amber',
   Requested: 't-violet', 'For marking': 't-blue', 'For action': 't-blue', Marked: 't-teal', Delegated: 't-sky', Correspondence: 't-sky' };
+/* The one action a notification asks for, shown on the card itself (not for plain "open" links) */
+function notifCardAct(n) {
+  if (typeof notifAction !== 'function') return '';
+  const a = notifAction(n); if (!a || /Open (letter|document)\s*</.test(a)) return '';
+  return `<span class="n-act">${a}</span>`;
+}
 function notifCard(n) {
   const f = getFile(n.fileId) || {}; const p = person(n.from);
   return `<div class="notif-card ${n.read ? '' : 'unread'}" data-act="openNotif" data-id="${n.id}">
     <div class="top"><span>${n.kind ? `<span class="chip ${NOTIF_TONE[n.kind] || 't-teal'} nk">${esc(n.kind)}</span>` : ''}${esc((n.letterId && typeof getLetter === 'function' && getLetter(n.letterId)?.title) || f.name || (/corr/.test(n.href || '') ? 'Correspondence' : 'File'))}</span><button type="button" class="n-read" data-act="notifRead" data-id="${n.id}" aria-label="${n.read ? 'Mark as unread' : 'Mark as read'}" title="${n.read ? 'Mark as unread' : 'Mark as read'}">${ic(n.read ? 'mail' : 'check')}</button></div>
     <p>${esc(n.text)}</p>
-    <div class="from">from ${esc(p.name)} - ${esc(p.title)}</div>
-    <div class="nfoot"><span class="ago">${ago(n.at)}</span><span class="n-view">View ${ic('chevR')}</span></div></div>`;
+    <div class="from">from ${esc(p.name)}</div>
+    <div class="nfoot"><span class="ago">${ago(n.at)}</span>${notifCardAct(n)}<span class="n-view">View ${ic('chevR')}</span></div></div>`;
 }
 /* One navigation list for the Overview top nav and the side nav on every other page */
 function navItems() {
@@ -630,6 +642,7 @@ function aiCard() {
 }
 function roleFilesPanel() {
   const mk = role() === 'marking', list = roleQueue();
+  if (mk) return '';   /* Marking Officers only get letters – the Letters to mark tile already lists them */
   return `<section class="panel glass dense"><div class="panel-h"><h2>${mk ? 'Files to mark' : 'Files to act on'}</h2><span class="n">${list.length}</span></div>
     ${list.length ? simpleTable(['File', 'Stage', 'Documents', 'Sent by', 'Since', ''], list.map(f => { const m = f.movements[f.movements.length - 1] || {}; const n = liveDocs(f).length;
       return `<tr><td>${fileLink(f)}</td><td><span class="chip t-${STAGES[f.stage].tone}">${esc(STAGES[f.stage].short)}</span></td><td>${n} of ${n}</td><td>${m.from ? esc(person(m.from).name) : '—'}</td><td data-d="${m.date || ''}">${m.date ? fmtDT(m.date) : '—'}</td><td><a class="btn btn-primary btn-xs" href="#/file/${f.id}">${ic('folder')} Open</a></td></tr>`; }), '', { key: 'rolefiles', search: 'Search files – name, reference or sender', facets: [[1, 'Stage'], [3, 'Sent by']] })
@@ -766,7 +779,7 @@ function viewFiles(q) {
       <label class="input-icon">${ic('search')}<input class="input" id="files-q" value="${esc(F.q)}" placeholder="Search any letter or file in all registries - subject, reference, folio, sender…" data-input="filesQuery"><span class="sr">Search files</span></label>
       <label class="lbl-select">${ic('sortUD')} Sort<select data-change="filesSort" aria-label="Sort files">${[['recent', 'Most recent'], ['oldest', 'Oldest'], ['size_desc', 'Size – largest'], ['size_asc', 'Size – smallest'], ['name', 'Name A–Z']].map(([k, l]) => `<option value="${k}" ${F.sort === k ? 'selected' : ''}>${l}</option>`).join('')}${F.sort.startsWith('col:') ? `<option selected value="${F.sort}">Column: ${COLS.find(c => c[0] === F.sort.split(':')[1])[1]}</option>` : ''}</select></label>
       <label class="lbl-select">${ic('filter')} Show<select data-change="filesShow" aria-label="Show">${[['all', 'Files & registries'], ['files', 'Files only'], ['registries', 'Registries only'], ['starred', 'Starred files'], ['ty', 'Temporary (TY) files'], ['drafts', `Draft files (${S.files.filter(f => f.draft).length})`]].map(([k, l]) => `<option value="${k}" ${F.show === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="lbl-select">${ic('clock')} Stage<select data-change="filesLife" aria-label="Lifecycle stage">${[['all', 'All stages'], ['Active', 'Active'], ['Semi-active', 'Semi-active']].map(([k, l]) => `<option value="${k}" ${(F.life || 'all') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="lbl-select">${ic('clock')} Stage<select data-change="filesLife" aria-label="Lifecycle stage">${[['all', 'All stages'], ['Active', 'Active'], ['Semi-active', 'Semi-active'], ['Dormant', 'Dormant']].map(([k, l]) => `<option value="${k}" ${(F.life || 'all') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="lbl-select">${ic('building')}<select data-change="filesReg" aria-label="Registry"><option value="all">All registries</option>${REGISTRIES.map(r => `<option value="${r.id}" ${F.reg === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}</select></label>
       <div class="seg icons" role="group" aria-label="View">${[['grid', 'gridView', 'Grid view'], ['list', 'list', 'List view']].map(([k, i, l]) => `<button class="${F.view === k ? 'on' : ''}" data-act="filesView" data-k="${k}" aria-label="${l}" title="${l}">${ic(i)}</button>`).join('')}</div>
     </div>
@@ -791,8 +804,8 @@ function actionButtons(f) {
     if (f.stage === 'returned_action') b.push(`<button class="btn btn-primary" data-act="fileAway" data-id="${f.id}">${ic('archive')} File away</button>`);
     if (f.stage === 'filed') b.push(`<button class="btn btn-glass" data-act="retrieve" data-id="${f.id}">${ic('refresh')} Retrieve from shelf</button>`);
     if (!['returned_marking', 'returned_action'].includes(f.stage)) b.push(`<button class="btn ${f.stage === 'registry' ? 'btn-primary' : 'btn-glass'}" data-act="sendFile" data-id="${f.id}" data-to="action" ${away ? `disabled title="The file is ${STAGES[f.stage].short.toLowerCase()} – it can go to an Action Officer once it is back in the Registry."` : ''}>${ic('send')} Send to Action Officer</button>`);
-    b.push(`<button class="btn btn-glass" data-act="sendOutside" data-id="${f.id}" ${liveDocs(f).length ? 'title="Send letters outside the organisation. Recorded in the Outward Mail Register."' : 'disabled title="There are no letters in this file to send."'}>${ic('send')} Send outside</button>`,
-      `<button class="btn btn-glass" data-act="addBringup" data-id="${f.id}">${ic('calendar')} Bring up</button>`);
+    if (canSendOutside(f)) b.push(`<button class="btn btn-glass" data-act="sendOutside" data-id="${f.id}" ${liveDocs(f).length ? 'title="Send letters outside the Ministry. Recorded in the Outward Mail Register."' : 'disabled title="There are no letters in this file to send."'}>${ic('send')} Send outside</button>`);
+    b.push(`<button class="btn btn-glass" data-act="addBringup" data-id="${f.id}">${ic('calendar')} Bring up</button>`);
   }
   if (r === 'marking' && f.stage === 'marking' && f.withUser === 'vera') b.push(`<button class="btn btn-primary" data-act="markFile" data-id="${f.id}" title="Record what should be done and to whom. The file goes back to the Registry.">${ic('pen')} Mark file</button>`);
   if (r === 'action' && f.stage === 'action' && f.withUser === meId()) b.push(
@@ -807,10 +820,10 @@ function folioBar(f, d) {
   const can = canAnnotate(f) && d.status !== 'landing';
   const canAct = role() === 'action' && f.stage === 'action' && f.withUser === meId() && d.kind !== 'response';
   const toMe = sentToMe(f).has(d.id);
-  return `<div class="folio-bar glass${toMe ? ' to-me' : ''}"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b>${toMe ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}<span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
+  return `<div class="folio-bar glass${toMe ? ' to-me' : ''}"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b>${toMe ? `<span class="chip to-me-chip">${ic('send')} Received</span>` : ''}<span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
     <div class="tools">
       <a class="btn btn-light btn-xs" href="#/file/${f.id}/letter/${d.id}">${ic('info')} View letter details</a>
-      ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic('stamp')} ${d.signed ? 'Unstamp' : 'Sign / stamp'}</button>` : ''}
+      ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic('stamp')} ${d.marks ? 'Edit stamp' : 'Stamp and sign'}</button>` : ''}
       ${canAct ? `<button class="btn btn-primary btn-xs" data-act="respond" data-id="${f.id}" data-folio="${esc(d.folio)}">${ic('reply')} Respond</button>` : ''}
       ${d.status === 'landing' && role() === 'registry' ? `<button class="btn btn-primary btn-xs" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate</button>` : ''}
     </div></div>`;
@@ -819,6 +832,7 @@ function pageHTML(f, d) {
   return `<article class="page ${d.kind === 'attachment' ? 'attachment' : ''} ${d.imgs && d.imgs.length ? 'has-img' : ''}" data-f="${f.id}" data-d="${d.id}">
     <div class="folio-box"><b>Folio ${esc(d.folio)}</b>${d.ref17 ? 'Ref: Folio 17' : esc(d.edms)}</div>
     <div class="content">${docContent(f, d)}</div>
+    ${d.marks && typeof marksOverlay === 'function' ? marksOverlay(d.marks, d.imgs && d.imgs.length ? d.imgs.length : 1) : ''}
     <div class="anno" id="anno-${d.id}">${annoHTML(f, d)}</div>
     ${d.status === 'landing' ? `<div class="landing-veil"><div><span class="chip t-violet" style="font-size:14px;height:32px">In the Landing Queue</span><p class="muted">Awaiting OCR and validation by the Registry.</p></div></div>` : ''}
   </article>`;
@@ -875,7 +889,7 @@ function folioTable(f, docs) {
   return bulk + tfWrap({ key: 'folios-' + f.id, paged: true, search: 'Search folios – title, reference, folio, type or officer…', date: [10, 'Modified from', 'Modified to'], facets: [[5, 'Type'], [6, 'Created by'], [7, 'Status'], [8, 'Confidentiality']],
       extra: `<button type="button" class="btn btn-light btn-icon star-filter ${ui.fStarOnly ? 'on' : ''}" data-act="starOnly" aria-pressed="${!!ui.fStarOnly}" title="Starred only" aria-label="Show starred folios only">${ic('star')}</button>` },
     `<div class="tbl-wrap"><table class="tbl folio-tbl"><thead><tr><th class="sel-col"><input type="checkbox" class="row-sel" data-selall="${f.id}" ${allOn ? 'checked' : ''} aria-label="Select all folios"></th><th class="sel-col"><span class="sr">Star</span></th><th>Title</th><th>Reference</th><th>Folio</th><th>Type</th><th>Created by</th><th>Status</th><th>Confidentiality</th><th><abbr title="Version">v</abbr></th><th>Modified</th></tr></thead><tbody>
-    ${list.filter(d => !ui.fStarOnly || d.starred).map(d => { const [sl, sc] = st(d), me2 = mine.has(d.id), on = sel.includes(d.id); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}" class="${me2 ? 'to-me' : ''}${on ? ' is-sel' : ''}"><td class="sel-col" data-v=""><input type="checkbox" class="row-sel" data-sel="${f.id}:${d.id}" ${on ? 'checked' : ''} aria-label="Select ${esc(d.title)}"></td><td class="sel-col" data-v=""><button class="star-btn ${d.starred ? 'on' : ''}" data-act="starFolio" data-f="${f.id}" data-d="${d.id}" aria-pressed="${!!d.starred}" aria-label="Star ${esc(d.title)}">${ic('star')}</button></td><td><b>${esc(d.title)}</b>${me2 ? `<span class="chip to-me-chip">${ic('send')} Sent to you</span>` : ''}</td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
+    ${list.filter(d => !ui.fStarOnly || d.starred).map(d => { const [sl, sc] = st(d), me2 = mine.has(d.id), on = sel.includes(d.id); return `<tr data-href="#/file/${f.id}/letter/${d.id}" data-pg="${d.id}" tabindex="0" title="Open folio ${esc(d.folio)}" class="${me2 ? 'to-me' : ''}${on ? ' is-sel' : ''}"><td class="sel-col" data-v=""><input type="checkbox" class="row-sel" data-sel="${f.id}:${d.id}" ${on ? 'checked' : ''} aria-label="Select ${esc(d.title)}"></td><td class="sel-col" data-v=""><button class="star-btn ${d.starred ? 'on' : ''}" data-act="starFolio" data-f="${f.id}" data-d="${d.id}" aria-pressed="${!!d.starred}" aria-label="Star ${esc(d.title)}">${ic('star')}</button></td><td><b>${esc(d.title)}</b>${me2 ? `<span class="chip to-me-chip">${ic('send')} Received</span>` : ''}</td><td class="mono">${esc(d.senderRef || d.edms)}</td><td class="mono">${esc(d.folio)}</td><td><span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span></td><td>${esc(by(d))}</td><td><span class="chip ${sc}">${sl}</span></td><td>${ic('lock')} ${esc(conf(d))}</td><td class="mono">${d.version || 1}</td><td data-d="${d.modified || d.date}">${fmtDT(d.modified || d.date)}</td></tr>`; }).join('')}</tbody></table></div>`);
 }
 /* Letter details: Overview · Metadata · Versions · Cross-references, with comments on the side */
 const LT_TABS = [['overview', 'Overview', 'grid'], ['metadata', 'Metadata', 'fileEdit'], ['versions', 'Versions', 'layers'], ['xrefs', 'Cross-References', 'swap']];
@@ -928,12 +942,14 @@ function viewLetter(f, d) {
   if (tab === 'xrefs') { const refs = (d.crossRefs || []).map(docById).filter(Boolean), by = S.files.flatMap(ff => ff.docs.filter(x => (x.crossRefs || []).includes(d.id)).map(x => ({ f: ff, d: x })));
     const link = r => `<a class="result card" href="#/file/${r.f.id}/letter/${r.d.id}"><span class="pg">${ic('file')}</span><div><b>${esc(r.d.title)}</b><small>Folio ${esc(r.d.folio)} in ${esc(r.f.name)} · ${esc(r.d.edms)}</small></div></a>`;
     const pool = S.files.flatMap(ff => ff.docs.filter(x => x.id !== d.id && !(d.crossRefs || []).includes(x.id)).map(x => ({ ff, x })));
-    body = `<h3 class="lt-h">This letter refers to</h3>${refs.length ? `<div class="results">${refs.map(link).join('')}</div>` : '<p class="muted">No cross-references.</p>'}
+    const typed = d.xrefsTyped || [];
+    body = `<h3 class="lt-h">This letter refers to</h3>${refs.length || typed.length ? `<div class="results">${refs.map(link).join('')}${typed.map((x, i) => `<div class="xt-row">${ic('swap')}<span><b class="mono">${esc(x.ref)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>${reg ? `<button class="icon-btn" data-act="rmXrefTypedDoc" data-i="${i}" aria-label="Remove cross-reference ${esc(x.ref)}">${ic('x')}</button>` : ''}</div>`).join('')}</div>` : '<p class="muted">No cross-references.</p>'}
     <h3 class="lt-h">Referred to by</h3>${by.length ? `<div class="results">${by.map(link).join('')}</div>` : '<p class="muted">No other letter refers to this one.</p>'}
-    ${reg ? `<div class="lt-add"><div class="field" style="flex:1"><label for="lx-doc">Add a cross-reference</label><select class="select" id="lx-doc"><option value="">Choose a letter…</option>${pool.map(({ ff, x }) => `<option value="${x.id}">${esc(ff.name)} · F.${esc(x.folio)} – ${esc(x.title)}</option>`).join('')}</select></div><button class="btn btn-primary" data-act="addXrefDoc">${ic('plus')} Add</button></div>` : ''}
-    <h3 class="lt-h">Physical enclosures</h3><p class="hint" style="margin:0 0 8px">Items that came with this letter but are kept on paper.</p>
+    ${reg ? `<div class="lt-add"><div class="field" style="flex:1"><label for="lx-doc">Add a cross-reference</label><select class="select" id="lx-doc"><option value="">Choose a letter…</option>${pool.map(({ ff, x }) => `<option value="${x.id}">${esc(ff.name)} · F.${esc(x.folio)} – ${esc(x.title)}</option>`).join('')}</select></div><button class="btn btn-primary" data-act="addXrefDoc">${ic('plus')} Add</button></div>
+      <div class="lt-add xt-add"><div class="field"><label for="lx-typed">Or type a reference</label><input class="input" id="lx-typed" placeholder="e.g. MOH/ADM/1/23"></div><div class="field" style="flex:1"><label for="lx-tnote">Note</label><input class="input" id="lx-tnote" placeholder="e.g. Earlier request on the same matter"></div><button class="btn btn-primary" data-act="addXrefTypedDoc">${ic('plus')} Add</button></div>` : ''}
+    <h3 class="lt-h">Enclosures</h3><p class="hint" style="margin:0 0 8px">Items that came with this letter, such as a bound report or a CD.</p>
     ${(d.enclosures || []).length ? `<ul class="lt-list">${d.enclosures.map(e => `<li><b>${esc(e.description)}</b>${e.quantity ? ` · ${esc(e.quantity)}` : ''}${e.kept_at ? ` · kept at ${esc(e.kept_at)}` : ''}</li>`).join('')}</ul>` : '<p class="muted">None recorded.</p>'}
-    ${reg ? `<div class="lt-add"><input class="input" id="lx-enc" placeholder="Title and number of copies, e.g. Annual Report – 3 copies" aria-label="Physical enclosure"><button class="btn btn-primary" data-act="addEncDoc">${ic('plus')} Add</button></div>` : ''}
+    ${reg ? `<div class="lt-add"><input class="input" id="lx-enc" placeholder="Title and number of copies, e.g. Annual Report – 3 copies" aria-label="Enclosure"><button class="btn btn-primary" data-act="addEncDoc">${ic('plus')} Add</button></div>` : ''}
     <h3 class="lt-h">Books and legal documents referenced</h3><p class="hint" style="margin:0 0 8px">A book, legal document or other source too big to scan. Give its subject and author, or a link to it.</p>
     ${(d.books || []).length ? `<ul class="lt-list">${d.books.map(b => `<li><b>${esc(b.title)}</b>${b.author ? ` · ${esc(b.author)}` : ''}${b.url ? ` · <a href="${esc(b.url)}" target="_blank" rel="noopener">link</a>` : ''}</li>`).join('')}</ul>` : '<p class="muted">None referenced.</p>'}
     ${reg ? `<div class="lt-add"><input class="input" id="lx-bt" placeholder="Subject / title" aria-label="Book subject or title"><input class="input" id="lx-ba" placeholder="Author" aria-label="Author"><input class="input" id="lx-bu" placeholder="Link (https://…) – optional" aria-label="Link"><button class="btn btn-primary" data-act="addBookDoc">${ic('plus')} Add</button></div>` : ''}`; }
@@ -1337,7 +1353,7 @@ function viewInward() {
 }
 function viewOutward() {
   const rows = S.files.flatMap(f => f.docs.filter(d => d.kind === 'response').map(d => ({ f, d }))).sort((a, b) => b.d.date.localeCompare(a.d.date));
-  return pageHead({ crumbs: [['Outward Register']], title: 'Outward Mail Register', sub: 'A report of every file or letter sent outside the organisation. To add an entry, use Send outside on the file or letter.', right: `<button class="btn btn-white" data-act="regExcel" data-k="outward">${ic('download')} Download Excel</button><a class="btn btn-white" href="#/senders">${ic('users')} Mail Senders</a>` }) +
+  return pageHead({ crumbs: [['Outward Register']], title: 'Outward Mail Register', sub: 'Every letter sent outside the Ministry. Only the HR Registry sends letters outside: use Send outside on an HR Registry file.', right: `<button class="btn btn-white" data-act="regExcel" data-k="outward">${ic('download')} Download Excel</button><a class="btn btn-white" href="#/senders">${ic('users')} Mail Senders</a>` }) +
     `<section class="panel glass">${simpleTable(['Date', 'To', 'Subject', 'Written by', 'File', 'Folio', 'Dispatch'], rows.map(({ f, d }) => `<tr><td data-d="${d.date}">${fmtDay(d.date)}</td><td>${esc(d.to)}</td><td><a href="#/file/${f.id}/doc/${d.id}">${esc(d.title)}</a></td><td>${esc(d.from)}</td><td>${fileLink(f)}</td><td class="mono">${esc(d.folio)}</td><td data-v="${S.dispatch[d.id] ? 'Sent' : 'Waiting'}">${S.dispatch[d.id] ? (x => `<span class="chip t-green">${ic('check')} Sent ${fmtDay(typeof x === 'string' ? x : x.at)}</span>${typeof x === 'object' && x.to ? `<small class="sub">${esc(x.how)} to ${esc(x.to)}${x.remarks ? ' · ' + esc(x.remarks) : ''}</small>` : ''}`)(S.dispatch[d.id]) : role() === 'registry' ? `<button class="btn btn-primary btn-xs" data-act="sendOutside" data-f="${f.id}" data-d="${d.id}">${ic('send')} Send outside</button>` : '<span class="chip t-amber">Waiting</span>'}</td></tr>`), 'Nothing to dispatch.', { key: 'outward', search: 'Sent to, subject or reference', date: [0, 'Sent from', 'Sent to'], facets: [[1, 'To'], [3, 'Written by'], [4, 'File'], [6, 'Dispatch']] })}</section>`;
 }
 function viewMovements() {
@@ -1353,11 +1369,20 @@ function viewBringup() {
   return pageHead({ crumbs: [['Bring-up Diary']], title: 'Bring-up Diary', sub: 'Files that need to come back to an officer on a date.', right: role() === 'registry' ? `<button class="btn btn-white" data-act="addBringup">${ic('plus')} Add bring-up</button>` : '' }) +
     `<section class="panel glass">${simpleTable(['Due', 'File', 'Note', 'For', 'Set by', 'Status', ''], list.map(b => { const f = getFile(b.fileId); const due = new Date(b.date) <= end; return `<tr><td data-d="${b.date}" data-v="${fmtDay(b.date)}"><b>${fmtDay(b.date)}</b><small class="sub">${when(b.date)}</small></td><td>${fileLink(f)}</td><td>${esc(b.note)}</td><td>${esc(person(b.for).name)}</td><td>${esc(person(b.by).name)}</td><td>${b.done ? '<span class="chip t-green">Done</span>' : due ? '<span class="chip t-red">Due</span>' : '<span class="chip t-blue">Upcoming</span>'}</td><td>${!b.done && (role() === 'registry' || b.for === meId()) ? `<button class="btn btn-light btn-xs" data-act="bringupDone" data-id="${b.id}">${ic('check')} Done</button>` : ''}</td></tr>`; }), 'No bring-ups.', { key: 'bringup', search: 'Search bring-ups – file, note or officer', date: [0, 'Due from', 'Due to'], facets: [[1, 'File'], [3, 'For'], [4, 'Set by'], [5, 'Status']] })}</section>`;
 }
+/* Service charter: access requests are answered within two working days */
+const CHARTER_DAYS = 2;
+function addWorkingDays(iso, n) { const d = new Date(iso); while (n > 0) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) n--; } return d.toISOString(); }
+function charterChip(a) {
+  const due = addWorkingDays(a.at, CHARTER_DAYS);
+  if (a.status !== 'open') return `<span class="muted">Answered</span>`;
+  const late = new Date(due) < new Date();
+  return `<span class="chip ${late ? 't-red' : 't-teal'}">${late ? 'Overdue' : 'Due'} ${fmtDay(due)}</span>`;
+}
 function viewAccess() {
   const canDecide = ['registry', 'marking'].includes(role());
   const list = canDecide ? S.access : S.access.filter(a => a.by === meId());
-  return pageHead({ crumbs: [['Access Requests']], title: 'Access Requests', sub: 'Read-only access to a file, with an expiry date.', right: `<button class="btn btn-white" data-act="requestAccess">${ic('lock')} Request access</button>` }) +
-    `<section class="panel glass">${simpleTable(['Officer', 'File', 'Reason', 'Duration', 'Requested', 'Status', ''], list.map(a => { const f = getFile(a.fileId); return `<tr><td><div class="fname">${avatar(a.by)}<div><b>${esc(person(a.by).name)}</b><small>${esc(person(a.by).title)}</small></div></div></td><td>${fileLink(f)}</td><td>${esc(a.reason)}</td><td>${plural(a.days, 'day')}</td><td data-d="${a.at}">${ago(a.at)}</td><td data-v="${{ open: 'Pending', approved: 'Approved', declined: 'Declined' }[a.status] || a.status}">${a.status === 'open' ? '<span class="chip t-amber">Pending</span>' : a.status === 'approved' ? `<span class="chip t-green">Until ${fmtDay(a.expires)}</span>` : '<span class="chip t-red">Declined</span>'}</td><td style="white-space:nowrap">${canDecide && a.status === 'open' ? `<button class="btn btn-primary btn-xs" data-act="accessDecide" data-id="${a.id}" data-v="approved">Approve</button> <button class="btn btn-light btn-xs" data-act="accessDecide" data-id="${a.id}" data-v="declined">Decline</button>` : ''}</td></tr>`; }), 'No access requests.', { key: 'access', search: 'Search requests – officer, file or reason', date: [4, 'Requested from', 'Requested to'], facets: [[0, 'Officer'], [1, 'File'], [5, 'Status']] })}</section>`;
+  return pageHead({ crumbs: [['Access Requests']], title: 'Access Requests', sub: `Read-only access to a file, with an expiry date. Service charter: every request is answered within ${CHARTER_DAYS} working days.`, right: `<button class="btn btn-white" data-act="requestAccess">${ic('lock')} Request access</button>` }) +
+    `<section class="panel glass">${simpleTable(['Officer', 'File', 'Reason', 'Duration', 'Requested', 'Answer by (service charter)', 'Status', ''], list.map(a => { const f = getFile(a.fileId); return `<tr><td><div class="fname">${avatar(a.by)}<div><b>${esc(person(a.by).name)}</b><small>${esc(PEOPLE[a.by]?.dept || '')}</small></div></div></td><td>${fileLink(f)}</td><td>${esc(a.reason)}</td><td>${plural(a.days, 'day')}</td><td data-d="${a.at}">${ago(a.at)}</td><td data-d="${addWorkingDays(a.at, CHARTER_DAYS)}">${charterChip(a)}</td><td data-v="${{ open: 'Pending', approved: 'Approved', declined: 'Declined' }[a.status] || a.status}">${a.status === 'open' ? '<span class="chip t-amber">Pending</span>' : a.status === 'approved' ? `<span class="chip t-green">Until ${fmtDay(a.expires)}</span>` : '<span class="chip t-red">Declined</span>'}</td><td style="white-space:nowrap">${canDecide && a.status === 'open' ? `<button class="btn btn-primary btn-xs" data-act="accessDecide" data-id="${a.id}" data-v="approved">Approve</button> <button class="btn btn-light btn-xs" data-act="accessDecide" data-id="${a.id}" data-v="declined">Decline</button>` : ''}</td></tr>`; }), 'No access requests.', { key: 'access', search: 'Search requests – officer, file or reason', date: [4, 'Requested from', 'Requested to'], facets: [[0, 'Officer'], [1, 'File'], [5, 'Status']] })}</section>`;
 }
 
 /* ==========================================================================
@@ -1423,7 +1448,7 @@ function viewPhysical(q) {
 }
 function handOverModal() {
   const o = ui.ho; const f = getFile(o.fileId);
-  modal(`${mHead('send', 'Hand over', 'The receiver acknowledges the handover. The file stays on the register until it comes back.')}
+  modal(`${mHead('send', 'Hand over a paper file', 'The person who receives it confirms the handover. The file stays on the register until it comes back.')}
     <div class="modal-b">
       <div class="field"><label for="ho-file">Physical file <span class="req">*</span></label><select class="select" id="ho-file" data-change="hoFile"><option value="">Select a file…</option>${S.files.filter(x => !x.draft && x.state !== 'Disposed').map(x => `<option value="${x.id}" ${x.id === o.fileId ? 'selected' : ''}>${esc(x.ref)} — ${esc(x.name)}</option>`).join('')}</select></div>
       <fieldset class="field radios"><legend class="label">What is being handed over</legend>
@@ -1442,7 +1467,7 @@ function handOverModal() {
 }
 function rackModal(h) {
   const f = getFile(h.fileId);
-  modal(`${mHead('checkCircle', 'Acknowledge return', `${esc(f.name)} is back with the Registry.`)}
+  modal(`${mHead('checkCircle', 'Confirm the file is back', `${esc(f.name)} is back with the Registry.`)}
     <div class="modal-b"><div class="field"><label for="rk">Rack or shelf where the file is kept (optional):</label><input class="input" id="rk" value="${esc(f.location)}"></div></div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="hoAckSave" data-id="${h.id}">${ic('check')} Acknowledge return</button></div>`, '', '#rk');
 }
@@ -1486,6 +1511,7 @@ function lcStats() {
       <h3 class="lc-h">Files</h3>${(() => {
         const yr = [['Files opened', done('OPEN'), '#/records?tab=registers'], ['Files closed', done('CLOSE'), '#/records?tab=registers'], ['Files disposed', done('DISPOSE'), '#/records?tab=registers']];
         const now = [['Open files', S.files.filter(f => !f.draft && f.state === 'Open').length, '#/records?tab=files'], ['Closed files', S.files.filter(f => !f.draft && f.state === 'Closed').length, '#/records?tab=files'],
+          ...LIFE.map(L => [`${L} files`, S.files.filter(f => !f.draft && f.state !== 'Disposed' && activity(f) === L).length, '#/files']),
           ['Awaiting approval', S.recReqs.filter(x => x.status === 'Awaiting approval').length, '#/records?tab=requests'], ['Bring-ups overdue', S.bringups.filter(b => !b.done && new Date(b.date) < end).length, '#/bringup']];
         const max = Math.max(1, ...yr.map(x => x[1]), ...now.map(x => x[1]));
         const chart = (label, rows) => `<div class="hbars lc-fbars" role="table" aria-label="${label}">${rows.map(([l, n, h]) => `<a class="hbar" role="row" href="${h}" title="${l}: ${plural(n, 'file')}"><span class="hb-l" role="cell">${l}</span><span class="hb-track" role="cell"><span class="hb-fill" style="width:${n ? Math.max(4, n / max * 100) : 0}%"></span></span><span class="hb-n" role="cell">${n}</span></a>`).join('')}</div>`;
@@ -1621,7 +1647,7 @@ function validateMeta(m) {
   if (!m.date_received) return 'Date Received is required.';
   if (!m.source_name.trim()) return 'Received From is required.';
   if (!m.subject.trim()) return 'Subject is required.';
-  if (m.enclosures.some(e => !e.description.trim() && (e.quantity.trim() || e.kept_at.trim()))) return 'Give each physical enclosure a description, or remove it.';
+  if (m.enclosures.some(e => !e.description.trim() && (e.quantity.trim() || e.kept_at.trim()))) return 'Give each enclosure a description, or remove it.';
   if (m.serial_no !== '' && !(Number(m.serial_no) >= 1)) return 'S/NO must be a positive number, or left blank to auto-generate.';
   return null;
 }
@@ -1669,7 +1695,7 @@ function viewUpload(q) {
     const pageCtx = { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: m._signed ? me().name : 'Authorised Officer', title: m._signed ? me().title : 'For: ' + (m.source_name || '—') }, signed: !!m._signed, org: m.source_name || 'Sender' };
     step = `<div class="det det2">
       <aside class="det-prev">
-        <div class="det-prev-h"><b>The document</b><button class="btn btn-outline btn-sm" data-act="upSignDoc" aria-pressed="${!!m._signed}">${ic('pen')} ${m._signed ? 'Signed and stamped · Undo' : 'Sign or stamp'}</button></div>
+        <div class="det-prev-h"><b>The document</b><button class="btn btn-outline btn-sm" data-act="upSignDoc" aria-pressed="${!!m._signed}">${ic('stamp')} ${m._signed ? 'Stamped and signed · Undo' : 'Stamp document'}</button></div>
         <div class="viewer${u.full ? ' is-full' : ''}">
           <div class="viewer-bar"><span class="vb-name">${esc(x.name)} · ${plural(m._pages, 'page')}</span>
             <button class="vb-btn" data-act="upAnnot" aria-label="Annotate" title="Annotate">${ic('pen')}</button>
@@ -1696,9 +1722,12 @@ function viewUpload(q) {
           ${m.cross_refs.length ? `<div class="x-chips">${m.cross_refs.map(id => { const r = docById(id); return r ? `<span class="x-chip">${esc(r.f.name)} · F.${esc(r.d.folio)} ${esc(r.d.title)}<button data-act="rmXref" data-id="${id}" aria-label="Remove cross-reference">${ic('x')}</button></span>` : ''; }).join('')}</div>` : ''}
           <div class="xr-search"><label class="input-icon">${ic('search')}<input class="input" id="xr-q" value="${esc(u.xq || '')}" placeholder="Search by subject, sender, reference no., file or folio…" data-input="xrQuery" autocomplete="off"><span class="sr">Search documents to cross-reference</span></label>
             ${xq ? `<div class="xr-list" role="listbox">${xHits.map(({ ff, d }) => `<button type="button" role="option" data-act="addXrefId" data-id="${d.id}">${ic('file')}<span><b>${esc(d.title)}</b><small>${esc(ff.name)} · Folio ${esc(d.folio)}${d.from ? ' · ' + esc(d.from) : ''}</small></span></button>`).join('') || '<p class="muted">No documents match.</p>'}</div>` : ''}</div></div>
-        <div class="field"><span class="label">Physical enclosures ${tip('Things that came with the letter but are kept on paper or elsewhere – e.g. a bound report.')}</span>
+        <div class="xt-up"><span class="label">Or type a cross-reference, with a note</span>
+          ${(m._xtyped || []).length ? `<div class="x-chips">${m._xtyped.map((x, i) => `<span class="x-chip">${esc(x.ref)}${x.note ? ` – ${esc(x.note)}` : ''}<button data-act="rmXrefTyped" data-i="${i}" aria-label="Remove cross-reference ${esc(x.ref)}">${ic('x')}</button></span>`).join('')}</div>` : ''}
+          <div class="enc-row xt-inputs"><input class="input" id="xt-ref" placeholder="Reference, e.g. MOH/ADM/1/23" aria-label="Cross-reference"><input class="input" id="xt-note" placeholder="Note, e.g. Earlier request on the same matter" aria-label="Note on the cross-reference"><button class="btn btn-outline btn-sm" data-act="addXrefTyped">${ic('plus')} Add</button></div></div>
+        <div class="field"><span class="label">Enclosures ${tip('Items that came with the letter, such as a bound report or a CD.')}</span>
           ${m.enclosures.map((e, i) => `<div class="enc-row"><input class="input" data-enc="${i}:description" value="${esc(e.description)}" placeholder="Description" aria-label="Enclosure ${i + 1} description"><input class="input" data-enc="${i}:quantity" value="${esc(e.quantity)}" placeholder="Quantity" aria-label="Enclosure ${i + 1} quantity"><input class="input" data-enc="${i}:kept_at" value="${esc(e.kept_at)}" placeholder="Kept at" aria-label="Enclosure ${i + 1} kept at"><button class="btn btn-light btn-sm btn-icon" data-act="rmEnc" data-i="${i}" aria-label="Remove enclosure">${ic('trash')}</button></div>`).join('')}
-          <button class="btn btn-outline btn-sm" style="justify-self:start" data-act="addEnc">${ic('plus')} Add a physical enclosure</button></div>
+          <button class="btn btn-outline btn-sm" style="justify-self:start" data-act="addEnc">${ic('plus')} Add an enclosure</button></div>
         <div class="field"><label for="um-confidentiality_level">Confidentiality ${tip('Who may open it. Confidential and Secret can be limited to named people.')} ${ai('confidentiality_level')}</label><select class="select ${cls('confidentiality_level')}" id="um-confidentiality_level" data-change="umConf">${CONF_LEVELS.map(c => `<option ${m.confidentiality_level === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
         ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.name)}</label>`).join('')}</div></div>` : ''}
         <fieldset class="reg-box"><legend>Registry details</legend>
@@ -1874,7 +1903,7 @@ function modal(html, cls = '', focus) {
 }
 function closeModal() { $('#overlay')?.remove(); $('#drawer')?.remove(); }
 const mHead = (icon, title, sub) => `<div class="modal-h">${icon ? `<span class="mh-ic">${ic(icon)}</span>` : ''}<div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div><button class="btn btn-light btn-icon btn-sm x" data-act="close" aria-label="Close">${ic('x')}</button></div>`;
-const peopleOpts = (filter, sel) => Object.values(PEOPLE).filter(filter).map(p => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.name)} — ${esc(p.title)}</option>`).join('');
+const peopleOpts = (filter, sel) => Object.values(PEOPLE).filter(filter).sort((a, b) => (MARKING_ORDER.indexOf(a.id) + 1 || 99) - (MARKING_ORDER.indexOf(b.id) + 1 || 99)).map(p => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.title || p.name)}</option>`).join('');
 function toast(text) {
   let w = $('.toast-wrap'); if (!w) { w = document.createElement('div'); w.className = 'toast-wrap'; document.body.appendChild(w); }
   const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.innerHTML = `${ic('checkCircle')} ${esc(text)}`;
@@ -1964,7 +1993,7 @@ function sendOutsideModal(f, only) {
   const letters = [...liveDocs(f)].sort(byFolio).reverse();
   const pre = only ? [only] : letters.filter(d => d.kind === 'response' && !S.dispatch[d.id]).map(d => d.id);
   const recips = S.senders.filter(x => x.on);
-  modal(`${mHead('send', 'Send outside the organisation', 'Recorded automatically in the Outward Mail Register.')}
+  modal(`${mHead('send', 'Send outside the Ministry', 'Each letter you send is added to the Outward Mail Register.')}
     <div class="modal-b">
       <div class="field"><label for="so-to">Send to <span class="req">*</span></label><input class="input" id="so-to" list="so-senders" placeholder="Search the senders…" autocomplete="off"><datalist id="so-senders">${recips.map(x => `<option value="${esc(x.name)}"></option>`).join('')}</datalist>
         <span class="hint">Only people who are already senders in the Inward Mail Register. Add a name on <a href="#/senders" data-act="close">Mail Senders</a>.</span></div>
@@ -1976,13 +2005,13 @@ function sendOutsideModal(f, only) {
       <div class="field"><label for="so-rem">Remarks <span class="muted" style="font-weight:500">(optional)</span></label><input class="input" id="so-rem"></div>
       <p class="form-err" id="so-err" role="alert" hidden></p>
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="sendOutsideSave" data-id="${f.id}">${ic('send')} Yes, send them</button></div>`, '', '#so-to');
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="sendOutsideSave" data-id="${f.id}">${ic('send')} Send letters</button></div>`, '', '#so-to');
 }
 
 /* --- Marking officer: mark file --- */
 function markModal(f) {
   const lastDoc = [...liveDocs(f)].sort(byFolio).pop();
-  modal(`${mHead('pen', 'Mark file', 'Record what should be done and to whom. The file goes back to the Registry.')}
+  modal(`${mHead('pen', 'Mark the file', 'Say what should be done and who should do it. The file then goes back to the Registry.')}
     <div class="modal-b">
       <div class="field"><label for="mk-to">Action Officer</label><select class="select" id="mk-to">${peopleOpts(p => p.role === 'action', 'virah')}</select></div>
       <div class="field"><label for="mk-ins">Instruction <span class="req">*</span></label><textarea class="textarea" id="mk-ins" placeholder="e.g. Head NVS – please prepare a response by Friday"></textarea></div>
@@ -2019,7 +2048,7 @@ function respondModal(f, folio) {
   else if (folio) ui.resp.folio = folio;
   const R = ui.resp;
   const sources = liveDocs(f).filter(d => d.kind !== 'response');
-  modal(`${mHead('reply', 'Responses', 'Answer with a letter, memo or other document - write a new one or upload one.')}
+  modal(`${mHead('reply', 'Responses', 'Reply with a letter, memo or other document. Write a new one or upload one.')}
     <div class="modal-b">
       <div class="seg solid" style="justify-self:start">${[['write', 'Write from a template', 'fileEdit'], ['upload', 'Upload a document', 'upload']].map(([k, l, i]) => `<button class="${R.mode === k ? 'on' : ''}" data-act="respMode" data-k="${k}">${ic(i)} ${l}</button>`).join('')}</div>
       ${R.mode === 'write' ? `<div class="mstep"><div class="mstep-h"><i>1</i> Choose a template</div>
@@ -2117,20 +2146,20 @@ function requestAnyModal() {
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmRequestAny">${ic('send')} Send request</button></div>`, '', '#ra-file');
 }
 function requestModal(f) {
-  modal(`${mHead('filePlus', 'Request files', 'Ask the Registry for more files you need in order to take action.')}
+  modal(`${mHead('filePlus', 'Request files', 'Ask the Registry for any other files you need to act on this one.')}
     <div class="modal-b"><div class="field"><label for="rq-file">File you need</label><select class="select" id="rq-file">${S.files.filter(x => x.id !== f.id).map(x => `<option value="${esc(x.ref)}">${esc(x.name)} — ${esc(x.ref)}</option>`).join('')}</select></div>
       <div class="field"><label for="rq-why">Why you need it <span class="req">*</span></label><textarea class="textarea" id="rq-why" placeholder="e.g. Need the earlier correspondence to respond"></textarea></div></div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmRequest" data-id="${f.id}">${ic('send')} Send request</button></div>`);
 }
 function delegateModal(f) {
-  modal(`${mHead('users', 'Delegate', 'Hand the letter to someone else to act on. They send it back to the Registry when done.')}
+  modal(`${mHead('users', 'Delegate', 'Pass the letter to another officer to act on. They send it back to the Registry when they finish.')}
     <div class="modal-b"><div class="field"><label for="dl-to">Delegate to</label><select class="select" id="dl-to">${peopleOpts(p => p.role === 'action' && p.id !== meId())}</select></div>
       <div class="field"><label for="dl-note">Instruction <span class="req">*</span></label><textarea class="textarea" id="dl-note" placeholder="e.g. Please draft the response and share by Thursday"></textarea></div></div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmDelegate" data-id="${f.id}">${ic('users')} Delegate</button></div>`);
 }
 function doneModal(f) {
   const responses = f.docs.filter(d => d.kind === 'response' && d.from === me().name);
-  modal(`${mHead('undo', 'Done – return to Registry', 'Use this last, when the work is finished.')}
+  modal(`${mHead('undo', 'Finish and return to the Registry', 'Use this only when all the work on the file is done.')}
     <div class="modal-b">
       ${responses.length ? `<div class="instruction" style="margin:0;background:#e8f7ef;border-color:#bfe8d1">${ic('checkCircle')}<div>You added ${plural(responses.length, 'response')}: ${responses.map(d => `Folio ${esc(d.folio)}`).join(', ')}</div></div>` : `<div class="instruction" style="margin:0">${ic('sticky')}<div>You have not added a response yet. You can still return the file with a minute.</div></div>`}
       <div class="field"><label for="dn-note">Closing minute <span class="req">*</span></label><textarea class="textarea" id="dn-note" placeholder="e.g. Response sent. File may be put away."></textarea></div>
@@ -2138,7 +2167,7 @@ function doneModal(f) {
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-primary" data-act="confirmDone" data-id="${f.id}">${ic('undo')} Return to Registry</button></div>`);
 }
 function bringupModal(fileId) {
-  modal(`${mHead('calendar', 'Add bring-up', 'Bring a file back to an officer on a date.')}
+  modal(`${mHead('calendar', 'Add a bring-up', 'Choose the date the file should come back to an officer.')}
     <div class="modal-b">
       <div class="field"><label for="bu-file">File</label><select class="select" id="bu-file">${S.files.map(f => `<option value="${f.id}" ${f.id === fileId ? 'selected' : ''}>${esc(f.name)} — ${esc(f.ref)}</option>`).join('')}</select></div>
       <div class="two"><div class="field"><label for="bu-date">Bring up on</label><input class="input" type="date" id="bu-date" value="${new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)}"></div>
@@ -2371,10 +2400,10 @@ const ACT = {
     if (!email || !pass) ui.lgErr = 'Enter your work email and password.';
     else if (!r) ui.lgErr = 'That email does not have an EDRMS account. Check it, or ask your administrator.';
     else if (pass !== DEMO_PASSWORD) ui.lgErr = 'That password is not right. Try again.';
-    else { ui.lgErr = ''; ui.lgEmail = ''; S.session = r; save(); go('#/'); toast(`Signed in as ${me().name}`); return; }
+    else { ui.lgErr = ''; ui.lgEmail = ''; S.session = r; S.as = LOGIN_AS[email] || null; save(); go('#/'); toast(`Signed in as ${me().name}, ${me().title}`); return; }
     render(); setTimeout(() => (r && email ? $('#lg-pass') : $('#lg-email'))?.focus(), 0);
   },
-  logout: () => { closeAcct(); S.session = null; save(); closeModal(); ui.fabOpen = false; history.replaceState(null, '', '#login'); render(); },
+  logout: () => { closeAcct(); S.session = null; S.as = null; save(); closeModal(); ui.fabOpen = false; history.replaceState(null, '', '#login'); render(); },
   switchRole: () => switchRoleModal(),
   acctMenu: el => { if ($('#acct-menu')) closeAcct(); else openAcct(el); },
   myProfile: () => { closeAcct(); profileModal(); },
@@ -2387,7 +2416,7 @@ const ACT = {
     if (bad) return; closeModal(); toast('Password changed. Use the new one next time you sign in.');
   },
   setRole: el => {
-    S.session = el.dataset.role; save(); closeModal(); ui.upload = freshUpload(); ui.resp = null; ui.sel = null; ui.editing = null; ui.chat = [];
+    S.session = el.dataset.role; S.as = null; save(); closeModal(); ui.upload = freshUpload(); ui.resp = null; ui.sel = null; ui.editing = null; ui.chat = [];
     $('#ai-panel')?.remove();
     if (parseHash().parts[0] === 'upload' && S.session !== 'registry') history.replaceState(null, '', '#overview');
     render(); toast(`Now signed in as ${me().name} (${ROLE_LABEL[S.session]})`);
@@ -2489,7 +2518,7 @@ const ACT = {
   gridExcel: el => { const f = getFile(el.dataset.id), q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = [['Date', 'Folio', 'Document', 'Step', 'Officer to see', 'Initials', 'Acknowledged'], ...gridRows(f).map(r => [fmtDT(r.date), r.folio, r.doc, r.step, r.to, r.initials, r.ack])];
     saveFile(`File grid – ${f.ref.replace(/\//g, '-')}.csv`, rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv'); },
-  setActivity: el => { const f = getFile(el.dataset.id); f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} marked ${f.activity}`); },
+  setActivity: el => { const f = getFile(el.dataset.id); f.activity = nextLife(activity(f)); save(); render(); toast(`${f.name} is now ${f.activity.toLowerCase()}.`); },
   tfClear: el => { const o = (ui.tf[el.dataset.k] || {}).open; ui.tf[el.dataset.k] = { fac: {}, open: o }; render(); },
   tfPage: el => { const st = ui.tf[el.dataset.k] || (ui.tf[el.dataset.k] = { fac: {} }); st.pg = (st.pg || 1) + +el.dataset.d; tfApply(el.closest('.tf-block')); },
   tfToggle: el => { const st = ui.tf[el.dataset.k] || (ui.tf[el.dataset.k] = { fac: {} }); st.open = !st.open; const bar = el.closest('.tf'); bar.classList.toggle('is-open', st.open); el.setAttribute('aria-expanded', st.open); },
@@ -2617,7 +2646,7 @@ const ACT = {
     notify('registry', `Marked to ${person(to).name}. Returned from marking.`, 'vera', f.id);
     save(); closeModal(); render(); toast('Marked and returned to the Registry');
   },
-  sign: el => { const f = getFile(el.dataset.f), d = getDoc(f, el.dataset.d); d.signed = !d.signed; save(); render(); toast(d.signed ? 'Signed and stamped' : 'Stamp removed'); },
+  sign: el => { const f = getFile(el.dataset.f), d = getDoc(f, el.dataset.d); stampEditorDoc(f, d); },
   validate: el => { const f = getFile(el.dataset.file), d = getDoc(f, el.dataset.doc); d.status = 'filed'; f.updated = now(); save(); render(); toast(`Folio ${d.folio} added to ${f.name}`); },
 
   /* comments */
@@ -2721,7 +2750,7 @@ const ACT = {
     if (!u.files.length) { u.err = u.tab === 'email' ? 'Pick at least one email to import.' : 'Add a document to upload.'; render(); return; }
     u.err = ''; runAI();
   },
-  upSignDoc: () => { const m = ui.upload.metas[ui.upload.idx]; m._signed = !m._signed; render(); toast(m._signed ? `Signed and stamped as ${me().name}` : 'Signature and stamp removed'); },
+  upSignDoc: () => { const m = ui.upload.metas[ui.upload.idx]; m._signed = !m._signed; if (m._signed && /stamped/.test(ui.upload.err || '')) ui.upload.err = ''; render(); toast(m._signed ? `Stamped and signed by ${me().name}, ${me().title}` : 'Stamp and signature removed'); },
   upFull: () => { ui.upload.full = !ui.upload.full; render(); },
   upAnnot: () => toast('Annotate opens once the document is saved into the file'),
   upDl: () => toast(`Downloading ${ui.upload.files[ui.upload.idx]?.name || 'document'}`),
@@ -2731,6 +2760,10 @@ const ACT = {
   upDoc: el => { const u = ui.upload; u.idx = clamp(u.idx + +el.dataset.d, 0, u.files.length - 1); u.err = ''; render(); },
   addEnc: () => { ui.upload.metas[ui.upload.idx].enclosures.push({ description: '', quantity: '', kept_at: '' }); render(); $$('[data-enc]').slice(-3)[0]?.focus(); },
   rmEnc: el => { ui.upload.metas[ui.upload.idx].enclosures.splice(+el.dataset.i, 1); render(); },
+  addXrefTyped: () => { const m = ui.upload.metas[ui.upload.idx], ref = val('xt-ref').trim(); if (!ref) { toast('Type the reference first.'); $('#xt-ref')?.focus(); return; } (m._xtyped = m._xtyped || []).push({ ref, note: val('xt-note').trim() }); render(); },
+  rmXrefTyped: el => { const m = ui.upload.metas[ui.upload.idx]; m._xtyped.splice(+el.dataset.i, 1); render(); },
+  addXrefTypedDoc: () => { const { d } = curLetter(); const ref = val('lx-typed').trim(); if (!ref) { toast('Type the reference first.'); $('#lx-typed')?.focus(); return; } (d.xrefsTyped = d.xrefsTyped || []).push({ ref, note: val('lx-tnote').trim() }); save(); render(); toast('Cross-reference added.'); },
+  rmXrefTypedDoc: el => { const { d } = curLetter(); d.xrefsTyped.splice(+el.dataset.i, 1); save(); render(); },
   rmXref: el => { const m = ui.upload.metas[ui.upload.idx]; m.cross_refs = m.cross_refs.filter(x => x !== el.dataset.id); m._touched.cross_refs = true; render(); },
   upDash: () => { closeModal(); go('#/'); },
   upGoFile: el => { closeModal(); go(`#/file/${el.dataset.f}/doc/${el.dataset.d}`); },
@@ -2746,10 +2779,14 @@ const ACT = {
     if (!f) {   /* version 2 journey: a new letter, not in a file yet */
       let serial = Math.max(0, ...(S.letters || []).map(l => l.serial), S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length);
       const send = el && el.dataset && el.dataset.send === '1';
+      if (send) { const i = u.metas.findIndex(m => !m._signed); if (i >= 0) { u.idx = i; u.err = 'You cannot send this document until it is stamped. Press Stamp document, then try again.'; render(); return; } }
       const made = u.files.map((x, i) => { const m = u.metas[i];
         return { id: nid('L'), kind: /\.(xlsx|xls|csv)$/i.test(x.name) ? 'Document' : undefined, serial: m.serial_no ? +m.serial_no : ++serial, title: m.subject.trim(), from: m.source_name.trim(), senderRef: m.sender_ref_no.trim(), received: new Date(m.date_received + 'T09:00').toISOString(),
           pages: m._pages, conf: m.confidentiality_level, stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.name }; });
       S.letters = [...made, ...(S.letters || [])];
+      /* A stamp added on the upload screen goes onto the letter */
+      made.forEach((l, i) => { const m = u.metas[i]; letterDoc(l); if (m._signed) l.doc.marks = { page: 0, stamp: { on: true, x: 60, y: 70, w: 28, by: meId(), at: now(), label: stampLabelFor(meId()) }, sign: { on: true, x: 8, y: 76, w: 32, by: meId(), at: now() } };
+        if (m._xtyped?.length) l.xrefsTyped = m._xtyped.map(x => ({ ...x })); });
       made.forEach(l => { if (l.from && !S.senders.some(x => x.name.toLowerCase() === l.from.toLowerCase())) S.senders.push({ id: nid('ms'), name: l.from, as: 'sender', on: true }); });
       save(); ui.upload = freshUpload();
       go(made.length === 1 ? letterOpen(made[0]) : '#/correspondence?tab=marking');
@@ -2890,7 +2927,7 @@ document.addEventListener('change', e => {
   if (k === 'recReg') { ui.rec.reg = t.value; render(); }
   if (k === 'extOn') { S.outside.on = t.checked; save(); render(); toast(t.checked ? 'Accepting submissions from SAGAS' : 'The link is switched off'); }
   if (k === 'extAs') { S.outside.shownAs = t.value; save(); toast('Saved'); }
-  if (k === 'letterFilePick') { ui.lfFile = t.value; const h = t.parentElement.querySelector('.hint'), ff = getFile(t.value); if (h) h.textContent = ff ? `It will be folio ${nextFolio(ff)} in ${ff.name}.` : 'Only files that are in the Registry are listed.'; }
+  if (k === 'letterFilePick') { ui.lfFile = t.value; render(); setTimeout(() => $('#lf-file')?.focus(), 0); }
   if (k === 'cnCovers') ui.census.covers = t.value;
   if (k === 'pickUpload') { ui.upload.files = [...t.files].map(asUpload); ui.upload.err = ''; render(); }
   if (k === 'umConf') { const m = ui.upload.metas[ui.upload.idx]; m.confidentiality_level = t.value; m._touched.confidentiality_level = true; render(); }

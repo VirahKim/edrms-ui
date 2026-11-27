@@ -116,7 +116,7 @@ function apModal(a) {
   const f = a.fileId && getFile(a.fileId);
   modal(`${mHead('listChecks', `${esc(a.type.replace(/^Document \(EDMS\) - /, ''))} #${a.no}`, esc(a.type))}
     <div class="modal-b">
-      <dl class="ap-facts"><dt>Subject</dt><dd>${esc(a.title)}</dd><dt>Started by</dt><dd>${esc(person(a.by).name)} — ${esc(person(a.by).title)}</dd>
+      <dl class="ap-facts"><dt>Subject</dt><dd>${esc(a.title)}</dd><dt>Started by</dt><dd>${esc(person(a.by).name)}</dd>
         <dt>Started</dt><dd>${fmtDT(a.at)}</dd><dt>Due</dt><dd>${fmtDT(a.due)}</dd>${f ? `<dt>File</dt><dd><a href="#/file/${f.id}" data-act="close">${esc(f.name)}</a> <span class="mono">${esc(f.ref)}</span></dd>` : ''}
         <dt>Progress</dt><dd>Step ${Math.min(a.done + 1, a.steps)} of ${a.steps}${a.steps > 1 ? ' — after you, it goes to the next approver' : ''}</dd>
         ${a.status !== 'open' ? `<dt>Decision</dt><dd>${a.status === 'approved' ? 'Approved' : 'Rejected'} by ${esc(person(a.decidedBy).name)}, ${fmtDT(a.decidedAt)}${a.note ? ` — “${esc(a.note)}”` : ''}</dd>` : ''}</dl>
@@ -412,10 +412,10 @@ function openFileMenu(btn, f) {
   const reg = role() === 'registry', act = activity(f) === 'Active';
   const it = (i, l, a, extra = '', cls = '') => `<button role="menuitem" class="${cls}" data-act="${a}" data-id="${f.id}" ${extra}><span class="i">${ic(i)}</span><span>${l}</span></button>`;
   const groups = [
-    [`<div class="fm-stage">Stage: <b>${activity(f)}</b></div>`, ...(reg ? [it('archive', act ? 'Move to semi-active' : 'Move to active', 'fmStage')] : [])],
+    [`<div class="fm-stage">Stage: <b>${activity(f)}</b></div>`, ...(reg ? [it('archive', `Move to ${nextLife(activity(f)).toLowerCase()}`, 'fmStage')] : [])],
     [it('info', 'View Details', 'fmDetails'),
       ...(reg && f.stage === 'registry' ? [it('send', 'Send to Action Officer', 'fmSubmit')] : []),
-      ...(reg ? [it('send', 'Send outside', 'fmOutside'), it('calendar', 'Add to bring-up diary', 'fmBringup')] : [])],
+      ...(reg ? [...(canSendOutside(f) ? [it('send', 'Send outside', 'fmOutside')] : []), it('calendar', 'Add to bring-up diary', 'fmBringup')] : [])],
     ...(reg ? [[it('folderPlus', 'New Sub-File', 'fmSub'), it('pen', 'Rename / Edit', 'fmRename'), it('swap', 'Move File', 'fmMove'), it('layers', 'Clone', 'fmClone')]] : []),
     [it('share', 'Share', 'fmShare'), it(f.muted ? 'bellOff' : 'bell', f.muted ? 'Turn notifications on' : 'Turn notifications off', 'fmNotify'), it('pin', f.pinned ? 'Unpin File' : 'Pin File', 'fmPin'), it('star', f.starred ? 'Unstar File' : 'Star File', 'fmStar')],
     ...(reg ? [[it('trash', 'Delete', 'fmDelete', '', 'danger')]] : []),
@@ -560,7 +560,7 @@ Object.assign(ACT, {
   regAddSave: () => { const v = $('#tm-v').value.trim(); if (!v) { const e2 = $('#tm-err'); e2.textContent = 'Give the registry a name.'; e2.hidden = false; return; } REGISTRIES.push({ id: nid('r'), name: v }); closeModal(); render(); toast(`${v} created`); },
   moreActions: (el, e) => { e.stopPropagation(); if ($('#file-menu') && ui.fmBtn === el) closeFileMenu(); else openMoreMenu(el, getFile(el.dataset.id)); },
   fmLink: el => { closeFileMenu(); go(el.getAttribute('href')); },
-  fmStage: fmDo(f => { f.activity = activity(f) === 'Active' ? 'Semi-active' : 'Active'; save(); render(); toast(`${f.name} moved to ${f.activity.toLowerCase()}`); }),
+  fmStage: fmDo(f => { f.activity = nextLife(activity(f)); save(); render(); toast(`${f.name} is now ${f.activity.toLowerCase()}.`); }),
   fmDetails: fmDo(f => { ui.fileTab = role() === 'registry' ? 'cover' : 'details'; go(`#/file/${f.id}`); }),
   fmSubmit: fmDo(f => sendModal(f, 'action')),
   fmOutside: fmDo(f => sendOutsideModal(f)),
@@ -598,7 +598,7 @@ Object.assign(ACT, {
   bkCopy: el => pickFileModal('Copy to File', `A copy goes into the other file; the original stays here.`, 'bkCopySave', el.dataset.id),
   bkMoveSave: el => bkTransfer(el.dataset.id, $('#pf-f').value, true),
   bkCopySave: el => bkTransfer(el.dataset.id, $('#pf-f').value, false),
-  bkRemove: el => { const n = fSel(el.dataset.id).length; modal(`${mHead('trash', 'Remove from file?', plural(n, 'folio'))}<div class="modal-b"><p style="margin-top:0">They are taken out of this file. Folio numbers already given are not reused.</p></div>
+  bkRemove: el => { const n = fSel(el.dataset.id).length; modal(`${mHead('trash', 'Remove from the file?', plural(n, 'folio'))}<div class="modal-b"><p style="margin-top:0">They are taken out of this file. Folio numbers already given are not reused.</p></div>
     <div class="modal-f"><button class="btn btn-light" data-act="close">Cancel</button><button class="btn btn-outline danger" data-act="bkRemoveSave" data-id="${el.dataset.id}">${ic('trash')} Remove</button></div>`); },
   bkRemoveSave: el => { const f = getFile(el.dataset.id), ids = fSel(f.id); f.docs = f.docs.filter(d => !ids.includes(d.id)); ui.fsel[f.id] = []; save(); closeModal(); render(); toast(`Removed ${plural(ids.length, 'folio')}`); },
   logout: (orig => (...a) => { closeManual(); return orig(...a); })(ACT.logout),

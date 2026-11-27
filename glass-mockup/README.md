@@ -354,3 +354,17 @@ Correspondence tabs are *Received*, *Marking Officer* and *Action Officer*. Tab 
 
 ### Letters show the real document
 The letter page always shows the page at full width (it had collapsed to nothing for the Marking Officer). Letters that came in as a scanned PDF – the seeded letters and anything registered from SAGAS – show the real scanned pages from `sample-documents/pages/`, with comments and sticky notes on top as before; the pages move with the letter when it is filed.
+
+### Checklist of 27 November
+- **Correspondence:** tabs are Received · Marking Officer · Action Officer; each has All · Sent · **Returned**. The folio-bar chip reads *Received*.
+- **Enclosures:** "Physical enclosures / kept on paper" is now **Enclosures**.
+- **From SAGAS:** *Receive* needs the stamp (error otherwise) and tells the officer it is for (the only "addressed to you" notification, with a picture of the document). *Register* opens a short form: the **reference number is locked**, there is no personnel check, and you can type a cross-reference with a note.
+- **Roles, not names:** other people show by title everywhere (your own name stays on your greeting and avatar). The **five Marking Officers** are Cabinet Secretary, Principal Secretary, Director General for Health, Director Human Resources and Secretary. Any Registry Officer can send for marking – extra logins: henry.kiprotich@health.go.ke (Main Registry) and rachael.nyagah@health.go.ke (HR Registry), same password.
+- **Stamp and signature:** *Stamp and sign* on any letter or document (also for the Marking Officer) opens the editor – stamp and signature move and resize separately; the signature is the signed-in officer's own, added automatically, and marking a letter signs it automatically. The stamp shows the office (REGISTRY, PRINCIPAL SECRETARY…). A letter cannot go for marking until it is stamped (upload screen and letter page both say so).
+- **Notifications:** cards carry their action button; a new notification plays a short sound and pops up; at sign-in a **Reminders** pop-up lists bring-ups due, overdue and coming up, letters to mark, and files an Action Officer has had for 3+ days ("You have had this file for 12 days"), with a sound on/off switch. The file page tells the Action Officer the same.
+- **Send outside** is only on HR Registry files; the Central (Main) Registry does not send outside.
+- **Filing** a marked letter can go into any open file, also one that is with an Action Officer (they are told).
+- **Cross-references** can be typed in, with a note (upload, register and letter details).
+- **Lifecycle:** files are Active, Semi-active or **Dormant** (closed or no activity for a year); filter and Reports show all three.
+- **Access requests** show the service-charter answer-by date (2 working days) and Overdue.
+- The Marking Officer's Overview no longer repeats an empty "Files to mark" panel.

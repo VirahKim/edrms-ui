@@ -21,10 +21,18 @@ const PEOPLE = {
   dalizu:   { id: 'dalizu',   name: 'John Dalizu',     title: 'Director General for Health',         role: 'marking',  registry: 'main', dept: 'Office of the Director General' },
   achieng:  { id: 'achieng',  name: 'Mercy Achieng',   title: 'Head, Supply Chain Management',       role: 'action',   registry: 'hr',   dept: 'Supply Chain Management Services' },
   otieno:   { id: 'otieno',   name: 'Brian Otieno',    title: 'Head, Public Communication',          role: 'action',   registry: 'main', dept: 'Public Communication' },
+  /* The five Marking Officers, shown by title: CS, PS, DG, Director HR and Secretary */
+  cs:       { id: 'cs',       name: 'Grace Mutua',     title: 'Cabinet Secretary',                   role: 'marking',  registry: 'main', dept: 'Office of the Cabinet Secretary' },
+  dhr:      { id: 'dhr',      name: 'Peter Njoroge',   title: 'Director, Human Resources',           role: 'marking',  registry: 'hr',   dept: 'Directorate of Human Resource Management' },
+  sec:      { id: 'sec',      name: 'Lucy Atieno',     title: 'Secretary',                           role: 'marking',  registry: 'main', dept: 'Office of the Secretary, Medical Services' },
 };
+/* Marking Officers in the order they are offered */
+const MARKING_ORDER = ['cs', 'vera', 'dalizu', 'dhr', 'sec'];
 const ACCOUNTS = { registry: 'john', marking: 'vera', action: 'virah' };
 /* Mockup sign-in: work email -> account. Every account uses the same demo password. */
-const LOGINS = { 'john.kimani@health.go.ke': 'registry', 'vera.wambui@health.go.ke': 'marking', 'virah.creates@health.go.ke': 'action' };
+const LOGINS = { 'john.kimani@health.go.ke': 'registry', 'vera.wambui@health.go.ke': 'marking', 'virah.creates@health.go.ke': 'action', 'henry.kiprotich@health.go.ke': 'registry', 'rachael.nyagah@health.go.ke': 'registry' };
+/* Which person each sign-in email is (several Registry Officers share the registry role) */
+const LOGIN_AS = { 'john.kimani@health.go.ke': 'john', 'vera.wambui@health.go.ke': 'vera', 'virah.creates@health.go.ke': 'virah', 'henry.kiprotich@health.go.ke': 'henry', 'rachael.nyagah@health.go.ke': 'rachael' };
 const DEMO_PASSWORD = 'Edrms@2026';
 const ROLE_LABEL = { registry: 'Registry Officer', marking: 'Marking Officer', action: 'Action Officer' };
 
