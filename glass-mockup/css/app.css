@@ -2806,3 +2806,8 @@ html { zoom: var(--z); }
 .ai-sugg-logo img { width: 21px; height: auto; display: block; }
 .ai-open-logo { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; vertical-align: -5px; }
 .ai-open-logo img { width: 13px; height: auto; display: block; }
+/* AI logo without the white disc */
+.ai-sugg-logo { background: none; box-shadow: none; width: auto; height: auto; border-radius: 0; }
+.ai-sugg-logo img { width: 30px; }
+.ai-open-logo { background: none; width: auto; height: auto; border-radius: 0; }
+.ai-open-logo img { width: 20px; }
