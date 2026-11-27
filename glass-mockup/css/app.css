@@ -2797,3 +2797,5 @@ html { zoom: var(--z); }
 @media (max-width: 640px) { .xt-inputs { grid-template-columns: 1fr; } }
 .notif-card .n-act ~ .n-view { display: none; } .notif-card .nfoot { flex-wrap: nowrap; } .notif-card .n-act .btn { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rem-f { justify-content: flex-end; }
+/* Upload: the upload area sits in the middle of the card */
+.up-body { margin-left: auto; margin-right: auto; width: 100%; }
