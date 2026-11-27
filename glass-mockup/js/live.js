@@ -369,7 +369,7 @@ function viewReports() {
 
 /* ---------- Overview extras: Open Q-BITS AI, notification channel ---------- */
 function decorateOverview(root) {
-  root.querySelectorAll('.ai-sugg').forEach(a => { if (!a.querySelector('.ai-open')) a.insertAdjacentHTML('beforeend', `<a class="ai-open" href="#/ai"><img class="ai-open-logo" src="assets/qbits-mark-on-mint.png" alt=""> Open Q-BITS AI ${ic('chevR')}</a>`); });
+  root.querySelectorAll('.ai-sugg').forEach(a => { if (!a.querySelector('.ai-open')) a.insertAdjacentHTML('beforeend', `<a class="ai-open" href="#/ai"><span class="ai-open-logo"><img src="assets/qbits-mark.png" alt=""></span> Open Q-BITS AI ${ic('chevR')}</a>`); });
   const emp = root.querySelector('.dash-main .empty');
   if (emp && role() !== 'registry' && !emp.querySelector('.ask-link')) emp.insertAdjacentHTML('beforeend', `<p class="muted" style="margin:6px 0 0">You see the files sent to you and the ones you have worked on. To see any other file, ask the Registry Officer for access.</p><a class="btn btn-light btn-sm ask-link" href="#/requestfiles">${ic('search')} Find a file and ask for access</a>`);
   root.querySelectorAll('.notif-card').forEach(n => { if (!n.querySelector('.ch')) (n.querySelector('.nfoot') || n).insertAdjacentHTML('beforeend', '<span class="ch">Email</span>'); });
