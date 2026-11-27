@@ -2799,3 +2799,5 @@ html { zoom: var(--z); }
 .rem-f { justify-content: flex-end; }
 /* Upload: the upload area sits in the middle of the card */
 .up-body { margin-left: auto; margin-right: auto; width: 100%; }
+.ai-sugg-logo { width: 28px; height: 28px; border-radius: 8px; flex: none; object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+.ai-open-logo { width: 18px; height: 18px; border-radius: 5px; vertical-align: -4px; }
