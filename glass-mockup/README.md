@@ -374,3 +374,6 @@ The letter page always shows the page at full width (it had collapsed to nothing
 - Returning a SAGAS letter tells the officer it was for, with the reason.
 - Approvals use short type names (Open a file, Close a file, Dispose of a file, HR document, Memo, Approve an upload); decisions notify as "Approved: …" or "Changes needed: … [role] said: …".
 - Sharing notifies "[role] shared “[title]” with you."; stamp errors read "You cannot continue without a stamp…".
+
+### Removed: Physical File Movement and the Landing Queue
+My Queue › File Movement now shows only the electronic register (no Physical File Movement Register tab), and the Overview no longer has a Physical Files tile. The Landing Queue tab, the Landing Queue button on Registries & Files and its AI suggestion are gone; old links to `#/queue?tab=landing` open My Queue. Paper files are still tracked on the Registry's **Physical Files** page in the side navigation.

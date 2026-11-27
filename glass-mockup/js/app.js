@@ -581,7 +581,6 @@ function tiles() {
     tile('send', 'Outward Register', 'Dispatch completed letters', '#/outward', S.files.flatMap(f => f.docs).filter(d => d.kind === 'response' && !S.dispatch[d.id]).length),
     tile('inboxIn', 'Inward Register', 'Receive and register mail', '#/inward', landingDocs().length),
     tile('enter', 'Files Requested', 'Letter & File Access', '#/access', S.access.filter(a => a.status === 'open').length),
-    tile('archive', 'Physical Files', 'File location', '#/physical', S.handovers.filter(h => h.status === 'SENT' || h.status === 'RETURNED').length),
     tile('calendar', 'Bring Up Diary', 'Files needed again', '#/bringup', bringupsDue().length),
   ];
   const mk = r === 'marking';
@@ -612,7 +611,7 @@ function insights() {
     const ret = dashFiles().filter(f => f.stage.startsWith('returned'));
     if (ret.length) add(`${plural(ret.length, 'file')} came back and ${ret.length === 1 ? 'is' : 'are'} waiting to be routed`, 'Urgent', 'Route files', '#/routing?stage=returned');
     const due = bringupsDue(); if (due.length) add(`Bring-up due today: ${getFile(due[0].fileId).name}`, 'Today', 'Open diary', '#/bringup');
-    if (landingDocs().length) add(`${plural(landingDocs().length, 'document')} in the Landing Queue need${landingDocs().length === 1 ? 's' : ''} validating`, 'Today', 'Validate', '#/queue?tab=landing');
+    if (false && landingDocs().length) add(`${plural(landingDocs().length, 'document')} in the Landing Queue need${landingDocs().length === 1 ? 's' : ''} validating`, 'Today', 'Validate', '#/queue?tab=landing');
     const acc = S.access.filter(a => a.status === 'open').length; if (acc) add(`${plural(acc, 'access request')} waiting for a decision`, 'Review', 'Review requests', '#/access');
     const req = S.requests.filter(x => x.status === 'open').length; if (req) add(`${plural(req, 'officer')} asked for a file`, 'Review', 'Send files', '#/queue?tab=approvals');
     const dr = S.files.filter(f => f.draft).length; if (dr) add(`${plural(dr, 'draft file')} not opened yet`, 'Info', 'See drafts', 'showDrafts');
@@ -773,7 +772,7 @@ function viewFiles(q) {
   </tbody></table></div>`);
   return pageHead({
     crumbs: [['Registries & Files']], title: F.show === 'drafts' ? 'Draft files' : 'Registries & Files', sub: `${plural(nFiles, 'File')} · ${plural(total, 'Document')} · ${REGISTRIES.length} Registries`,
-    right: `<a class="btn btn-glass" style="color:#fff" href="#/queue?tab=landing">${ic('inbox')} Landing Queue</a>${true ? `<a class="btn btn-white" href="#/upload">${ic('upload')} Upload</a><button class="btn btn-primary" data-act="newFile">${ic('folderPlus')} New File</button>` : ''}`,
+    right: `${true ? `<a class="btn btn-white" href="#/upload">${ic('upload')} Upload</a><button class="btn btn-primary" data-act="newFile">${ic('folderPlus')} New File</button>` : ''}`,
   }) + `
     <div class="files-toolbar glass">
       <label class="input-icon">${ic('search')}<input class="input" id="files-q" value="${esc(F.q)}" placeholder="Search any letter or file in all registries - subject, reference, folio, sender…" data-input="filesQuery"><span class="sr">Search files</span></label>
@@ -1168,7 +1167,6 @@ function queueHead(which, sub) {
   return pageHead({ crumbs: [['My Queue', QN[which] ? '#/queue' : ''], ...(QN[which] ? [[QN[which]]] : [])], title: 'My Queue', sub, right: '' }) +
     `<div class="queue-switch seg solid" role="tablist" aria-label="My Queue">${[['queue', '#/queue', 'My Queue', 'listChecks', myQueue().length + notesForMe().length], ['routing', '#/routing', 'File Movement', 'route', 0],
       ['approvals', '#/queue?tab=approvals', 'Pending Approvals', 'checkCircle', (typeof myApprovals === 'function' ? myApprovals().length : 0) + (role() === 'registry' ? S.requests.filter(x => x.status === 'open').length : 0)],
-      ...(role() === 'registry' ? [['landing', '#/queue?tab=landing', 'Landing Queue', 'inboxIn', landingDocs().length]] : []),
       ['subs', '#/queue?tab=subs', 'My Submissions', 'upload', 0]].map(([k, h, l, i, n]) => `<button role="tab" aria-selected="${which === k}" class="${which === k ? 'on' : ''}" data-href="${h}">${ic(i)} ${l}${n ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
 }
 /* File Movement: the movement register — one row each time a file leaves the Registry for an officer */
@@ -1191,11 +1189,11 @@ function movementRows() {
   return rows.filter(x => r === 'registry' || x.officer === me_ || x.passed === me_).sort((a, b) => b.m.date.localeCompare(a.m.date));
 }
 function viewRouting(q = {}) {
-  const reg = q.stage === 'physical' ? 'physical' : 'electronic';
+  const reg = 'electronic';   /* the physical register is no longer shown here */
   const rows = movementRows();
   const out = rows.filter(x => !x.ret).length;
   const who = id => { const p = person(id); return `${esc(p.name)}<small class="sub">${esc(p.title || '')}</small>`; };
-  const regTabs = `<div class="fm-head"><nav class="set-tabs" aria-label="File movement registers">${[['electronic', 'Electronic File Movement Register', 'route'], ['physical', 'Physical File Movement Register', 'archive']].map(([k, l, i]) => `<a class="set-tab ${reg === k ? 'on' : ''}" href="#/routing${k === 'physical' ? '?stage=physical' : ''}" ${reg === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>${reg === 'physical' && role() === 'registry' ? `<button class="btn btn-primary" data-act="handOver">${ic('send')} Hand over</button>` : ''}</div>`;
+  const regTabs = '', regTabsOld = `<div class="fm-head"><nav class="set-tabs" aria-label="File movement registers">${[['electronic', 'Electronic File Movement Register', 'route'], ['physical', 'Physical File Movement Register', 'archive']].map(([k, l, i]) => `<a class="set-tab ${reg === k ? 'on' : ''}" href="#/routing${k === 'physical' ? '?stage=physical' : ''}" ${reg === k ? 'aria-current="page"' : ''}>${ic(i)} ${l}</a>`).join('')}</nav>${reg === 'physical' && role() === 'registry' ? `<button class="btn btn-primary" data-act="handOver">${ic('send')} Hand over</button>` : ''}</div>`;
   if (reg === 'physical') return queueHead('routing', 'Physical files, and single documents taken out of them, and where they are. Each handover is acknowledged by the person who receives it, and each return is acknowledged by the Registry Officer.') + regTabs + physicalRegister(ui.phTab || 'open', k => `data-act="phTab" data-k="${k}"`);
   return queueHead('routing', role() === 'registry' ? 'The electronic file movement register: every time a whole file leaves the Registry for an Action Officer, who received it, and when it came back.' : 'Every file the Registry sent you, when you received it, and when it went back.') + regTabs + `
     <section class="panel glass">
@@ -1210,7 +1208,7 @@ function viewRouting(q = {}) {
     </section>`;
 }
 function viewQueue(q) {
-  const tab = q.tab === 'landing' && role() !== 'registry' ? 'act' : (q.tab || 'act');
+  const tab = q.tab === 'landing' ? 'act' : (q.tab || 'act');   /* the Landing Queue has been removed */
   const r = role();
   const reqs = r === 'registry' ? S.requests.filter(x => x.status === 'open') : S.requests.filter(x => x.by === meId());
   const subs = r === 'registry' ? S.files.flatMap(f => f.docs.filter(d => d.uploadedBy === meId() || (f.createdBy === meId() && d.kind !== 'response')).map(d => ({ f, d })))
