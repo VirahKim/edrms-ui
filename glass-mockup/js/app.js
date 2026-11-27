@@ -633,7 +633,7 @@ function aiCard() {
   const list = insights(), i = clamp(ui.aiIdx || 0, 0, list.length - 1), x = list[i];
   const tagTone = { Urgent: 'urgent', Today: 'today', Review: 'review', Info: 'info' }[x.tag];
   return `<section class="ai-sugg" aria-label="AI suggestions">
-    <div class="ai-sugg-h"><span class="ai-sugg-logo"><img src="assets/qbits-mark.png" alt="Q-BITS"></span><h2>AI Suggestions</h2><span class="pill">${plural(list.length, 'insight')}</span></div>
+    <div class="ai-sugg-h"><span class="ai-sugg-logo" role="img" aria-label="Q-BITS">${QB_MARK('ai-mark')}</span><h2>AI Suggestions</h2><span class="pill">${plural(list.length, 'insight')}</span></div>
     <p class="ai-sugg-sub">Recommendations based on your files</p>
     <div class="ai-sugg-item" aria-live="polite"><div class="t"><span>${esc(x.text)}</span><span class="tag ${tagTone}">${x.tag}</span></div>
       ${x.target.startsWith('#') ? `<a class="btn btn-white btn-sm" href="${x.target}">${x.cta} ${ic('chevR')}</a>` : `<button class="btn btn-white btn-sm" data-act="${x.target}">${x.cta} ${ic('chevR')}</button>`}</div>

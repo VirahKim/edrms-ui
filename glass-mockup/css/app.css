@@ -2811,3 +2811,7 @@ html { zoom: var(--z); }
 .ai-sugg-logo img { width: 30px; }
 .ai-open-logo { background: none; width: auto; height: auto; border-radius: 0; }
 .ai-open-logo img { width: 20px; }
+/* AI logo: the same white Q-BITS mark as the side-nav Q-BITS AI button */
+.ai-mark path, .ai-mark circle { stroke: #fff; }
+.ai-sugg-logo .ai-mark { width: 34px; height: 24px; display: block; }
+.ai-open-logo .ai-mark { width: 22px; height: 15px; display: block; }
