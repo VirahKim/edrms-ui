@@ -692,10 +692,9 @@ function reminderPop() {
   const el = document.createElement('section'); el.className = 'rem-pop glass'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Reminders');
   el.innerHTML = `<div class="rem-h">${ic('bell')}<h2>Reminders</h2><span class="n">${items.length}</span><button class="icon-btn" data-rem-close aria-label="Close reminders">${ic('x')}</button></div>
     <ul>${items.slice(0, 5).map(x => `<li class="rem-${x.tone}"><span class="ri">${ic(x.icon)}</span><span><b>${esc(x.head)}</b><small>${esc(x.text)}</small></span><a class="btn btn-light btn-xs" href="${x.href}" data-rem-go>Open</a></li>`).join('')}</ul>
-    <div class="rem-f"><label class="rem-snd"><input type="checkbox" data-rem-sound ${soundOn() ? 'checked' : ''}> Play a sound</label><button class="btn btn-light btn-xs" data-rem-close>Remind me later</button></div>`;
+    <div class="rem-f"><button class="btn btn-light btn-xs" data-rem-close>Remind me later</button></div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if (e.target.closest('[data-rem-close]') || e.target.closest('[data-rem-go]')) el.remove(); });
-  el.querySelector('[data-rem-sound]').addEventListener('change', e => { S.sound = e.target.checked; save(); });
   if (soundOn()) chime('reminder');
 }
 /* New notifications: sound and a short pop-up */
