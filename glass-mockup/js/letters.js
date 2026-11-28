@@ -541,8 +541,8 @@ function normMarks(m, at) {
 /* Who may still sign: the Registry only once; a Marking Officer adds their own signature once */
 function signState(marks) {
   const m = normMarks(marks), r = role();
+  if (r === 'marking') return m && m.msign ? { can: false, label: 'Signed' } : { can: true, label: 'Sign' };
   if (!m || !m.stamp.on) return { can: r === 'registry', label: 'Stamp and sign' };
-  if (r === 'marking') return m.msign ? { can: false, label: 'Signed' } : { can: true, label: 'Sign' };
   return { can: false, label: 'Stamped and signed' };
 }
 let stpN = 0;
@@ -583,7 +583,7 @@ let STP_T = null;
 function stampEditorT(T) {
   STP_T = T;
   const pages = T.pages, now = new Date().toISOString(), meP = person(meId());
-  const base = normMarks(T.marks), counter = !!(base && base.stamp.on && role() === 'marking');
+  const base = normMarks(T.marks) || { page: 0, stamp: { on: false }, sign: { on: false }, msign: null }, counter = role() === 'marking';
   if (counter) return countersignEditor(T, base);
   if (!ui.stp || ui.stp.key !== T.key) {
     const m = normMarks(T.marks), d = STP_DEFAULT();
@@ -662,7 +662,7 @@ Object.assign(ACT, {
   stpConfirm: () => { const st = ui.stp, T = STP_T;
     if (!st || !st.stamp.on) { const e = $('#stp-err'); if (e) e.hidden = false; return; }
     const m = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign, by: meId() }, locked: true }; ui.stp = null; STP_T = null; T.onConfirm(m); },
-  stpCounterOk: () => { const T = STP_T, st = ui.stp; const m = { ...normMarks(T.marks), msign: { ...st.msign, on: true, by: meId(), at: new Date().toISOString() } }; ui.stp = null; STP_T = null; T.onConfirm(m); },
+  stpCounterOk: () => { const T = STP_T, st = ui.stp; const m = { ...(normMarks(T.marks) || { page: 0, stamp: { on: false, x: 0, y: 0, w: 28 }, sign: { on: false, x: 0, y: 0, w: 28 } }), msign: { ...st.msign, on: true, by: meId(), at: new Date().toISOString() } }; ui.stp = null; STP_T = null; T.onConfirm(m); },
   stpView: el => stampedCopyModal(S.outside.items.find(y => y.id === el.dataset.id)),
   stpBack: el => extReadModal(S.outside.items.find(y => y.id === el.dataset.id)),
 });
@@ -743,10 +743,10 @@ function countersignEditor(T, base) {
     <div class="modal-b stp">
       <div class="stp-doc"><div class="stp-page" id="stp-page">${T.pages[base.page]}${stpMark('stamp', base.stamp)}${stpMark('sign', base.sign)}${stpMark('msign', { ...st.msign }, true).replace('stp-msign', 'stp-sign stp-msign')}</div></div>
       <aside class="stp-tools">
-        <p class="stp-hint">${ic('info')}<span>The Registry has already stamped and signed this letter. Drag your signature to where it goes and resize it from the corner.</span></p>
+        <p class="stp-hint">${ic('info')}<span>${base.stamp.on ? 'The Registry has already stamped and signed this letter. ' : ''}Drag your signature to where it goes and resize it from the corner.</span></p>
         <div class="stp-tool on"><span class="stp-tl">${ic('pen')} <span><b>Your signature</b><small>Added automatically · ${esc(meP.fullName || meP.name)}</small></span></span>
           <label class="stp-size"><span>Size</span><input type="range" min="16" max="60" step="1" value="${st.msign.w}" data-stp-size="msign" aria-label="Signature size"><output>${Math.round(st.msign.w)}%</output></label></div>
-        <p class="stp-locked">${ic('lock')} Registry stamp and signature: fixed</p>
+        ${base.stamp.on ? `<p class="stp-locked">${ic('lock')} Registry stamp and signature: fixed</p>` : ''}
       </aside>
     </div>
     <div class="modal-f"><button class="btn btn-light" data-act="stpCancel">Cancel</button><button class="btn btn-primary" data-act="stpCounterOk">${ic('check')} Confirm signature</button></div>`, 'xwide stamp-modal', '.stp-msign');
