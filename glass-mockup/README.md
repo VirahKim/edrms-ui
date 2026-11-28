@@ -380,3 +380,10 @@ My Queue › File Movement now shows only the electronic register (no Physical F
 
 ### Registry Overview
 Nine tiles: Upload Document, **Correspondence** (new, with the count of letters waiting), Registries and Files, My Tasks, File Movement, Outward Register, Inward Register, Files Requested, Bring Up Diary. The "File movements" panel under the tiles is removed (File Movement is still a tile and a My Queue tab).
+
+### Stamp and sign once; roles when sending; note when a cross-reference can't be found
+- **Upload:** *Stamp and sign* opens the document itself: place and resize your stamp and your signature separately, then confirm. The preview shows them where you put them, and the letter keeps them. A document must be stamped and signed before *Save and send to a Marking Officer*.
+- **Once only:** after the Registry stamps and signs a letter or document it is fixed – the button reads *Stamped and signed* and it cannot be signed again (also for SAGAS letters).
+- **Marking Officer:** *Sign* adds only their own signature, which they drag into place; the Registry stamp and signature stay fixed. Marking a letter adds their signature automatically if they have not signed.
+- **Send to a Marking Officer** lists offices only: Cabinet Secretary, Principal Secretary, Director General for Health, Director Human Resources, Secretary.
+- **Cross-references:** when a search finds nothing, *Add a note instead* opens a note (with the reference, if known); notes show as chips with a note icon.

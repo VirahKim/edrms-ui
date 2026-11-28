@@ -92,10 +92,10 @@ function viewLetterItem(q) {
   const [stLabel, stTone] = LETTER_STAGE[l.stage];
   const f = getFile(l.fileId), mk = l.marking;
   let act = '';
-  if (r === 'registry' && l.stage === 'registry') { const stamped = normMarks(letterDoc(l).marks)?.stamp.on;
+  if (r === 'registry' && l.stage === 'registry') { const stamped = normMarks(letterDoc(l).marks)?.stamp.on, ss = signState(letterDoc(l).marks);
     act = `<h3>Next: stamp it and send it to a Marking Officer</h3><p class="muted">Stamp the letter first. Then choose who marks it: they say what should be done and by whom, and send it back to you.</p>
       <p class="lt-stamp-state ${stamped ? 'ok' : ''}">${ic(stamped ? 'checkCircle' : 'stamp')} ${stamped ? 'Stamped' : 'Not stamped yet'}</p>
-      <div class="row-btns"><button class="btn ${stamped ? 'btn-light' : 'btn-primary'}" data-act="letterStamp" data-id="${l.id}">${ic('stamp')} ${stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn ${stamped ? 'btn-primary' : 'btn-outline'}" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button></div>`; }
+      <div class="row-btns">${ss.can ? `<button class="btn btn-primary" data-act="letterStamp" data-id="${l.id}">${ic('stamp')} Stamp and sign</button>` : ''}<button class="btn ${stamped ? 'btn-primary' : 'btn-outline'}" data-act="letterSendMark" data-id="${l.id}">${ic('send')} Send to Marking Officer</button></div>`; }
   else if (r === 'marking' && l.stage === 'marking') act = `<h3>Mark this ${letterKind(l).toLowerCase()}</h3><p class="muted">Say who should act on it and what they should do. It goes back to the Registry to be filed and sent on.</p>
       <div class="field"><label for="lm-to">Action Officer</label><select class="select" id="lm-to">${peopleOpts(p => p.role === 'action', 'virah')}</select></div>
       <div class="field"><label for="lm-ins">Instruction <span class="req">*</span></label><textarea class="textarea" id="lm-ins" placeholder="e.g. Head NVS – please prepare a response by Friday"></textarea></div>
@@ -235,7 +235,7 @@ Object.assign(ACT, {
       else toast(`Stamp each letter before you send it. Not stamped yet: ${bare.map(l => letterNo(l)).join(', ')}.`);
       return; }
     letterSendModal(ids, 'marking'); },
-  letterStamp: el => { const l = getLetter(el.dataset.id); letterDoc(l); stampEditorDoc(letterFile(l), l.doc, el.dataset.then === 'send' ? () => setTimeout(() => letterSendModal([l.id], 'marking'), 60) : null); },
+  letterStamp: el => { const l = getLetter(el.dataset.id); letterDoc(l); if (!signState(l.doc.marks).can) { toast('This letter is already stamped and signed. It cannot be signed again.'); return; } stampEditorDoc(letterFile(l), l.doc, el.dataset.then === 'send' ? () => setTimeout(() => letterSendModal([l.id], 'marking'), 60) : null); },
   letterSendConfirm: el => {
     const ids = el.dataset.ids.split(','), to = val('ls-to'), note = val('ls-note'), mk = el.dataset.to === 'marking';
     if (!to) { const e = $('#ls-err'); e.textContent = `Choose the ${mk ? 'Marking' : 'Action'} Officer.`; e.hidden = false; return; }
@@ -262,7 +262,7 @@ Object.assign(ACT, {
     l.marking = { to, ins, by: meId(), at: now() }; l.stage = 'marked'; l.movements.push({ date: now(), from: meId(), to: 'registry' });
     /* The Marking Officer's signature goes on automatically when they mark */
     const ld = letterDoc(l), mm = normMarks(ld.marks) || { page: 0, stamp: { on: false, x: 0, y: 0, w: 28 }, sign: { on: false } };
-    if (!mm.sign.on || mm.sign.by !== meId()) { mm.sign = { on: true, x: 8, y: 80, w: 30, by: meId(), at: now() }; ld.marks = mm; }
+    if (!mm.msign) { mm.msign = { on: true, x: 56, y: 84, w: 30, by: meId(), at: now() }; ld.marks = mm; }
     notifyL('registry', 'Marked', `${l.title} has been marked to the ${person(to).name}. File it, then send the file on.`, l);
     save(); go('#/queue'); toast('Marked, signed and sent back to the Registry.');
   },
@@ -298,7 +298,7 @@ function letterSendModal(ids, to) {
       ${mk ? '' : `<div class="instruction" style="margin:0">${ic('sticky')}<div><b>Marked to ${esc(person(l.marking.to).name)}</b> – ${esc(l.marking.ins)}</div></div>
         <p class="form-note">${ic('folder')} The whole file goes: ${f ? `<b>${esc(f.name)}</b> (${esc(f.ref)}), with this letter as folio ${esc(l.folio)}` : 'the file this letter is in'}.</p>`}
       <div class="field"><label for="ls-to">${mk ? 'Marking Officer' : 'Action Officer'} <span class="req">*</span></label>
-        <select class="select" id="ls-to"><option value="">Choose who to send it to…</option>${peopleOpts(p => p.role === (mk ? 'marking' : 'action'), mk ? '' : l.marking.to)}</select>
+        <select class="select" id="ls-to"><option value="">Choose the office…</option>${peopleOpts(p => p.role === (mk ? 'marking' : 'action'), mk ? '' : l.marking.to)}</select>
         <span class="hint">${mk ? 'They mark it and send it back to the Registry to be filed.' : 'Usually the officer it was marked to. Choose another officer if it should go elsewhere.'}</span></div>
       <div class="field"><label for="ls-note">${mk ? 'Note' : 'Minute'} <span class="muted" style="font-weight:500">(optional)</span></label><textarea class="textarea" id="ls-note" placeholder="${mk ? 'e.g. Urgent – reply needed by Friday' : 'e.g. Follow the marking instruction'}"></textarea></div>
       <p class="form-err" id="ls-err" role="alert" hidden></p>
@@ -457,7 +457,7 @@ function extReadModal(x, showErr) {
       ${x.stamped ? `<div class="ext-stamped">${x.marks ? stampedThumb(x) : ic('stamp')}<span><b>Stamped${x.marks?.sign?.on ? ' and signed' : ''} received</b><small>${fmtDT(x.stamped)}${x.marks ? ` · page ${normMarks(x.marks).page + 1} of ${extPages(x).length}` : ''}</small></span>${x.marks ? `<button class="btn btn-light btn-xs" data-act="stpView" data-id="${x.id}">${ic('eye')} View stamped copy</button>` : ''}</div>` : ''}
       ${role() === 'registry' && x.status === 'new' ? `<p class="form-err" id="ext-err" role="alert" ${showErr ? '' : 'hidden'}>You cannot continue without a stamp. Stamp the letter, then receive it.</p>` : ''}
     </div>
-    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button><button class="btn ${x.stamped ? 'btn-light' : 'btn-outline'}" data-act="extStamp" data-id="${x.id}">${ic('stamp')} ${x.stamped ? 'Edit stamp' : 'Stamp and sign'}</button><button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
+    <div class="modal-f"><button class="btn btn-light" data-act="close">Close</button>${role() !== 'registry' ? (x.letterId && getLetter(x.letterId) ? `<button class="btn btn-primary" data-act="notifGo" data-to="${letterOpen(getLetter(x.letterId))}">${ic('mail')} Open in EDRMS</button>` : `<span class="muted" style="align-self:center">${x.status === 'registered' ? 'Registered by the Registry.' : 'The Registry registers it and routes it to you.'}</span>`) : x.status === 'new' ? `<button class="btn btn-light" data-act="extReturn" data-id="${x.id}">${ic('undo')} Return</button>${x.stamped ? '' : `<button class="btn btn-outline" data-act="extStamp" data-id="${x.id}">${ic('stamp')} Stamp and sign</button>`}<button class="btn btn-primary" data-act="extAccept" data-id="${x.id}">${ic('check')} Receive</button>` : ['received', 'toregister'].includes(x.status) ? `<button class="btn btn-primary" data-act="extRegister" data-id="${x.id}">${ic('archive')} Register</button>` : ''}</div>`);
 }
 Object.assign(ACT, {
   extTab: (el, e) => { e?.preventDefault(); ui.extTab = el.dataset.k; render(); },
@@ -534,7 +534,16 @@ function normMarks(m, at) {
   if (!m) return null;
   const by = m.by || 'john';
   const it = (o, k) => o ? { ...o, by: o.by || by, at: o.at || at || new Date().toISOString(), ...(k === 'stamp' ? { label: o.label || stampLabelFor(o.by || by) } : {}) } : { on: false, x: 0, y: 0, w: 28 };
-  return { page: m.page || 0, stamp: it(m.stamp, 'stamp'), sign: it(m.sign, 'sign') };
+  return { page: m.page || 0, stamp: it(m.stamp, 'stamp'), sign: it(m.sign, 'sign'), msign: m.msign && m.msign.on ? { ...m.msign } : null,
+    /* once the Registry stamps and signs, it is fixed: it cannot be stamped or signed again */
+    locked: m.locked !== false };
+}
+/* Who may still sign: the Registry only once; a Marking Officer adds their own signature once */
+function signState(marks) {
+  const m = normMarks(marks), r = role();
+  if (!m || !m.stamp.on) return { can: r === 'registry', label: 'Stamp and sign' };
+  if (r === 'marking') return m.msign ? { can: false, label: 'Signed' } : { can: true, label: 'Sign' };
+  return { can: false, label: 'Stamped and signed' };
 }
 let stpN = 0;
 function stampSVG(date, label) {
@@ -565,7 +574,7 @@ function marksOverlay(m, nPages, onlyPage) {
   if (onlyPage !== undefined && onlyPage !== m.page) return '';
   const yOf = nPages > 1 && onlyPage === undefined ? y => (m.page + y / 100) / nPages * 100 : null;
   const w = it => yOf ? { ...it, w: it.w, x: it.x } : it;
-  return `<div class="stp-layer" aria-hidden="true">${stpMark('stamp', w(m.stamp), false, yOf)}${stpMark('sign', w(m.sign), false, yOf)}</div>`;
+  return `<div class="stp-layer" aria-hidden="true">${stpMark('stamp', w(m.stamp), false, yOf)}${stpMark('sign', w(m.sign), false, yOf)}${m.msign ? stpMark('sign', m.msign, false, yOf) : ''}</div>`;
 }
 function stampedThumb(x) { return `<span class="stp-thumb"><img src="${extPages(x)[normMarks(x.marks).page]}" alt="">${marksOverlay(x.marks, 1, normMarks(x.marks).page)}</span>`; }
 
@@ -574,6 +583,8 @@ let STP_T = null;
 function stampEditorT(T) {
   STP_T = T;
   const pages = T.pages, now = new Date().toISOString(), meP = person(meId());
+  const base = normMarks(T.marks), counter = !!(base && base.stamp.on && role() === 'marking');
+  if (counter) return countersignEditor(T, base);
   if (!ui.stp || ui.stp.key !== T.key) {
     const m = normMarks(T.marks), d = STP_DEFAULT();
     ui.stp = { key: T.key, page: m ? m.page : 0, sel: 'stamp',
@@ -650,7 +661,8 @@ Object.assign(ACT, {
   stpCancel: () => { const T = STP_T; ui.stp = null; STP_T = null; T ? T.onCancel() : closeModal(); },
   stpConfirm: () => { const st = ui.stp, T = STP_T;
     if (!st || !st.stamp.on) { const e = $('#stp-err'); if (e) e.hidden = false; return; }
-    const m = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign, by: meId() } }; ui.stp = null; STP_T = null; T.onConfirm(m); },
+    const m = { page: st.page, stamp: { ...st.stamp }, sign: { ...st.sign, by: meId() }, locked: true }; ui.stp = null; STP_T = null; T.onConfirm(m); },
+  stpCounterOk: () => { const T = STP_T, st = ui.stp; const m = { ...normMarks(T.marks), msign: { ...st.msign, on: true, by: meId(), at: new Date().toISOString() } }; ui.stp = null; STP_T = null; T.onConfirm(m); },
   stpView: el => stampedCopyModal(S.outside.items.find(y => y.id === el.dataset.id)),
   stpBack: el => extReadModal(S.outside.items.find(y => y.id === el.dataset.id)),
 });
@@ -721,3 +733,32 @@ render = function () {
   if (parts[0] === 'file' && role() === 'action') { const h = heldFiles().find(x => x.f.id === parts[1]); const bar = document.querySelector('.action-bar');
     if (h && bar && !document.querySelector('.held-note')) bar.insertAdjacentHTML('beforebegin', `<p class="held-note" role="status">${ic('clock')} You have had this file for <b>${plural(h.days, 'day')}</b> (since ${fmtDay(h.since)}). Please act on it or send it back to the Registry.</p>`); }
 };
+
+/* The Marking Officer adds only their own signature; the Registry stamp and signature stay where they are */
+function countersignEditor(T, base) {
+  STP_T = T;
+  if (!ui.stp || ui.stp.key !== T.key + ':c') ui.stp = { key: T.key + ':c', page: base.page, msign: { on: true, x: 56, y: 84, w: 30, by: meId(), at: new Date().toISOString() } };
+  const st = ui.stp, meP = person(meId());
+  modal(`${mHead('pen', 'Sign', T.sub)}
+    <div class="modal-b stp">
+      <div class="stp-doc"><div class="stp-page" id="stp-page">${T.pages[base.page]}${stpMark('stamp', base.stamp)}${stpMark('sign', base.sign)}${stpMark('msign', { ...st.msign }, true).replace('stp-msign', 'stp-sign stp-msign')}</div></div>
+      <aside class="stp-tools">
+        <p class="stp-hint">${ic('info')}<span>The Registry has already stamped and signed this letter. Drag your signature to where it goes and resize it from the corner.</span></p>
+        <div class="stp-tool on"><span class="stp-tl">${ic('pen')} <span><b>Your signature</b><small>Added automatically · ${esc(meP.fullName || meP.name)}</small></span></span>
+          <label class="stp-size"><span>Size</span><input type="range" min="16" max="60" step="1" value="${st.msign.w}" data-stp-size="msign" aria-label="Signature size"><output>${Math.round(st.msign.w)}%</output></label></div>
+        <p class="stp-locked">${ic('lock')} Registry stamp and signature: fixed</p>
+      </aside>
+    </div>
+    <div class="modal-f"><button class="btn btn-light" data-act="stpCancel">Cancel</button><button class="btn btn-primary" data-act="stpCounterOk">${ic('check')} Confirm signature</button></div>`, 'xwide stamp-modal', '.stp-msign');
+  const pg = $('#stp-page'), el = pg.querySelector('.stp-msign'), it = st.msign;
+  const apply = () => { el.style.left = it.x + '%'; el.style.top = it.y + '%'; el.style.width = it.w + '%'; const rr = $('[data-stp-size="msign"]'); rr.value = it.w; rr.nextElementSibling.textContent = Math.round(it.w) + '%'; };
+  const clamp = () => { const h = el.offsetHeight / pg.offsetHeight * 100; it.w = Math.max(10, Math.min(65, it.w)); it.x = Math.max(0, Math.min(100 - it.w, it.x)); it.y = Math.max(0, Math.min(100 - h, it.y)); };
+  el.classList.add('sel');
+  el.addEventListener('pointerdown', e => { e.preventDefault(); const box = pg.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, o = { ...it }, rs = e.target.classList.contains('stp-h');
+    el.setPointerCapture(e.pointerId); el.classList.add('moving');
+    const mv = ev => { const dx = (ev.clientX - sx) / box.width * 100, dy = (ev.clientY - sy) / box.height * 100; if (rs) it.w = o.w + dx; else { it.x = o.x + dx; it.y = o.y + dy; } clamp(); apply(); };
+    const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.classList.remove('moving'); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); });
+  el.addEventListener('keydown', e => { const s2 = e.shiftKey ? 5 : 1, m = { ArrowLeft: () => it.x -= s2, ArrowRight: () => it.x += s2, ArrowUp: () => it.y -= s2, ArrowDown: () => it.y += s2, '+': () => it.w += s2, '=': () => it.w += s2, '-': () => it.w -= s2 }[e.key]; if (m) { e.preventDefault(); m(); clamp(); apply(); } });
+  $('[data-stp-size="msign"]').addEventListener('input', e => { it.w = +e.target.value; clamp(); apply(); });
+}

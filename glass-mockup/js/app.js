@@ -823,7 +823,7 @@ function folioBar(f, d) {
   return `<div class="folio-bar glass${toMe ? ' to-me' : ''}"><span class="fn">${esc(d.folio)}</span><b title="${esc(d.title)}">${esc(d.title)}</b>${toMe ? `<span class="chip to-me-chip">${ic('send')} Received</span>` : ''}<span class="chip ${KIND[d.kind][1]}">${KIND[d.kind][0]}</span><span class="muted" style="font-size:13px">${fmtDay(d.date)}</span>
     <div class="tools">
       <a class="btn btn-light btn-xs" href="#/file/${f.id}/letter/${d.id}">${ic('info')} View letter details</a>
-      ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic('stamp')} ${d.marks ? 'Edit stamp' : 'Stamp and sign'}</button>` : ''}
+      ${can ? `<button class="btn btn-white btn-xs" data-act="addComment" data-f="${f.id}" data-d="${d.id}">${ic('pen')} Add comment</button><button class="btn btn-white btn-xs" data-act="addSticky" data-f="${f.id}" data-d="${d.id}">${ic('sticky')} Sticky note</button><button class="btn btn-light btn-xs" data-act="sign" data-f="${f.id}" data-d="${d.id}">${ic(signState(d.marks).can ? 'stamp' : 'checkCircle')} ${signState(d.marks).label}</button>` : ''}
       ${canAct ? `<button class="btn btn-primary btn-xs" data-act="respond" data-id="${f.id}" data-folio="${esc(d.folio)}">${ic('reply')} Respond</button>` : ''}
       ${d.status === 'landing' && role() === 'registry' ? `<button class="btn btn-primary btn-xs" data-act="validate" data-file="${f.id}" data-doc="${d.id}">${ic('check')} Validate</button>` : ''}
     </div></div>`;
@@ -946,7 +946,7 @@ function viewLetter(f, d) {
     body = `<h3 class="lt-h">This letter refers to</h3>${refs.length || typed.length ? `<div class="results">${refs.map(link).join('')}${typed.map((x, i) => `<div class="xt-row">${ic('swap')}<span><b class="mono">${esc(x.ref)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>${reg ? `<button class="icon-btn" data-act="rmXrefTypedDoc" data-i="${i}" aria-label="Remove cross-reference ${esc(x.ref)}">${ic('x')}</button>` : ''}</div>`).join('')}</div>` : '<p class="muted">No cross-references.</p>'}
     <h3 class="lt-h">Referred to by</h3>${by.length ? `<div class="results">${by.map(link).join('')}</div>` : '<p class="muted">No other letter refers to this one.</p>'}
     ${reg ? `<div class="lt-add"><div class="field" style="flex:1"><label for="lx-doc">Add a cross-reference</label><select class="select" id="lx-doc"><option value="">Choose a letter…</option>${pool.map(({ ff, x }) => `<option value="${x.id}">${esc(ff.name)} · F.${esc(x.folio)} – ${esc(x.title)}</option>`).join('')}</select></div><button class="btn btn-primary" data-act="addXrefDoc">${ic('plus')} Add</button></div>
-      <div class="lt-add xt-add"><div class="field"><label for="lx-typed">Or type a reference</label><input class="input" id="lx-typed" placeholder="e.g. MOH/ADM/1/23"></div><div class="field" style="flex:1"><label for="lx-tnote">Note</label><input class="input" id="lx-tnote" placeholder="e.g. Earlier request on the same matter"></div><button class="btn btn-primary" data-act="addXrefTypedDoc">${ic('plus')} Add</button></div>` : ''}
+      <div class="lt-add xt-add"><div class="field" style="flex:1"><label for="lx-tnote">Can't find the document? Add a note instead</label><input class="input" id="lx-tnote" placeholder="e.g. Refers to our letter of 3 March on cold chain boxes"></div><div class="field"><label for="lx-typed">Reference, if known</label><input class="input" id="lx-typed" placeholder="e.g. MOH/ADM/1/23"></div><button class="btn btn-primary" data-act="addXrefTypedDoc">${ic('plus')} Add</button></div>` : ''}
     <h3 class="lt-h">Enclosures</h3><p class="hint" style="margin:0 0 8px">Items that came with this letter, such as a bound report or a CD.</p>
     ${(d.enclosures || []).length ? `<ul class="lt-list">${d.enclosures.map(e => `<li><b>${esc(e.description)}</b>${e.quantity ? ` · ${esc(e.quantity)}` : ''}${e.kept_at ? ` · kept at ${esc(e.kept_at)}` : ''}</li>`).join('')}</ul>` : '<p class="muted">None recorded.</p>'}
     ${reg ? `<div class="lt-add"><input class="input" id="lx-enc" placeholder="Title and number of copies, e.g. Annual Report – 3 copies" aria-label="Enclosure"><button class="btn btn-primary" data-act="addEncDoc">${ic('plus')} Add</button></div>` : ''}
@@ -1691,17 +1691,19 @@ function viewUpload(q) {
     const tip = t => `<span class="info-tip" tabindex="0" role="note" title="${esc(t)}" aria-label="${esc(t)}">${ic('info')}</span>`;
     const xq = (u.xq || '').trim().toLowerCase();
     const xHits = xq ? allDocs.filter(({ ff, d }) => [d.title, d.from || '', d.senderRef || '', d.edms, ff.name, ff.ref, 'f.' + d.folio, 'folio ' + d.folio].join(' ').toLowerCase().includes(xq)).slice(0, 6) : [];
-    const pageCtx = { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: m._signed ? me().name : 'Authorised Officer', title: m._signed ? me().title : 'For: ' + (m.source_name || '—') }, signed: !!m._signed, org: m.source_name || 'Sender' };
+    const pageCtx = { ref: m.sender_ref_no, date: (m.sender_ref_date || m.date_received) + 'T09:00', to: 'The Principal Secretary, State Department for Medical Services', subject: (m.subject || '').toUpperCase(), body: LOREM.slice(0, 3), signer: { name: 'Authorised Officer', title: 'For: ' + (m.source_name || '—') }, signed: false, org: m.source_name || 'Sender' };
+    const upPageHTML = isSampleDoc(x.name) ? `<img src="${extPages({ files: [x.name] })[0]}" alt="Preview of ${esc(x.name)}">` : x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>${f ? `Folio ${esc(String(+nextFolio(f) + u.idx))}` : 'New letter'}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', pageCtx)}</div></div>`;
+    ui.upPage = upPageHTML;
     step = `<div class="det det2">
       <aside class="det-prev">
-        <div class="det-prev-h"><b>The document</b><button class="btn btn-outline btn-sm" data-act="upSignDoc" aria-pressed="${!!m._signed}">${ic('stamp')} ${m._signed ? 'Stamped and signed · Undo' : 'Stamp document'}</button></div>
+        <div class="det-prev-h"><b>The document</b>${m._signed ? `<span class="up-stamped">${ic('checkCircle')} Stamped and signed</span>` : `<button class="btn btn-primary btn-sm" data-act="upSignDoc">${ic('stamp')} Stamp and sign</button>`}</div>
         <div class="viewer${u.full ? ' is-full' : ''}">
           <div class="viewer-bar"><span class="vb-name">${esc(x.name)} · ${plural(m._pages, 'page')}</span>
             <button class="vb-btn" data-act="upAnnot" aria-label="Annotate" title="Annotate">${ic('pen')}</button>
             <button class="vb-btn" data-act="upDl" aria-label="Download" title="Download">${ic('download')}</button>
             <button class="vb-btn" data-act="print" aria-label="Print" title="Print">${ic('printer')}</button>
             <button class="vb-btn vb-on" data-act="upFull" aria-label="${u.full ? 'Exit full screen' : 'Full screen'}" title="${u.full ? 'Exit full screen' : 'Full screen'}">${ic(u.full ? 'x' : 'expand')}</button></div>
-          <div class="viewer-page">${x.url ? `<img src="${x.url}" alt="Preview of ${esc(x.name)}">` : `<div class="page"><div class="folio-box"><b>${f ? `Folio ${esc(String(+nextFolio(f) + u.idx))}` : 'New letter'}</b>${esc(m._ext)}</div><div class="content">${tplHTML('letter', pageCtx)}</div></div>`}</div>
+          <div class="viewer-page up-stp">${upPageHTML}${m._marks ? marksOverlay(m._marks, 1, 0) : ''}</div>
         </div>
         <div class="ai-box"><b>${ic('sparkles')} AI summary</b><p>${esc(m._summary)}</p><small>OCR confidence ${m._ocr}% · ${f ? `going into ${esc(f.name)}` : 'saved as a new letter'}</small></div>
       </aside>
@@ -1720,15 +1722,15 @@ function viewUpload(q) {
         <div class="field"><span class="label">Cross-references ${tip('Link this document to related letters in any file.')} ${ai('cross_refs')}</span>
           ${m.cross_refs.length ? `<div class="x-chips">${m.cross_refs.map(id => { const r = docById(id); return r ? `<span class="x-chip">${esc(r.f.name)} · F.${esc(r.d.folio)} ${esc(r.d.title)}<button data-act="rmXref" data-id="${id}" aria-label="Remove cross-reference">${ic('x')}</button></span>` : ''; }).join('')}</div>` : ''}
           <div class="xr-search"><label class="input-icon">${ic('search')}<input class="input" id="xr-q" value="${esc(u.xq || '')}" placeholder="Search by subject, sender, reference no., file or folio…" data-input="xrQuery" autocomplete="off"><span class="sr">Search documents to cross-reference</span></label>
-            ${xq ? `<div class="xr-list" role="listbox">${xHits.map(({ ff, d }) => `<button type="button" role="option" data-act="addXrefId" data-id="${d.id}">${ic('file')}<span><b>${esc(d.title)}</b><small>${esc(ff.name)} · Folio ${esc(d.folio)}${d.from ? ' · ' + esc(d.from) : ''}</small></span></button>`).join('') || '<p class="muted">No documents match.</p>'}</div>` : ''}</div></div>
-        <div class="xt-up"><span class="label">Or type a cross-reference, with a note</span>
-          ${(m._xtyped || []).length ? `<div class="x-chips">${m._xtyped.map((x, i) => `<span class="x-chip">${esc(x.ref)}${x.note ? ` – ${esc(x.note)}` : ''}<button data-act="rmXrefTyped" data-i="${i}" aria-label="Remove cross-reference ${esc(x.ref)}">${ic('x')}</button></span>`).join('')}</div>` : ''}
-          <div class="enc-row xt-inputs"><input class="input" id="xt-ref" placeholder="Reference, e.g. MOH/ADM/1/23" aria-label="Cross-reference"><input class="input" id="xt-note" placeholder="Note, e.g. Earlier request on the same matter" aria-label="Note on the cross-reference"><button class="btn btn-outline btn-sm" data-act="addXrefTyped">${ic('plus')} Add</button></div></div>
+            ${xq ? `<div class="xr-list" role="listbox">${xHits.map(({ ff, d }) => `<button type="button" role="option" data-act="addXrefId" data-id="${d.id}">${ic('file')}<span><b>${esc(d.title)}</b><small>${esc(ff.name)} · Folio ${esc(d.folio)}${d.from ? ' · ' + esc(d.from) : ''}</small></span></button>`).join('') || `<div class="xr-none"><p class="muted">No document matches “${esc(u.xq)}”.</p><button type="button" class="btn btn-outline btn-sm" data-act="xrAsNote">${ic('sticky')} Add a note instead</button></div>`}</div>` : ''}</div></div>
+        <div class="xt-up" id="xt-box"><span class="label">Can't find the document? Add a note instead</span>
+          ${(m._xtyped || []).length ? `<div class="x-chips">${m._xtyped.map((x, i) => `<span class="x-chip">${ic('sticky')} ${x.ref && x.ref !== 'Note' ? esc(x.ref) + (x.note ? ' – ' : '') : ''}${esc(x.note || '')}<button data-act="rmXrefTyped" data-i="${i}" aria-label="Remove cross-reference ${esc(x.ref)}">${ic('x')}</button></span>`).join('')}</div>` : ''}
+          <div class="enc-row xt-inputs"><input class="input" id="xt-note" placeholder="Note, e.g. Refers to our letter of 3 March on cold chain boxes" aria-label="Cross-reference note" value="${esc(u.xtNote || '')}"><input class="input" id="xt-ref" placeholder="Reference, if known" aria-label="Reference, if known" value="${esc(u.xtRef || '')}"><button class="btn btn-outline btn-sm" data-act="addXrefTyped">${ic('plus')} Add note</button></div></div>
         <div class="field"><span class="label">Enclosures ${tip('Items that came with the letter, such as a bound report or a CD.')}</span>
           ${m.enclosures.map((e, i) => `<div class="enc-row"><input class="input" data-enc="${i}:description" value="${esc(e.description)}" placeholder="Description" aria-label="Enclosure ${i + 1} description"><input class="input" data-enc="${i}:quantity" value="${esc(e.quantity)}" placeholder="Quantity" aria-label="Enclosure ${i + 1} quantity"><input class="input" data-enc="${i}:kept_at" value="${esc(e.kept_at)}" placeholder="Kept at" aria-label="Enclosure ${i + 1} kept at"><button class="btn btn-light btn-sm btn-icon" data-act="rmEnc" data-i="${i}" aria-label="Remove enclosure">${ic('trash')}</button></div>`).join('')}
           <button class="btn btn-outline btn-sm" style="justify-self:start" data-act="addEnc">${ic('plus')} Add an enclosure</button></div>
         <div class="field"><label for="um-confidentiality_level">Confidentiality ${tip('Who may open it. Confidential and Secret can be limited to named people.')} ${ai('confidentiality_level')}</label><select class="select ${cls('confidentiality_level')}" id="um-confidentiality_level" data-change="umConf">${CONF_LEVELS.map(c => `<option ${m.confidentiality_level === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
-        ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.name)}</label>`).join('')}</div></div>` : ''}
+        ${restrictedUi ? `<div class="field"><span class="label">Restricted to <span class="muted" style="font-weight:500">(optional – only these people can open it)</span></span><div class="restrict">${Object.values(PEOPLE).map(pp => `<label><input type="checkbox" data-change="umRestrict" value="${pp.id}" ${m.restricted.includes(pp.id) ? 'checked' : ''}> ${esc(pp.title || pp.name)}</label>`).join('')}</div></div>` : ''}
         <fieldset class="reg-box"><legend>Registry details</legend>
           <div class="three"><div class="field"><label for="um-date_received">Date Received <span class="req">*</span></label><input class="input" type="date" id="um-date_received" data-um="date_received" value="${esc(m.date_received)}"></div>
             <div class="field"><label for="um-serial_no">S/NO ${tip('Inward Register number. Leave blank and it is given the next number.')}</label><input class="input" id="um-serial_no" data-um="serial_no" inputmode="numeric" value="${esc(m.serial_no)}" placeholder="Auto"></div>
@@ -2645,7 +2647,7 @@ const ACT = {
     notify('registry', `Marked to ${person(to).name}. Returned from marking.`, 'vera', f.id);
     save(); closeModal(); render(); toast('Marked and returned to the Registry');
   },
-  sign: el => { const f = getFile(el.dataset.f), d = getDoc(f, el.dataset.d); stampEditorDoc(f, d); },
+  sign: el => { const f = getFile(el.dataset.f), d = getDoc(f, el.dataset.d); if (!signState(d.marks).can) { toast(role() === 'marking' ? 'You have already signed this document.' : 'This document is already stamped and signed. It cannot be signed again.'); return; } stampEditorDoc(f, d); },
   validate: el => { const f = getFile(el.dataset.file), d = getDoc(f, el.dataset.doc); d.status = 'filed'; f.updated = now(); save(); render(); toast(`Folio ${d.folio} added to ${f.name}`); },
 
   /* comments */
@@ -2749,7 +2751,11 @@ const ACT = {
     if (!u.files.length) { u.err = u.tab === 'email' ? 'Pick at least one email to import.' : 'Add a document to upload.'; render(); return; }
     u.err = ''; runAI();
   },
-  upSignDoc: () => { const m = ui.upload.metas[ui.upload.idx]; m._signed = !m._signed; if (m._signed && /stamped/.test(ui.upload.err || '')) ui.upload.err = ''; render(); toast(m._signed ? `Stamped and signed by ${me().name}, ${me().title}` : 'Stamp and signature removed'); },
+  upSignDoc: () => { const u = ui.upload, m = u.metas[u.idx]; if (m._signed) { toast('This document is already stamped and signed. It cannot be signed again.'); return; }
+    const pg = (ui.upPage || '').replace('<div class="page">', '<div class="page stp-genpage">');
+    stampEditorT({ key: 'u:' + u.idx + ':' + (m._name || ''), sub: esc(m.subject || u.files[u.idx]?.name || 'New letter'), pages: [pg], marks: null,
+      onConfirm: mk => { m._marks = mk; m._signed = true; if (/stamped/.test(u.err || '')) u.err = ''; closeModal(); render(); toast(`Stamped and signed by ${me().name}, ${me().title}.`); },
+      onCancel: () => closeModal() }); },
   upFull: () => { ui.upload.full = !ui.upload.full; render(); },
   upAnnot: () => toast('Annotate opens once the document is saved into the file'),
   upDl: () => toast(`Downloading ${ui.upload.files[ui.upload.idx]?.name || 'document'}`),
@@ -2759,9 +2765,10 @@ const ACT = {
   upDoc: el => { const u = ui.upload; u.idx = clamp(u.idx + +el.dataset.d, 0, u.files.length - 1); u.err = ''; render(); },
   addEnc: () => { ui.upload.metas[ui.upload.idx].enclosures.push({ description: '', quantity: '', kept_at: '' }); render(); $$('[data-enc]').slice(-3)[0]?.focus(); },
   rmEnc: el => { ui.upload.metas[ui.upload.idx].enclosures.splice(+el.dataset.i, 1); render(); },
-  addXrefTyped: () => { const m = ui.upload.metas[ui.upload.idx], ref = val('xt-ref').trim(); if (!ref) { toast('Type the reference first.'); $('#xt-ref')?.focus(); return; } (m._xtyped = m._xtyped || []).push({ ref, note: val('xt-note').trim() }); render(); },
+  addXrefTyped: () => { const u = ui.upload, m = u.metas[u.idx], note = val('xt-note').trim(), ref = val('xt-ref').trim(); if (!note && !ref) { toast('Write the note first.'); $('#xt-note')?.focus(); return; } (m._xtyped = m._xtyped || []).push({ ref: ref || 'Note', note }); u.xtNote = ''; u.xtRef = ''; render(); toast('Cross-reference note added.'); },
+  xrAsNote: () => { const u = ui.upload; u.xtRef = (u.xq || '').trim(); u.xq = ''; render(); setTimeout(() => { $('#xt-note')?.focus(); $('#xt-box')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 30); },
   rmXrefTyped: el => { const m = ui.upload.metas[ui.upload.idx]; m._xtyped.splice(+el.dataset.i, 1); render(); },
-  addXrefTypedDoc: () => { const { d } = curLetter(); const ref = val('lx-typed').trim(); if (!ref) { toast('Type the reference first.'); $('#lx-typed')?.focus(); return; } (d.xrefsTyped = d.xrefsTyped || []).push({ ref, note: val('lx-tnote').trim() }); save(); render(); toast('Cross-reference added.'); },
+  addXrefTypedDoc: () => { const { d } = curLetter(); const ref = val('lx-typed').trim(), note = val('lx-tnote').trim(); if (!ref && !note) { toast('Write the note first.'); $('#lx-tnote')?.focus(); return; } (d.xrefsTyped = d.xrefsTyped || []).push({ ref: ref || 'Note', note }); save(); render(); toast('Cross-reference added.'); },
   rmXrefTypedDoc: el => { const { d } = curLetter(); d.xrefsTyped.splice(+el.dataset.i, 1); save(); render(); },
   rmXref: el => { const m = ui.upload.metas[ui.upload.idx]; m.cross_refs = m.cross_refs.filter(x => x !== el.dataset.id); m._touched.cross_refs = true; render(); },
   upDash: () => { closeModal(); go('#/'); },
@@ -2778,13 +2785,13 @@ const ACT = {
     if (!f) {   /* version 2 journey: a new letter, not in a file yet */
       let serial = Math.max(0, ...(S.letters || []).map(l => l.serial), S.files.flatMap(ff => ff.docs).filter(d => d.kind !== 'response').length);
       const send = el && el.dataset && el.dataset.send === '1';
-      if (send) { const i = u.metas.findIndex(m => !m._signed); if (i >= 0) { u.idx = i; u.err = 'You cannot send this document until it is stamped. Press Stamp document, then try again.'; render(); return; } }
+      if (send) { const i = u.metas.findIndex(m => !m._signed); if (i >= 0) { u.idx = i; u.err = 'You cannot send this document until it is stamped and signed. Press Stamp and sign, place them, then try again.'; render(); return; } }
       const made = u.files.map((x, i) => { const m = u.metas[i];
         return { id: nid('L'), kind: /\.(xlsx|xls|csv)$/i.test(x.name) ? 'Document' : undefined, serial: m.serial_no ? +m.serial_no : ++serial, title: m.subject.trim(), from: m.source_name.trim(), senderRef: m.sender_ref_no.trim(), received: new Date(m.date_received + 'T09:00').toISOString(),
           pages: m._pages, conf: m.confidentiality_level, stage: 'registry', uploadedBy: meId(), movements: [], fileName: x.name }; });
       S.letters = [...made, ...(S.letters || [])];
       /* A stamp added on the upload screen goes onto the letter */
-      made.forEach((l, i) => { const m = u.metas[i]; letterDoc(l); if (m._signed) l.doc.marks = { page: 0, stamp: { on: true, x: 60, y: 70, w: 28, by: meId(), at: now(), label: stampLabelFor(meId()) }, sign: { on: true, x: 8, y: 76, w: 32, by: meId(), at: now() } };
+      made.forEach((l, i) => { const m = u.metas[i]; letterDoc(l); if (m._signed) l.doc.marks = JSON.parse(JSON.stringify(m._marks || { page: 0, stamp: { on: true, x: 60, y: 70, w: 28, by: meId(), at: now(), label: stampLabelFor(meId()) }, sign: { on: true, x: 8, y: 76, w: 32, by: meId(), at: now() }, locked: true }));
         if (m._xtyped?.length) l.xrefsTyped = m._xtyped.map(x => ({ ...x })); });
       made.forEach(l => { if (l.from && !S.senders.some(x => x.name.toLowerCase() === l.from.toLowerCase())) S.senders.push({ id: nid('ms'), name: l.from, as: 'sender', on: true }); });
       save(); ui.upload = freshUpload();

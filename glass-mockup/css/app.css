@@ -2818,3 +2818,18 @@ html { zoom: var(--z); }
 /* Notification pop-up: no "View document" label on the letter picture (it still opens when pressed) */
 .nm-body .nm-prev-cta { display: none; }
 .nm-body .nm-prev:hover .nm-prev-page { box-shadow: 0 0 0 3px rgba(0,127,123,.45); border-radius: 6px; }
+/* Upload: stamped state, and the stamp and signature drawn on the preview */
+.up-stamped { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(0,127,123,.1); color: #00625f; font-size: 13px; font-weight: 600; }
+.up-stamped svg { width: 16px; height: 16px; }
+.viewer-page.up-stp { position: relative; }
+.viewer-page.up-stp > .stp-layer { inset: 0; }
+.stp-locked { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--ink-2); }
+.stp-locked svg { width: 15px; height: 15px; }
+.stp-msign .stp-svg { mix-blend-mode: multiply; }
+/* Cross-reference: no match → add a note */
+.xr-none { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 6px 4px; }
+.xr-none p { margin: 0; }
+.x-chip svg { width: 13px; height: 13px; vertical-align: -2px; }
+[data-theme="dark"] .up-stamped { color: #8fe3da; background: rgba(143,227,218,.1); }
+.xt-inputs { grid-template-columns: 1.7fr 1fr auto; }
+@media (max-width: 640px) { .xt-inputs { grid-template-columns: 1fr; } }
